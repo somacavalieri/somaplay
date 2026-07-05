@@ -94,6 +94,30 @@ Seu olhar em festa se fez feliz
 Lembrando a seresta que um dia eu fiz
 Por onde for quero ser seu par`;
 
+const DEMO_CIFRA = `[Groove · 100 bpm]
+Am              F
+  Toca junto e ouve o mix
+C               G
+  Cada canal no seu lugar
+Am              F
+  Sobe o baixo, tira a voz
+C               G
+  A levada vai rolar
+
+[Refrão]
+Am        F
+  Play, pause e seek
+C         G
+  Tudo em sincronia`;
+
+const DEMO_LETRA = `Toca junto e ouve o mix
+Cada canal no seu lugar
+Sobe o baixo, tira a voz
+A levada vai rolar
+
+Play, pause e seek
+Tudo em sincronia`;
+
 export async function importSamples() {
   const done = [];
   // -- Paralelas (imagem) --
@@ -130,6 +154,34 @@ export async function importSamples() {
       letra: ANDANCA_LETRA, stems: [], full: [],
     });
     done.push('Andança (Beth Carvalho) — cifra em texto + letra');
+  }
+  // -- Groove de teste (áudio sintético, 4 canais) — para experimentar o mixer --
+  if (!S.songs.some((s) => s.title === 'Groove de teste')) {
+    const canais = [
+      { key: 'baixo', name: 'Baixo', vol: 85 },
+      { key: 'violao', name: 'Violão', vol: 75 },
+      { key: 'piano', name: 'Piano', vol: 60 },
+      { key: 'bateria', name: 'Bateria', vol: 70 },
+    ];
+    const stems = [];
+    let ok = true;
+    for (const c of canais) {
+      const res = await fetch(`samples/demo/${c.key}.mp3`);
+      if (!res.ok) { ok = false; break; }
+      const blobId = uid();
+      await DB.saveBlob(blobId, await res.blob());
+      stems.push({ id: c.key, name: c.name, blobId, fileName: `${c.key}.mp3`, vol: c.vol, muted: false });
+    }
+    if (ok) {
+      const demo = await upsertArtist('Demonstração');
+      await saveSong({
+        id: uid(), artistId: demo.id, title: 'Groove de teste', tom: 'Am', favorita: false,
+        createdAt: Date.now(),
+        cifra: { fonte: 'texto', texto: DEMO_CIFRA, digitacoes: null, acordes: ['Am', 'F', 'C', 'G'] },
+        letra: DEMO_LETRA, stems, full: [],
+      });
+      done.push('Groove de teste (Demonstração) — 4 canais de áudio p/ o mixer');
+    }
   }
   return done;
 }
