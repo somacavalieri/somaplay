@@ -383,6 +383,8 @@ function wireAddEditFiles() {
     const f = backup.files[0];
     backup.value = '';
     if (!f) return;
+    const total = S.songs.length;
+    if (total > 0 && !confirm(`Importar "${f.name}" vai SUBSTITUIR a biblioteca deste aparelho (${total} música${total === 1 ? '' : 's'}) pela do backup. As músicas atuais deste aparelho serão apagadas. Continuar?`)) return;
     toast('Importando biblioteca...');
     try {
       const res = await importLibrary(f);

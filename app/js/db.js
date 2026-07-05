@@ -133,6 +133,16 @@ export const DB = {
     return b ? URL.createObjectURL(b) : null;
   },
 
+  // Apaga toda a biblioteca (artistas, músicas, listas e arquivos), preservando settings.
+  // Usado pelo import "substituir" para o aparelho virar espelho exato do backup.
+  async wipe() {
+    for (const store of ['artists', 'songs', 'lists']) {
+      await tx(store, 'readwrite', (s) => s.clear());
+    }
+    const ids = await this.listBlobIds();
+    for (const id of ids) await this.deleteBlob(id);
+  },
+
   async storageEstimate() {
     if (navigator.storage && navigator.storage.estimate) {
       try { return await navigator.storage.estimate(); } catch (e) { /* ignore */ }

@@ -51,6 +51,10 @@ export async function importLibrary(file) {
   const manifest = JSON.parse(json);
   if (!manifest.songs || !manifest.artists) throw new Error('Backup inválido');
 
+  // Substitui a biblioteca deste aparelho pela do backup (evita duplicatas ao
+  // reimportar). É seguro: settings ficam; o backup traz artistas/músicas/listas/arquivos.
+  await DB.wipe();
+
   // blobs
   let off = jsonStart + jsonLen;
   for (const meta of manifest.blobs || []) {
