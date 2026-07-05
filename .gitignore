@@ -1,0 +1,14 @@
+# Biblioteca de assets (PDFs de songbooks + imagens de cifras) — ~1.8 GB, fica só local
+chords/
+
+# Arquivos de sistema do macOS
+.DS_Store
+**/.DS_Store
+
+# Editores / IDE
+.vscode/
+.idea/
+
+# Temporários
+*.tmp
+*.log
