@@ -217,7 +217,7 @@ export function renderPlay() {
       <button class="${isKar ? 'on' : ''}" data-a="setViewMode" data-id="karaoke">${I.mic(16)}Karaokê</button>
     </div>` : '';
 
-  const zoomCtl = (isImg && S.ctlVisible) ? `<div class="zoom-ctl">
+  const zoomCtl = isImg ? `<div class="zoom-ctl">
       <button data-a="imgZoomOut" title="Diminuir zoom">−</button>
       <div class="pct" id="zoom-pct">${Math.round(S.imgZoom * 100)}%</div>
       <button data-a="imgZoomIn" title="Aumentar zoom">+</button>
@@ -237,13 +237,13 @@ export function renderPlay() {
 
   const body = isKar ? karaokeHTML(song) : (isImg ? cifraImageHTML(song) : cifraTextHTML(song));
 
-  const scrollCtl = S.ctlVisible ? `<div class="scroll-ctl">
+  const scrollCtl = `<div class="scroll-ctl">
       <button class="pp" data-a="toggleScroll">${S.scrollPlaying ? I.pause(22) : I.play(22)}</button>
       <div class="div"></div>
       <button class="pm" data-a="decSpeed">−</button>
       <div class="mid"><div class="l1">Rolagem automática</div><div class="l2">Velocidade <span id="speed-val">${S.scrollSpeed}</span></div></div>
       <button class="pm" data-a="incSpeed">+</button>
-    </div>` : '';
+    </div>`;
 
   return `<div class="screen">
     <div class="play-head">
@@ -276,6 +276,7 @@ export function renderPlay() {
 // -------- comportamento pós-render (gestos, autoscroll, relógio) --------
 let scrollTimer = null;
 let ctlTimer = null;
+let mixerWasOpen = false;
 
 export function afterRenderPlay(update) {
   const song = currentSong();
@@ -300,19 +301,33 @@ export function afterRenderPlay(update) {
   // autoscroll
   manageScroll();
 
-  // auto-hide dos controles + gestos da imagem
+  // auto-hide dos controles (via classe CSS, SEM re-render) + gestos da imagem
   const el = document.querySelector('[data-autoscroll]');
   if (el && !el._ctlWired) {
     el._ctlWired = true;
-    const bump = () => bumpControls(update);
     ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'touchmove'].forEach((ev) =>
-      el.addEventListener(ev, bump, { passive: true }));
-    el.addEventListener('scroll', () => { if (!S.scrollPlaying) bumpControls(update); }, { passive: true });
+      el.addEventListener(ev, showControls, { passive: true }));
+    el.addEventListener('scroll', () => { if (!S.scrollPlaying) showControls(); }, { passive: true });
   }
-  bumpControls(update, true);
+  showControls();
+
+  // anima a entrada do bottom sheet só quando ele acabou de abrir (não a cada re-render)
+  const mx = document.querySelector('.mixer');
+  if (mx && !mixerWasOpen) mx.classList.add('sheet-enter');
+  mixerWasOpen = !!mx;
 
   setupImgGestures(update);
   applyImgZoom();
+}
+
+function showControls() {
+  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.remove('ctl-hidden'));
+  clearTimeout(ctlTimer);
+  ctlTimer = setTimeout(hideControls, 3200);
+}
+function hideControls() {
+  if (S.screen !== 'play') return;
+  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.add('ctl-hidden'));
 }
 
 export function manageScroll() {
@@ -321,26 +336,21 @@ export function manageScroll() {
     scrollTimer = setInterval(() => {
       const el = document.querySelector('[data-autoscroll]');
       if (!el) return;
+      // mantém os controles visíveis durante a rolagem (para poder pausar)
+      const ctl = document.querySelector('.scroll-ctl');
+      if (ctl) { ctl.classList.remove('ctl-hidden'); clearTimeout(ctlTimer); }
       el.scrollTop += S.scrollSpeed * 0.7;
       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
         S.scrollPlaying = false;
         clearInterval(scrollTimer); scrollTimer = null;
         const btn = document.querySelector('.scroll-ctl .pp');
         if (btn) btn.innerHTML = I.play(22);
+        showControls();
       }
     }, 30);
   } else if (!active && scrollTimer) {
     clearInterval(scrollTimer); scrollTimer = null;
   }
-}
-
-function bumpControls(update, initial) {
-  if (S.screen !== 'play') return;
-  if (!S.ctlVisible) { S.ctlVisible = true; update(); return; }
-  clearTimeout(ctlTimer);
-  ctlTimer = setTimeout(() => {
-    if (S.screen === 'play' && S.ctlVisible) { S.ctlVisible = false; update(); }
-  }, 3200);
 }
 
 function applyImgZoom() {
@@ -403,6 +413,7 @@ function setupImgGestures() {
 export function stopPlayTimers() {
   if (scrollTimer) { clearInterval(scrollTimer); scrollTimer = null; }
   clearTimeout(ctlTimer);
+  mixerWasOpen = false;
   audio.onTime = null;
   audio.onEnded = null;
 }
