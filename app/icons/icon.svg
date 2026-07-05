@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0E0E11"/>
+  <path d="M256 96 C313 96 358 128 358 182 C358 236 307 293 256 326 C205 293 154 236 154 182 C154 128 199 96 256 96 Z" fill="#E8A23D"/>
+  <g stroke="#0E0E11" stroke-width="16" stroke-linecap="round">
+    <line x1="194" y1="166" x2="318" y2="166"/>
+    <line x1="186" y1="198" x2="326" y2="198"/>
+    <line x1="197" y1="230" x2="315" y2="230"/>
+  </g>
+  <text x="256" y="435" text-anchor="middle" font-family="Sora, Arial, sans-serif" font-size="96" font-weight="700" fill="#F5F4F2">S<tspan fill="#E8A23D">_p</tspan></text>
+</svg>

@@ -2,8 +2,9 @@
 
 **Data:** 2026-06-25
 **Autor:** Soma (projeto pessoal)
-**Status:** Desenho aprovado — pronto para plano de implementação
+**Status:** MVP implementado (`app/`) — ver Anexo A para as decisões do design visual
 **Atualizado:** 2026-06-26 — adicionada a seção **7. Listas** (seções seguintes renumeradas); cifra por **imagem ou texto** com toggle **Aberta/Fechada** (§5 e §8)
+**Atualizado:** 2026-07-05 — MVP implementado a partir do design visual aprovado (projeto Claude Design "Soma_play"); deltas registrados no **Anexo A**
 
 ---
 
@@ -220,3 +221,24 @@ Todos os canais de uma música tocam **alinhados ao mesmo relógio** (começam j
 - **Latência/sincronia de áudio no Android:** validar cedo com stems reais; é o recurso de maior risco técnico.
 - **Persistência offline:** garantir que Service Worker + OPFS sobrevivam a reinícios e atualizações do app.
 - **Legibilidade em palco:** testar tema/zoom em condições reais de luz.
+
+---
+
+## Anexo A — Decisões do design visual incorporadas no MVP (2026-07-05)
+
+Fonte: projeto Claude Design "Soma_play" (`-DESIGN/Soma Play.html`). Onde este anexo divergir das seções acima, **vale o anexo** (é o desenho aprovado mais recente).
+
+1. **T1 e T2 são uma tela única ("Tela Cifra")** — o mixer e o transporte aparecem quando a música tem áudio; não existe template T2 separado. O switch dentro da música tem 2 posições: **Cifra | Karaokê** (Karaokê desabilitado quando a música não tem letra — o switch segue sendo indicador de recursos, §6).
+2. **Lente de modo = chips T2 e T3** (multi-seleção; T1 é implícito — toda música tem cifra). O filtro exige que a música tenha *todos* os modos selecionados. Na aba Listas a lente fica apagada/inativa (§7).
+3. **Acordes e diagramas:** dicionário de digitações embutido + `digitacoes` opcionais por música; grade "Acordes desta música" no fim da cifra (texto e imagem); **acordes fixados** por estrela ficam numa **barra recolhível no topo** (em fluxo — empurra a cifra, não sobrepõe).
+4. **Cifra-imagem:** fit-to-width com **zoom** (botões/pinch/ctrl+scroll), **pan por arrasto**, **inverter cores** para leitura noturna e toggle Aberta/Fechada quando existem as duas imagens.
+5. **Fonte de áudio por música:** canais separados (stems) **ou** "**versão completa**" (gravação única, 1..n versões) — alternável no mixer; o transporte é o mesmo.
+6. **Controle de rolagem automática** flutuante (play/pause + velocidade 1–10), com auto-ocultar por inatividade.
+7. **Ações por música:** coração (favorita) e "adicionar à lista" nas linhas da biblioteca; menu ⋯ na Tela Cifra (favoritar, adicionar à lista, inverter, formato, **editar**, **excluir**).
+8. **Tokens visuais:** fundo `#0E0E11`, superfícies `#1A1A20/#23232B`, borda `#2E2E37`, texto `#F5F4F2`, âmbar `#E8A23D` (ação/T1), teal `#2DD4BF` (T2/mixer), dourado `#F4B860` (T3); fontes **Sora** (títulos), **Inter** (corpo), **JetBrains Mono** (acordes/tempos).
+
+### Implementação (registro)
+
+- Código do MVP em **`app/`** (PWA vanilla, ES modules, sem build): `js/db.js` (IndexedDB + OPFS), `js/audio.js` (transporte único Web Audio; correção de drift entre faixas), `js/chords.js` (parser de cifra-texto + diagramas SVG), `js/backup.js` (formato `.somaplay`: manifest JSON + blobs concatenados), telas em `js/render/`.
+- Rodar localmente: `cd app && python3 -m http.server 8137` → `http://localhost:8137`. Instalável como PWA; offline via Service Worker (precache do shell).
+- Exemplos embutidos (Configurações → Importar exemplos): Paralelas (cifra-imagem) e Andança (cifra-texto com digitações próprias).
