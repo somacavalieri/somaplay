@@ -24,6 +24,11 @@ test('acorde desconhecido não tem padrão', () => {
   assert.deepEqual(catalogShapes('Zx9'), []);
 });
 
+test('catálogo cobre todos os acordes de As Pastorinhas (caso-ouro)', () => {
+  const nomes = ['C/E', 'Cm6/Eb', 'G/D', 'E7', 'A7', 'D7', 'Gm', 'G7/B', 'Cm', 'G', 'G/B', 'Gm6/Bb', 'Am7', 'G7', 'C'];
+  for (const n of nomes) assert.ok(catalogDefault(n), `sem forma para ${n}`);
+});
+
 test('chordSVG usa o padrão do catálogo quando a música não tem digitação', () => {
   const svg = chordSVG('G/D', false, null);
   assert.ok(svg.includes('<circle'));   // desenhou casas
