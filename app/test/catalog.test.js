@@ -29,6 +29,10 @@ test('catálogo cobre todos os acordes de As Pastorinhas (caso-ouro)', () => {
   for (const n of nomes) assert.ok(catalogDefault(n), `sem forma para ${n}`);
 });
 
+test('catálogo cobre os acordes de Oxum (Serena Assumpção)', () => {
+  for (const n of ['F#m', 'Bm7', 'C#m', 'C#m7']) assert.ok(catalogDefault(n), `sem forma para ${n}`);
+});
+
 test('chordSVG usa o padrão do catálogo quando a música não tem digitação', () => {
   const svg = chordSVG('G/D', false, null);
   assert.ok(svg.includes('<circle'));   // desenhou casas

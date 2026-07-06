@@ -7,6 +7,7 @@ export const CATALOG = {
   // — semente: formas antes embutidas em chords.js (cada uma vira a padrão do seu nome) —
   'C':    [{ frets: [-1, 3, 2, 0, 1, 0], default: true }],
   'C#m':  [{ frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
+  'C#m7': [{ frets: [-1, 4, 6, 4, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
   'D':    [{ frets: [-1, -1, 0, 2, 3, 2], default: true }],
   'D7':   [{ frets: [-1, -1, 0, 2, 1, 2], default: true }],
   'Dm':   [{ frets: [-1, -1, 0, 2, 3, 1], default: true }],

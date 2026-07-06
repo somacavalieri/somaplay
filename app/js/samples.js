@@ -153,6 +153,56 @@ const PASTORINHAS_DIG = {
   'G7': { frets: [3, 2, 0, 0, 0, 1] }, 'C': { frets: [-1, 3, 2, 0, 1, 0] },
 };
 
+const OXUM_CIFRA = `F#m
+Iê iê iê iê
+
+Iê iê iê iê
+
+F#m                       Bm7
+A sua luz reluz os seus encantos
+C#m                       Bm7
+A sua luz reluz o seu axé
+C#m                       Bm7
+A sua luz que vem da cachoeira
+C#m                              F#m
+Das santas águas doces de mamãe Oxum
+
+F#m                       Bm7
+A sua luz reluz os seus encantos
+C#m                       Bm7
+A sua luz reluz o seu axé
+C#m                       Bm7
+A sua luz que vem da cachoeira
+C#m                              F#m
+Das santas águas doces de mamãe Oxum
+
+F#m    Bm7
+Iê, iê, ô
+Bm7   C#m7  
+Iê, iê, ô
+
+C#m7                              Bm7
+Meu caminhar se enfeita com as miçangas
+                                  F#m
+Das santas águas doces de mamãe Oxum
+
+F#m    Bm7
+Iê, iê, ô
+Bm7   C#m7  
+Iê, iê, ô
+
+C#m7                              Bm7
+Meu caminhar se enfeita com as miçangas
+                                  F#m
+Das santas águas doces de mamãe Oxum`;
+
+const OXUM_DIG = {
+  'F#m': { frets: [2, 4, 4, 2, 2, 2], barre: { fret: 2, from: 0, to: 5 } },
+  'Bm7': { frets: [-1, 2, 4, 2, 3, 2], barre: { fret: 2, from: 1, to: 5 } },
+  'C#m': { frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 } },
+  'C#m7': { frets: [-1, 4, 6, 4, 5, 4], barre: { fret: 4, from: 1, to: 5 } },
+};
+
 export async function importSamples() {
   const done = [];
   // -- Paralelas (imagem) --
@@ -231,6 +281,20 @@ export async function importSamples() {
       letra: '', stems: [], full: [],
     });
     done.push('As Pastorinhas (Noel Rosa) — cifra em texto + 15 digitações conferidas');
+  }
+  // -- Oxum (Serena Assumpção) — importada do CifraClub (texto + 4 acordes) --
+  if (!S.songs.some((s) => s.title === 'Oxum')) {
+    const serena = await upsertArtist('Serena Assumpção');
+    await saveSong({
+      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', favorita: false,
+      createdAt: Date.now(),
+      cifra: {
+        fonte: 'texto', texto: OXUM_CIFRA, digitacoes: OXUM_DIG,
+        acordes: ['F#m', 'Bm7', 'C#m', 'C#m7'],
+      },
+      letra: '', stems: [], full: [],
+    });
+    done.push('Oxum (Serena Assumpção) — cifra em texto importada do CifraClub');
   }
   return done;
 }
