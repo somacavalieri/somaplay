@@ -214,7 +214,7 @@ export async function importSamples() {
       await DB.saveBlob(blobId, blob);
       const fagner = await upsertArtist('Fagner');
       await saveSong({
-        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', favorita: false,
+        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', fonte: 'Songbook', favorita: false,
         createdAt: Date.now(),
         cifra: {
           fonte: 'imagem',
@@ -230,7 +230,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'Andança')) {
     const beth = await upsertArtist('Beth Carvalho');
     await saveSong({
-      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', favorita: false,
+      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', fonte: 'CifraClub', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: ANDANCA_CIFRA, digitacoes: ANDANCA_DIGITACOES,
@@ -272,7 +272,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'As Pastorinhas')) {
     const noel = await upsertArtist('Noel Rosa');
     await saveSong({
-      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', favorita: false,
+      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', fonte: 'CifraClub', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: PASTORINHAS_CIFRA, digitacoes: PASTORINHAS_DIG,
@@ -286,7 +286,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'Oxum')) {
     const serena = await upsertArtist('Serena Assumpção');
     await saveSong({
-      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', favorita: false,
+      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', fonte: 'CifraClub', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: OXUM_CIFRA, digitacoes: OXUM_DIG,
