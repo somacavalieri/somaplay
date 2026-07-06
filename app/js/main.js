@@ -1,7 +1,7 @@
 // main.js — bootstrap, roteador e ações (delegação de eventos)
 import {
   S, audio, initState, applyTheme, saveSettings,
-  songById, openSong as goSong, currentSong, toggleFav, deleteSong,
+  songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
   createList, listById, toggleSongInList, moveInList, favList,
   persistCurrentStems,
 } from './state.js';
@@ -15,6 +15,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
+import { catalogShapes, catalogDefault } from './chords-catalog.js';
 
 const app = document.getElementById('app');
 
@@ -279,6 +280,26 @@ const actions = {
     update();
   },
   setCifraFonte(d) { syncDraftFromDOM(); S.draft.cifraFonte = d.id; update(); },
+  editChord(d) { syncDraftFromDOM(); S.draft.editingChord = d.id || null; update(); },
+  refreshChords() { syncDraftFromDOM(); update(); },
+  setFret(d) {
+    syncDraftFromDOM();
+    const name = S.draft.editingChord; if (!name) return;
+    const dict = S.draft.digitacoes || (S.draft.digitacoes = {});
+    const base = dict[name] || catalogDefault(name) || { frets: [-1, -1, -1, -1, -1, -1] };
+    const frets = base.frets.slice();
+    const i = +d.id; const fret = +d.fret;
+    frets[i] = (frets[i] === fret) ? 0 : fret;
+    dict[name] = { frets, ...(base.barre ? { barre: { ...base.barre } } : {}) };
+    update();
+  },
+  useCatShape(d, ev, el) {
+    syncDraftFromDOM();
+    const name = d.id; const s = catalogShapes(name)[+el.dataset.ix]; if (!s) return;
+    const dict = S.draft.digitacoes || (S.draft.digitacoes = {});
+    dict[name] = { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}) };
+    update();
+  },
   pickImages() { document.getElementById('file-images').click(); },
   setImgTipo(d, ev, el) { syncDraftFromDOM(); S.draft.imagens[+d.id].tipo = el.dataset.tipo; update(); },
   removeImg(d) { syncDraftFromDOM(); S.draft.imagens.splice(+d.id, 1); update(); },

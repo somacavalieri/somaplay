@@ -448,3 +448,24 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .play-head{padding:10px 12px;gap:8px}
   .karaoke .verse div{font-size:26px}
 }
+
+/* ---- editor de casas (add/edit) ---- */
+.digchips{display:flex;flex-wrap:wrap;gap:10px}
+.digchip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 8px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text)}
+.digchip.on{border-color:var(--accent)}
+.digchip.set .dnm{color:var(--accent)}
+.digchip .dnm{font-family:var(--f-title);font-weight:600;font-size:13px}
+.chord-editor{margin-top:14px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:14px}
+.ce-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:14px}
+.ce-hd .mut{color:var(--muted);font-size:12px}
+.fgrid{display:flex;gap:8px;justify-content:center}
+.fcol{display:flex;flex-direction:column;gap:5px;align-items:center}
+.fstr{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.fcell{width:34px;height:30px;border:1px solid var(--border2);border-radius:7px;background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px}
+.fcell.head{background:transparent;border-style:dashed}
+.fcell.head.x{color:var(--red)}
+.fcell.head.o{color:var(--muted)}
+.fcell.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.ce-cat{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ce-cat .mut{color:var(--muted);font-size:12px}
+.btn-ghost.sm{height:32px;padding:0 12px;font-size:12px}
