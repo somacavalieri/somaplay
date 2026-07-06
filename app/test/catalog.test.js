@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { catalogShapes, catalogDefault } from '../js/chords-catalog.js';
-import { chordSVG } from '../js/chords.js';
+import { chordSVG, isChordTok } from '../js/chords.js';
 
 test('catalogDefault devolve forma conhecida', () => {
   assert.deepEqual(catalogDefault('G').frets, [3, 2, 0, 0, 0, 3]);
@@ -31,6 +31,19 @@ test('catálogo cobre todos os acordes de As Pastorinhas (caso-ouro)', () => {
 
 test('catálogo cobre os acordes de Oxum (Serena Assumpção)', () => {
   for (const n of ['F#m', 'Bm7', 'C#m', 'C#m7']) assert.ok(catalogDefault(n), `sem forma para ${n}`);
+});
+
+test('isChordTok reconhece notação do CifraClub (°, 5-, parênteses)', () => {
+  for (const t of ['C#°', 'C#m5-', 'Am7(5-)', 'C7(9-)', 'D7(4)', 'F7M', 'Cm6', 'G/F']) {
+    assert.ok(isChordTok(t), `não reconheceu ${t}`);
+  }
+});
+
+test('catálogo cobre os acordes do lote (Queremos Saber, Disfarça e Chora, Me Dê Motivo)', () => {
+  const nomes = ['Em7', 'Am7', 'Cm6', 'G', 'G/F', 'C/E', 'D7(4)', 'C', 'F7M', 'Bm7', 'C#°', 'C/D', 'Bb7M', 'G7M',
+    'C#7', 'C7', 'Am/E', 'Cm/Eb', 'D7', 'Gm7', 'C7/E', 'Am7(5-)', 'Am7/E', 'G7',
+    'Dm', 'A7', 'C7(4)', 'C7(9-)', 'Em7(5-)', 'C#m5-', 'Dm7/C', 'E7', 'D7/F#'];
+  for (const n of nomes) assert.ok(catalogDefault(n), `sem forma para ${n}`);
 });
 
 test('chordSVG usa o padrão do catálogo quando a música não tem digitação', () => {
