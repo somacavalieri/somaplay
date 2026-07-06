@@ -198,6 +198,9 @@ Todos os canais de uma música tocam **alinhados ao mesmo relógio** (começam j
 - Pedal de página Bluetooth (footswitch) para virar página/dar play com o pé.
 - Afinação de referência / metrônomo.
 - Latência/buffer de áudio avançado; idioma.
+- Catálogo de acordes **editável dentro do app** + **promover voicing** para o catálogo + **sincronizar o catálogo no backup** (no MVP o catálogo é só-leitura e cresce no repo).
+- **Imagem chapada dos diagramas** como fallback de exibição por acorde (no MVP a digitação é sempre dado editável).
+- Pipeline de **importação em massa** (arquivo por música no repo + gerador `.somaplay`) — peça D do design de 2026-07-06, plano próprio.
 - Sincronização entre dispositivos / nuvem.
 
 ---
@@ -230,7 +233,7 @@ Fonte: projeto Claude Design "Soma_play" (`-DESIGN/Soma Play.html`). Onde este a
 
 1. **T1 e T2 são uma tela única ("Tela Cifra")** — o mixer e o transporte aparecem quando a música tem áudio; não existe template T2 separado. O switch dentro da música tem 2 posições: **Cifra | Karaokê** (Karaokê desabilitado quando a música não tem letra — o switch segue sendo indicador de recursos, §6).
 2. **Lente de modo = chips T2 e T3** (multi-seleção; T1 é implícito — toda música tem cifra). O filtro exige que a música tenha *todos* os modos selecionados. Na aba Listas a lente fica apagada/inativa (§7).
-3. **Acordes e diagramas:** dicionário de digitações embutido + `digitacoes` opcionais por música; grade "Acordes desta música" no fim da cifra (texto e imagem); **acordes fixados** por estrela ficam numa **barra recolhível no topo** (em fluxo — empurra a cifra, não sobrepõe).
+3. **Acordes e diagramas:** **catálogo de formas** (`chords-catalog.js`: nome → variações, uma marcada padrão; semeado e **só-leitura no MVP**, cresce no repo). A música guarda a forma escolhida em `cifra.digitacoes` (**snapshot** — self-contained, sem referência ao catálogo em runtime). **Editor de casas** no add/edit e **seletor de variação** na Tela Cifra (toca no acorde → escolhe a variante → grava **só naquela música**). Grade "Acordes desta música" no fim da cifra (texto e imagem); **acordes fixados** por estrela numa **barra recolhível no topo** (em fluxo — empurra a cifra, não sobrepõe). Resolução ao desenhar: `digitacoes` da música → padrão do catálogo → "?". Ver [`../plans/2026-07-06-catalogo-e-editor-de-acordes.md`](../plans/2026-07-06-catalogo-e-editor-de-acordes.md) e o design [`2026-07-06-importacao-e-catalogo-acordes-design.md`](2026-07-06-importacao-e-catalogo-acordes-design.md).
 4. **Cifra-imagem:** fit-to-width com **zoom** (botões/pinch/ctrl+scroll), **pan por arrasto**, **inverter cores** para leitura noturna e toggle Aberta/Fechada quando existem as duas imagens.
 5. **Fonte de áudio por música:** canais separados (stems) **ou** "**versão completa**" (gravação única, 1..n versões) — alternável no mixer; o transporte é o mesmo.
 6. **Controle de rolagem automática** flutuante (play/pause + velocidade 1–10), com auto-ocultar por inatividade.

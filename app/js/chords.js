@@ -1,42 +1,7 @@
-// chords.js — dicionário de digitações, diagramas SVG e parser de cifra em texto.
+// chords.js — diagramas SVG e parser de cifra em texto.
+// As formas (voicings) vivem no catálogo (chords-catalog.js); aqui só o desenho.
 // Portado do design visual aprovado (Soma Play.html).
-
-// 6 cordas, mi grave → mi agudo; -1 = abafada, 0 = solta
-export const CHORDS = {
-  'C':    { frets: [-1, 3, 2, 0, 1, 0] },
-  'C#m':  { frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 } },
-  'D':    { frets: [-1, -1, 0, 2, 3, 2] },
-  'D7':   { frets: [-1, -1, 0, 2, 1, 2] },
-  'Dm':   { frets: [-1, -1, 0, 2, 3, 1] },
-  'Dm7':  { frets: [-1, -1, 0, 2, 1, 1] },
-  'D#m':  { frets: [-1, 6, 8, 8, 7, 6], barre: { fret: 6, from: 1, to: 5 } },
-  'E':    { frets: [0, 2, 2, 1, 0, 0] },
-  'Em':   { frets: [0, 2, 2, 0, 0, 0] },
-  'Em7':  { frets: [0, 2, 0, 0, 0, 0] },
-  'E7':   { frets: [0, 2, 0, 1, 0, 0] },
-  'F':    { frets: [1, 3, 3, 2, 1, 1], barre: { fret: 1, from: 0, to: 5 } },
-  'F#':   { frets: [2, 4, 4, 3, 2, 2], barre: { fret: 2, from: 0, to: 5 } },
-  'F#m':  { frets: [2, 4, 4, 2, 2, 2], barre: { fret: 2, from: 0, to: 5 } },
-  'G':    { frets: [3, 2, 0, 0, 0, 3] },
-  'G7':   { frets: [3, 2, 0, 0, 0, 1] },
-  'G/B':  { frets: [-1, 2, 0, 0, 3, 3] },
-  'G#m':  { frets: [4, 6, 6, 4, 4, 4], barre: { fret: 4, from: 0, to: 5 } },
-  'Gmaj7':{ frets: [3, 2, 0, 0, 0, 2] },
-  'G7M':  { frets: [3, 2, 0, 0, 0, 2] },
-  'Gm':   { frets: [3, 5, 5, 3, 3, 3], barre: { fret: 3, from: 0, to: 5 } },
-  'D7/C': { frets: [-1, 3, 0, 2, 1, 2] },
-  'A':    { frets: [-1, 0, 2, 2, 2, 0] },
-  'A7':   { frets: [-1, 0, 2, 0, 2, 0] },
-  'Am':   { frets: [-1, 0, 2, 2, 1, 0] },
-  'Am7':  { frets: [-1, 0, 2, 0, 1, 0] },
-  'A#':   { frets: [-1, 1, 3, 3, 3, 1], barre: { fret: 1, from: 1, to: 5 } },
-  'B':    { frets: [-1, 2, 4, 4, 4, 2], barre: { fret: 2, from: 1, to: 5 } },
-  'B7':   { frets: [-1, 2, 1, 2, 0, 2] },
-  'Bm':   { frets: [-1, 2, 4, 4, 3, 2], barre: { fret: 2, from: 1, to: 5 } },
-  'Bm7':  { frets: [-1, 2, 4, 2, 3, 2], barre: { fret: 2, from: 1, to: 5 } },
-  'Cmaj7':{ frets: [-1, 3, 2, 0, 0, 0] },
-  'C7M':  { frets: [-1, 3, 2, 0, 0, 0] },
-};
+import { catalogDefault } from './chords-catalog.js';
 
 // Token parece um acorde? (aceita extensões com parênteses: 7(b5), 7(13), etc.)
 export function isChordTok(t) {
@@ -96,7 +61,7 @@ export function extractChords(parsed) {
 
 // Diagrama SVG do acorde (portado do design; dict = digitações da música)
 export function chordSVG(name, small, dict) {
-  const d = (dict && dict[name]) || CHORDS[name];
+  const d = (dict && dict[name]) || catalogDefault(name);
   const W0 = small ? 64 : 84, H = small ? 80 : 104;
   const padX = small ? 9 : 11, padTop = small ? 17 : 21, padBot = small ? 7 : 9;
   const S = 6, FR = 4, gh = H - padTop - padBot;

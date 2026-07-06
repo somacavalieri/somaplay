@@ -3,6 +3,8 @@ import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist } from '
 import { DB, uid } from '../db.js';
 import { I, esc } from '../icons.js';
 import { offlineBadge } from './home.js';
+import { parseCifraText, extractChords, chordSVG } from '../chords.js';
+import { catalogShapes, catalogDefault } from '../chords-catalog.js';
 
 export function newDraft(song) {
   if (song) {
@@ -17,14 +19,14 @@ export function newDraft(song) {
       letra: song.letra || '',
       stems: (song.stems || []).map((st) => ({ ...st, fileName: st.fileName || '' })),
       full: (song.full || []).map((f) => ({ ...f, fileName: f.fileName || '' })),
-      digitacoes: song.cifra?.digitacoes || null,
+      digitacoes: { ...(song.cifra?.digitacoes || {}) }, editingChord: null,
     };
   }
   return {
     artistName: '', artistOpen: false, artistQuery: '',
     title: '', tom: '', cifraFonte: 'imagem',
     imagens: [], cifraTexto: '', acordes: '', letra: '', stems: [], full: [],
-    digitacoes: null,
+    digitacoes: {}, editingChord: null,
   };
 }
 
@@ -45,6 +47,53 @@ function artistDropdown(d) {
       </div>
       ${q && !exact ? `<div class="dd-create" data-a="createArtistFromQuery">${I.plus()}<span>Criar novo artista: "${esc(d.artistQuery.trim())}"</span></div>` : ''}
     </div>`;
+}
+
+function draftChordNames(d) {
+  if (d.cifraFonte === 'texto') return extractChords(parseCifraText(d.cifraTexto || ''));
+  return (d.acordes || '').trim() ? d.acordes.trim().split(/\s+/) : [];
+}
+
+function chordEditorHTML(d, name) {
+  const dict = d.digitacoes || {};
+  const shape = dict[name] || catalogDefault(name) || { frets: [-1, -1, -1, -1, -1, -1] };
+  const frets = shape.frets;
+  const pos = frets.filter((f) => f > 0);
+  const base = pos.length && Math.max(...pos) > 4 ? Math.min(...pos) : 1;
+  const nomes = ['Mi', 'Lá', 'Ré', 'Sol', 'Si', 'Mi'];
+  const cols = nomes.map((s, i) => {
+    const f = frets[i];
+    const head = `<button class="fcell head ${f === -1 ? 'x' : ''} ${f === 0 ? 'o' : ''}" data-a="setFret" data-id="${i}" data-fret="${f === 0 ? -1 : 0}">${f === -1 ? '✕' : (f === 0 ? '○' : '·')}</button>`;
+    let cells = '';
+    for (let r = 0; r < 5; r++) { const fr = base + r; cells += `<button class="fcell ${f === fr ? 'on' : ''}" data-a="setFret" data-id="${i}" data-fret="${fr}"></button>`; }
+    return `<div class="fcol"><div class="fstr">${s}</div>${head}${cells}</div>`;
+  }).join('');
+  const cat = catalogShapes(name);
+  const catBtns = cat.map((s, ix) => `<button class="btn-ghost sm" data-a="useCatShape" data-id="${esc(name)}" data-ix="${ix}">${esc(s.label || ('variação ' + (ix + 1)))}</button>`).join('');
+  return `<div class="chord-editor">
+    <div class="ce-hd"><b>${esc(name)}</b><span class="mut">base ${base}ª · toque a casa; toque de novo p/ soltar</span>
+      <button class="btn-icon xs" style="margin-left:auto" data-a="editChord" data-id="">${I.close()}</button></div>
+    <div class="fgrid">${cols}</div>
+    ${catBtns ? `<div class="ce-cat"><span class="mut">catálogo:</span>${catBtns}</div>` : ''}
+  </div>`;
+}
+
+function chordDigHTML(d) {
+  const isText = d.cifraFonte === 'texto';
+  const names = draftChordNames(d);
+  if (!isText && !names.length) return '';
+  const dict = d.digitacoes || {};
+  const chips = names.map((n) => `<button class="digchip ${d.editingChord === n ? 'on' : ''} ${dict[n] ? 'set' : ''}" data-a="editChord" data-id="${esc(n)}">
+      <span class="dnm">${esc(n)}</span>${chordSVG(n, true, dict)}
+    </button>`).join('');
+  return `<div class="card-section">
+    <div class="hd"><span style="color:var(--accent);display:flex">${I.cifraLines(19)}</span>
+      <div class="t">Digitações dos acordes</div>
+      <div class="s">toque um acorde para ajustar as casas</div>
+      <button class="btn-ghost sm" style="margin-left:auto" data-a="refreshChords">Detectar acordes</button></div>
+    <div class="digchips">${chips || '<div style="color:var(--muted);font-size:13px">Cole a cifra e toque em “Detectar acordes”.</div>'}</div>
+    ${d.editingChord ? chordEditorHTML(d, d.editingChord) : ''}
+  </div>`;
 }
 
 export function renderAddEdit() {
@@ -138,6 +187,8 @@ export function renderAddEdit() {
           ${cifraBody}
         </div>
 
+        ${chordDigHTML(d)}
+
         <div class="card-section">
           <div class="hd"><span style="color:var(--accent);display:flex">${I.textLines()}</span><div class="t">Letra (karaokê)</div>
             <div class="s">separe estrofes com linha em branco</div></div>
@@ -218,6 +269,12 @@ export async function commitDraft() {
     if (blobId) full.push({ id: f.id || uid(), nome: f.nome || 'Versão completa', meta: f.meta || '', blobId, fileName: f.fileName || '' });
   }
 
+  const usados = draftChordNames(d);
+  const dig = { ...(d.digitacoes || {}) };
+  for (const n of usados) {
+    if (!dig[n]) { const def = catalogDefault(n); if (def) dig[n] = { frets: def.frets.slice(), ...(def.barre ? { barre: { ...def.barre } } : {}) }; }
+  }
+
   const existing = S.editSongId ? songById(S.editSongId) : null;
   const song = {
     id: existing ? existing.id : uid(),
@@ -227,8 +284,8 @@ export async function commitDraft() {
     favorita: existing ? existing.favorita : false,
     createdAt: existing ? existing.createdAt : Date.now(),
     cifra: d.cifraFonte === 'imagem'
-      ? { fonte: imagens.length ? 'imagem' : null, imagens, texto: '', acordes: d.acordes.trim() ? d.acordes.trim().split(/\s+/) : [], digitacoes: d.digitacoes || null }
-      : { fonte: d.cifraTexto.trim() ? 'texto' : null, imagens: [], texto: d.cifraTexto, acordes: [], digitacoes: d.digitacoes || null },
+      ? { fonte: imagens.length ? 'imagem' : null, imagens, texto: '', acordes: d.acordes.trim() ? d.acordes.trim().split(/\s+/) : [], digitacoes: dig }
+      : { fonte: d.cifraTexto.trim() ? 'texto' : null, imagens: [], texto: d.cifraTexto, acordes: [], digitacoes: dig },
     letra: d.letra || '',
     stems, full,
   };

@@ -118,6 +118,41 @@ A levada vai rolar
 Play, pause e seek
 Tudo em sincronia`;
 
+const PASTORINHAS_CIFRA = `[Intro] C/E  Cm6/Eb  G/D  E7  A7  D7  Gm
+
+          Gm          G7/B    Cm
+A estrela d'alva, no céu   desponta
+             D7                       Gm
+E a lua anda tonta, com tamanho esplendor
+          Cm             D7      Gm
+E as moreninhas, pra consolo da lua
+                A7    D7                  G
+Vão cantando na rua,    lindos versos de amor
+
+         G                 G/B    Gm6/Bb  Am7   D7
+Linda morena, morenaa, da cor de Mada    le    na
+
+Tu não tens pena de mim
+G
+Que vivo louco com esse seu olhar
+         G      G7                     C
+Linda criança,    tu não me sais da lembrança
+        Cm6/Eb         G/D   E7
+Meu coração    não se can....sa
+A7           D7        Gm
+De sempre e sempre te amar`;
+
+const PASTORINHAS_DIG = {
+  'C/E': { frets: [0, 3, 2, 0, 1, 0] }, 'Cm6/Eb': { frets: [-1, -1, 1, 2, 1, 3] },
+  'G/D': { frets: [-1, 5, 5, 4, 3, -1] }, 'E7': { frets: [0, 2, 2, 1, 3, 0] },
+  'A7': { frets: [-1, 0, 2, 0, 2, 0] }, 'D7': { frets: [-1, -1, 0, 2, 1, 2] },
+  'Gm': { frets: [3, 5, 5, 3, 3, 3], barre: { fret: 3, from: 0, to: 5 } },
+  'G7/B': { frets: [-1, 2, 3, 0, 3, -1] }, 'Cm': { frets: [-1, 3, 5, 5, 4, 3], barre: { fret: 3, from: 1, to: 5 } },
+  'G': { frets: [3, 2, 0, 0, 0, 3] }, 'G/B': { frets: [-1, 2, 0, 0, 3, 3] },
+  'Gm6/Bb': { frets: [-1, 1, 2, 0, 3, 0] }, 'Am7': { frets: [-1, 0, 2, 0, 1, 0] },
+  'G7': { frets: [3, 2, 0, 0, 0, 1] }, 'C': { frets: [-1, 3, 2, 0, 1, 0] },
+};
+
 export async function importSamples() {
   const done = [];
   // -- Paralelas (imagem) --
@@ -182,6 +217,20 @@ export async function importSamples() {
       });
       done.push('Groove de teste (Demonstração) — 4 canais de áudio p/ o mixer');
     }
+  }
+  // -- As Pastorinhas (Noel Rosa) — caso-ouro: texto + 15 digitações conferidas --
+  if (!S.songs.some((s) => s.title === 'As Pastorinhas')) {
+    const noel = await upsertArtist('Noel Rosa');
+    await saveSong({
+      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', favorita: false,
+      createdAt: Date.now(),
+      cifra: {
+        fonte: 'texto', texto: PASTORINHAS_CIFRA, digitacoes: PASTORINHAS_DIG,
+        acordes: ['C/E', 'Cm6/Eb', 'G/D', 'E7', 'A7', 'D7', 'Gm', 'G7/B', 'Cm', 'G', 'G/B', 'Gm6/Bb', 'Am7', 'G7', 'C'],
+      },
+      letra: '', stems: [], full: [],
+    });
+    done.push('As Pastorinhas (Noel Rosa) — cifra em texto + 15 digitações conferidas');
   }
   return done;
 }
