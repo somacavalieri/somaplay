@@ -38,6 +38,7 @@ export const S = {
   imgMenuOpen: false,
   ctlVisible: true,
   chordFavs: {},           // songId -> [acorde]
+  chordPicker: null,       // nome do acorde com o seletor de variação aberto
   pinnedOpen: true,
   transportPlaying: false,
   position: 0,

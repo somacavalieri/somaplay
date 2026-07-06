@@ -1,10 +1,11 @@
 // render/play.js — Tela Cifra (T1 + T2 unificado) + visão Karaokê
 // Cifra por texto ou imagem · rolagem automática · acordes/diagramas/fixados
 // mixer (stems + versão completa) · transporte global
-import { S, currentSong, artistName, audio, persistCurrentStems } from '../state.js';
+import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
 import { parseCifraText, extractChords, chordSVG } from '../chords.js';
+import { catalogShapes } from '../chords-catalog.js';
 import { offlineBadge } from './home.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
@@ -62,7 +63,7 @@ function chordsGridHTML(song, chordNames) {
     const f = favs.includes(n);
     return `<div class="chord-card ${f ? 'pinned' : ''}">
       <div class="nm"><span>${esc(n)}</span><button class="star-btn ${f ? 'on' : ''}" data-a="toggleChordFav" data-id="${esc(n)}" title="Fixar acorde no topo">${I.star(f)}</button></div>
-      <div>${chordSVG(n, false, dict)}</div>
+      <button class="chord-diag" data-a="openChordPicker" data-id="${esc(n)}" title="Trocar variação">${chordSVG(n, false, dict)}</button>
     </div>`;
   }).join('');
   return `<div class="chords-block" data-nopan="1">
@@ -198,6 +199,27 @@ function transportHTML() {
   </div>`;
 }
 
+function chordPickerHTML(song) {
+  const name = S.chordPicker;
+  const dict = song.cifra?.digitacoes || {};
+  const atual = dict[name] ? JSON.stringify(dict[name].frets) : null;
+  const shapes = catalogShapes(name);
+  const opts = shapes.map((s, ix) => {
+    const sel = atual && JSON.stringify(s.frets) === atual;
+    return `<button class="pick-opt ${sel ? 'sel' : ''}" data-a="pickChordShape" data-id="${esc(name)}" data-ix="${ix}">
+      ${chordSVG(name, false, { [name]: s })}
+      <span class="lbl">${esc(s.label || ('variação ' + (ix + 1)))}</span>
+    </button>`;
+  }).join('');
+  return `<div class="scrim" data-a="closeChordPicker">
+    <div class="popover" data-stop="1">
+      <div class="head"><div class="head-row"><div class="title">Variações de ${esc(name)}</div>
+        <button class="btn-icon xs" data-a="closeChordPicker">${I.close()}</button></div></div>
+      <div class="body pick-grid">${opts || '<div style="padding:14px;color:var(--muted);font-size:13px">Só a forma atual — edite as casas em “Editar música”.</div>'}</div>
+    </div>
+  </div>`;
+}
+
 // -------- tela --------
 export function renderPlay() {
   const song = currentSong();
@@ -270,6 +292,7 @@ export function renderPlay() {
       ${hasMixer && !S.mixerCollapsed ? mixerHTML(song) : ''}
     </div>
     ${hasMixer ? transportHTML() : ''}
+    ${S.chordPicker ? chordPickerHTML(song) : ''}
   </div>`;
 }
 

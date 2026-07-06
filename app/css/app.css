@@ -469,3 +469,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .ce-cat{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ce-cat .mut{color:var(--muted);font-size:12px}
 .btn-ghost.sm{height:32px;padding:0 12px;font-size:12px}
+
+/* ---- seletor de variação (Tela Cifra) ---- */
+.chord-diag{background:none;border:none;padding:0;cursor:pointer;display:block}
+.pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.pick-opt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text)}
+.pick-opt.sel{border-color:var(--accent)}
+.pick-opt .lbl{font-size:11px;color:var(--muted)}

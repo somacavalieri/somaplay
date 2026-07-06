@@ -234,6 +234,16 @@ const actions = {
     S.chordFavs[id] = cur.includes(d.id) ? cur.filter((x) => x !== d.id) : [...cur, d.id];
     update();
   },
+  openChordPicker(d) { S.chordPicker = d.id; update(); },
+  closeChordPicker() { S.chordPicker = null; update(); },
+  async pickChordShape(d, ev, el) {
+    const song = currentSong(); if (!song) return;
+    const s = catalogShapes(d.id)[+el.dataset.ix]; if (!s) return;
+    song.cifra.digitacoes = { ...(song.cifra.digitacoes || {}), [d.id]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}) } };
+    await saveSong(song);
+    S.chordPicker = null;
+    update();
+  },
   togglePinnedBar() { S.pinnedOpen = !S.pinnedOpen; update(); },
   toggleScroll() {
     S.scrollPlaying = !S.scrollPlaying;
@@ -423,7 +433,7 @@ document.addEventListener('click', (e) => {
     const name = t.dataset.a;
     if (actions[name]) {
       // scrim fecha só se o clique foi nele mesmo (não no conteúdo)
-      if ((name === 'closePopover' || name === 'toggleMixer') && t !== e.target && e.target.closest('[data-stop]')) return;
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker') && t !== e.target && e.target.closest('[data-stop]')) return;
       actions[name](t.dataset, e, t);
       return;
     }
