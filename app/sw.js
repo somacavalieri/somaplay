@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-v4';
+const VERSION = 'somaplay-v5';
 const SHELL = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const SHELL = [
   './js/db.js',
   './js/audio.js',
   './js/chords.js',
+  './js/chords-catalog.js',
   './js/backup.js',
   './js/icons.js',
   './js/samples.js',
