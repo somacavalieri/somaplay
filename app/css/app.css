@@ -487,6 +487,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 /* fonte no formulário de adicionar/editar */
 .fonte-row{display:flex;gap:8px;align-items:center}
 .fonte-row .input{flex:1}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip-row .input{flex:1 1 200px}
 .btn-ghost.sm.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 @media (max-width:640px){
   .song-id .ttl{font-size:22px}

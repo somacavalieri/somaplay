@@ -71,6 +71,7 @@ Artista
         │     ├── volume
         │     └── mute (ativo/silenciado)
         ├── fonte (origem: CifraClub | Songbook | ...)  (rótulo exibido no cabeçalho; auto pelo tipo da cifra)
+        ├── estilo (estilo musical — um por música; agrupa na aba Estilos, ver §6)
         └── favorita (sim/não)               (coração → alimenta a lista "Favoritas")
 
 Lista  (coleção pessoal — ver §7)
@@ -92,9 +93,10 @@ A navegação é guiada por **modo (lente global)**, para que **tocar uma músic
 
 - **Seletor de modo global**, sempre visível no topo: **T1 Cifra (padrão)**, **T2 Acompanhamento**, **T3 Karaokê**. Ele define a "lente" da biblioteca inteira.
 - A biblioteca mostra **apenas o conteúdo que existe no modo ativo** (ex.: em T2, só aparecem artistas/músicas que têm acompanhamento).
-- Dentro do modo ativo, **duas visões** alternáveis por abas:
+- Dentro do modo ativo, **três visões** alternáveis por abas:
   - **Artistas:** grade de artistas (só os que têm música no modo ativo) → **Artista → lista de músicas** daquele artista (só as do modo ativo).
   - **Músicas:** lista global de **todas as músicas do modo ativo**, cada item com o **nome do artista**. Permite **ordenar** (título, artista, recém-adicionadas) e **buscar**.
+  - **Estilos:** grade de estilos musicais (agrupa por `song.estilo`, análogo a Artistas) → **Estilo → lista de músicas** daquele estilo. Música sem estilo cai em "Sem estilo". Fica **entre Músicas e Listas** e respeita a lente. (As **Listas**, §7, são a 4ª aba e ignoram a lente.)
 - **Tocar = um toque:** como o modo já está definido pela lente, tocar numa música **abre direto** o template correspondente. **Não há seletor de modo intermediário** entre a lista e o template.
 - Trocar de modo no topo re-filtra toda a biblioteca; uma música com vários modos aparece em cada modo correspondente.
 - **Troca de modo dentro da música:** todo template tem um **switch de modo (T1/T2/T3)** que serve também de **indicador de recursos** da faixa — os modos que a música possui ficam ativos (revelando que ela tem aquele recurso), os ausentes ficam desabilitados. Trocar ali alterna o template **sem sair da música**, mantendo o contexto.

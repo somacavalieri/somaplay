@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
@@ -26,6 +26,30 @@ function artistCards() {
     return `<div class="card-artist" data-a="openArtist" data-id="${a.id}">
       <div class="avatar ${a.av}">${esc(a.name[0] || '?')}</div>
       <div><div class="name">${esc(a.name)}</div><div class="count">${label}</div></div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function estiloCards() {
+  const q = S.query.trim().toLowerCase();
+  const groups = {};
+  S.songs.forEach((s) => {
+    if (!matchesLens(s)) return;
+    const e = estiloOf(s);
+    (groups[e] || (groups[e] = [])).push(s);
+  });
+  let names = Object.keys(groups);
+  if (q) names = names.filter((e) => e.toLowerCase().includes(q) || groups[e].some((s) => s.title.toLowerCase().includes(q) || artistName(s).toLowerCase().includes(q)));
+  names.sort((a, b) => ((a === SEM_ESTILO) - (b === SEM_ESTILO)) || a.localeCompare(b, 'pt'));
+  if (!names.length) {
+    return `<div class="empty"><div class="t">${S.songs.length ? 'Nenhum estilo neste modo' : 'Biblioteca vazia'}</div>
+      <div class="s">${S.songs.length ? 'Nenhuma música na categoria selecionada' : 'Adicione músicas em Configurações → Adicionar música'}</div></div>`;
+  }
+  return `<div class="artist-grid">` + names.map((e) => {
+    const n = groups[e].length;
+    return `<div class="card-artist" data-a="openEstilo" data-id="${esc(e)}">
+      <div class="avatar teal">${esc(e[0] || '?')}</div>
+      <div><div class="name">${esc(e)}</div><div class="count">${n} ${n === 1 ? 'música' : 'músicas'}</div></div>
     </div>`;
   }).join('') + `</div>`;
 }
@@ -115,6 +139,7 @@ function listsTab() {
 export function homeResults() {
   if (S.tab === 'artists') return artistCards();
   if (S.tab === 'songs') return songsTab();
+  if (S.tab === 'estilos') return estiloCards();
   return listsTab();
 }
 
@@ -122,7 +147,9 @@ export function renderHome() {
   const isL = S.tab === 'lists';
   const tabsub = isL
     ? `${S.lists.length} listas · lente de modo inativa`
-    : (S.tab === 'artists' ? `${S.artists.length} artistas na biblioteca` : `${S.songs.length} músicas na biblioteca`);
+    : (S.tab === 'artists' ? `${S.artists.length} artistas na biblioteca`
+      : S.tab === 'estilos' ? 'músicas agrupadas por estilo'
+      : `${S.songs.length} músicas na biblioteca`);
   const chips = ['T2', 'T3'].map((m) => {
     const on = S.modeFilter.includes(m);
     const cls = m === 'T2' ? 't2' : 't3';
@@ -142,6 +169,7 @@ export function renderHome() {
       <div class="segtab">
         <button class="${S.tab === 'artists' ? 'on' : ''}" data-a="setTab" data-id="artists">${I.grid()}Artistas</button>
         <button class="${S.tab === 'songs' ? 'on' : ''}" data-a="setTab" data-id="songs">${I.music()}Músicas</button>
+        <button class="${S.tab === 'estilos' ? 'on' : ''}" data-a="setTab" data-id="estilos">${I.disc(18)}Estilos</button>
         <button class="${S.tab === 'lists' ? 'on' : ''}" data-a="setTab" data-id="lists">${I.listIcon()}Listas</button>
       </div>
       <div class="tabsub">${tabsub}</div>
