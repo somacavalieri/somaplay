@@ -12,6 +12,7 @@ import { renderListScreen } from './render/listscreen.js';
 import { renderPopover } from './render/popover.js';
 import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
+import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
@@ -37,6 +38,7 @@ export function update() {
   let html = '';
   if (scr === 'home') html = renderHome();
   else if (scr === 'artist') html = renderArtist();
+  else if (scr === 'estilo') html = renderEstilo();
   else if (scr === 'list') html = renderListScreen();
   else if (scr === 'play') html = renderPlay();
   else if (scr === 'addedit') html = renderAddEdit();
@@ -110,10 +112,12 @@ const actions = {
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.screen = 'addedit'; update(); },
   openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
+  openEstilo(d) { S.estiloId = d.id; S.screen = 'estilo'; update(); },
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
   goBack() {
     leavePlay();
     if (S.backTo === 'artist') S.screen = 'artist';
+    else if (S.backTo === 'estilo') S.screen = 'estilo';
     else if (S.backTo === 'list') S.screen = 'list';
     else { S.screen = 'home'; }
     update();
@@ -296,6 +300,7 @@ const actions = {
     update();
   },
   setFonte(d) { syncDraftFromDOM(); S.draft.fonte = d.id; update(); },
+  setEstilo(d) { syncDraftFromDOM(); S.draft.estilo = d.id; update(); },
   editChord(d) { syncDraftFromDOM(); S.draft.editingChord = d.id || null; update(); },
   refreshChords() { syncDraftFromDOM(); update(); },
   setFret(d) {

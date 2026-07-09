@@ -5,13 +5,14 @@ import { AudioEngine } from './audio.js';
 export const S = {
   // navegação
   screen: 'home',          // home | artist | list | play | addedit | settings
-  tab: 'artists',          // artists | songs | lists
+  tab: 'artists',          // artists | songs | estilos | lists
   backTo: 'home',          // de onde a tela play foi aberta
   query: '',
   sort: 'title',           // title | artist | recent
   sortMenuOpen: false,
   modeFilter: [],          // lente global: subset de ['T2','T3']
   artistId: null,
+  estiloId: null,          // estilo aberto (o nome do estilo é a chave)
   openListId: null,        // id da lista aberta ('__fav' = Favoritas)
   listMenuOpen: false,
   creatingList: false,
@@ -64,6 +65,14 @@ export function songsOfArtist(artistId) {
     .sort((a, b) => a.title.localeCompare(b.title, 'pt'));
 }
 export function artistName(song) { const a = artistById(song.artistId); return a ? a.name : '?'; }
+
+// Estilo musical (um por música; sem estilo → "Sem estilo")
+export const SEM_ESTILO = 'Sem estilo';
+export function estiloOf(s) { return (s && s.estilo && s.estilo.trim()) || SEM_ESTILO; }
+export function songsOfEstilo(estilo) {
+  return S.songs.filter((s) => estiloOf(s) === estilo)
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt'));
+}
 
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {

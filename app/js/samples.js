@@ -383,7 +383,7 @@ export async function importSamples() {
       await DB.saveBlob(blobId, blob);
       const fagner = await upsertArtist('Fagner');
       await saveSong({
-        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', fonte: 'Songbook', favorita: false,
+        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', fonte: 'Songbook', estilo: 'MPB', favorita: false,
         createdAt: Date.now(),
         cifra: {
           fonte: 'imagem',
@@ -399,7 +399,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'Andança')) {
     const beth = await upsertArtist('Beth Carvalho');
     await saveSong({
-      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', fonte: 'CifraClub', estilo: 'Samba', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: ANDANCA_CIFRA, digitacoes: ANDANCA_DIGITACOES,
@@ -441,7 +441,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'As Pastorinhas')) {
     const noel = await upsertArtist('Noel Rosa');
     await saveSong({
-      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', fonte: 'CifraClub', estilo: 'Samba', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: PASTORINHAS_CIFRA, digitacoes: PASTORINHAS_DIG,
@@ -455,7 +455,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'Oxum')) {
     const serena = await upsertArtist('Serena Assumpção');
     await saveSong({
-      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', fonte: 'CifraClub', estilo: 'MPB', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: OXUM_CIFRA, digitacoes: OXUM_DIG,
@@ -468,7 +468,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === "Queremos Saber")) {
     const a = await upsertArtist("Cássia Eller");
     await saveSong({
-      id: uid(), artistId: a.id, title: "Queremos Saber", tom: "Em", fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: a.id, title: "Queremos Saber", tom: "Em", fonte: 'CifraClub', estilo: 'MPB', favorita: false,
       createdAt: Date.now(),
       cifra: { fonte: 'texto', texto: QUEREMOS_CIFRA, digitacoes: null, acordes: ["Em7", "Am7", "Cm6", "G", "G/F", "C/E", "D7(4)", "C", "F7M", "Bm7", "C#°", "C/D", "Bb7M", "G7M"] },
       letra: '', stems: [], full: [],
@@ -478,7 +478,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === "Disfarça e Chora")) {
     const a = await upsertArtist("Cartola");
     await saveSong({
-      id: uid(), artistId: a.id, title: "Disfarça e Chora", tom: "Dm", fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: a.id, title: "Disfarça e Chora", tom: "Dm", fonte: 'CifraClub', estilo: 'Samba', favorita: false,
       createdAt: Date.now(),
       cifra: { fonte: 'texto', texto: DISFARCA_CIFRA, digitacoes: null, acordes: ["F7M", "C#7", "C7", "Am/E", "Cm/Eb", "D7", "Gm7", "C7/E", "Am7(5-)", "Am7/E", "G7"] },
       letra: '', stems: [], full: [],
@@ -488,7 +488,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === "Me Dê Motivo")) {
     const a = await upsertArtist("Tim Maia");
     await saveSong({
-      id: uid(), artistId: a.id, title: "Me Dê Motivo", tom: "Dm", fonte: 'CifraClub', favorita: false,
+      id: uid(), artistId: a.id, title: "Me Dê Motivo", tom: "Dm", fonte: 'CifraClub', estilo: 'Soul', favorita: false,
       createdAt: Date.now(),
       cifra: { fonte: 'texto', texto: MEDEMOTIVO_CIFRA, digitacoes: null, acordes: ["Dm", "Gm7", "A7", "C7(4)", "C7", "C7(9-)", "F7M", "Em7(5-)", "C#m5-", "Dm7/C", "E7", "D7/F#"] },
       letra: '', stems: [], full: [],

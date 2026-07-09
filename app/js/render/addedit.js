@@ -13,6 +13,7 @@ export function newDraft(song) {
       artistName: a ? a.name : '', artistOpen: false, artistQuery: '',
       title: song.title, tom: song.tom || '',
       fonte: song.fonte || '',
+      estilo: song.estilo || '',
       cifraFonte: song.cifra?.fonte || 'imagem',
       imagens: (song.cifra?.imagens || []).map((im) => ({ ...im })),
       cifraTexto: song.cifra?.texto || '',
@@ -25,7 +26,7 @@ export function newDraft(song) {
   }
   return {
     artistName: '', artistOpen: false, artistQuery: '',
-    title: '', tom: '', fonte: '', cifraFonte: 'imagem',
+    title: '', tom: '', fonte: '', estilo: '', cifraFonte: 'imagem',
     imagens: [], cifraTexto: '', acordes: '', letra: '', stems: [], full: [],
     digitacoes: {}, editingChord: null,
   };
@@ -191,6 +192,14 @@ export function renderAddEdit() {
           </div>
         </div>
 
+        <div class="field">
+          <label>Estilo musical</label>
+          <div class="chip-row">
+            <input type="text" class="input lg" id="f-estilo" placeholder="Ex.: Samba" value="${esc(d.estilo)}">
+            ${['MPB', 'Samba', 'Bossa Nova', 'Choro', 'Forró', 'Carimbó', 'Rock', 'Pop', 'Alternativo', 'Jazz', 'Soul'].map((genero) => `<button type="button" class="btn-ghost sm ${d.estilo === genero ? 'on' : ''}" data-a="setEstilo" data-id="${genero}">${genero}</button>`).join('')}
+          </div>
+        </div>
+
         <div class="card-section">
           <div class="hd"><span style="color:var(--accent);display:flex">${d.cifraFonte === 'imagem' ? I.img() : I.cifraLines(19)}</span>
             <div class="t">${d.cifraFonte === 'imagem' ? 'Imagens de cifra' : 'Cifra em texto'}</div></div>
@@ -238,6 +247,7 @@ export function syncDraftFromDOM() {
   if (g('f-title')) d.title = g('f-title').value;
   if (g('f-tom')) d.tom = g('f-tom').value.trim();
   if (g('f-fonte')) d.fonte = g('f-fonte').value.trim();
+  if (g('f-estilo')) d.estilo = g('f-estilo').value.trim();
   if (g('f-acordes')) d.acordes = g('f-acordes').value;
   if (g('f-cifratexto')) d.cifraTexto = g('f-cifratexto').value;
   if (g('f-letra')) d.letra = g('f-letra').value;
@@ -293,6 +303,7 @@ export async function commitDraft() {
     title: d.title.trim(),
     tom: d.tom || '',
     fonte: (d.fonte && d.fonte.trim()) || (d.cifraFonte === 'texto' ? 'CifraClub' : 'Songbook'),
+    estilo: d.estilo ? d.estilo.trim() : '',
     favorita: existing ? existing.favorita : false,
     createdAt: existing ? existing.createdAt : Date.now(),
     cifra: d.cifraFonte === 'imagem'
