@@ -196,7 +196,7 @@ export function renderAddEdit() {
           <label>Estilo musical</label>
           <div class="chip-row">
             <input type="text" class="input lg" id="f-estilo" placeholder="Ex.: Samba" value="${esc(d.estilo)}">
-            ${['MPB', 'Samba', 'Bossa Nova', 'Choro', 'Forró', 'Rock', 'Pop', 'Gospel', 'Jazz', 'Soul'].map((genero) => `<button type="button" class="btn-ghost sm ${d.estilo === genero ? 'on' : ''}" data-a="setEstilo" data-id="${genero}">${genero}</button>`).join('')}
+            ${['MPB', 'Samba', 'Bossa Nova', 'Choro', 'Forró', 'Carimbó', 'Rock', 'Pop', 'Alternativo', 'Jazz', 'Soul'].map((genero) => `<button type="button" class="btn-ghost sm ${d.estilo === genero ? 'on' : ''}" data-a="setEstilo" data-id="${genero}">${genero}</button>`).join('')}
           </div>
         </div>
 
