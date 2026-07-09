@@ -59,7 +59,7 @@ function updateHomeResults() {
 function afterRender() {
   if (S.screen === 'play') afterRenderPlay(update);
   else stopPlayTimers();
-  if (S.screen === 'settings') fillStorageInfo();
+  if (S.screen === 'settings') { fillStorageInfo(); wireBackupInput(); }
   if (S.screen === 'addedit') wireAddEditFiles();
 
   const search = document.getElementById('search-input');
@@ -415,8 +415,14 @@ function wireAddEditFiles() {
     fileTarget = null;
     update();
   };
+}
+
+// A tela de Configurações tem o <input id="file-backup">. Este handler precisa
+// ser religado a cada render da tela (o innerHTML recria o elemento).
+function wireBackupInput() {
   const backup = document.getElementById('file-backup');
-  if (backup) backup.onchange = async () => {
+  if (!backup) return;
+  backup.onchange = async () => {
     const f = backup.files[0];
     backup.value = '';
     if (!f) return;
