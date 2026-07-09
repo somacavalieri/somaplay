@@ -153,6 +153,225 @@ const PASTORINHAS_DIG = {
   'G7': { frets: [3, 2, 0, 0, 0, 1] }, 'C': { frets: [-1, 3, 2, 0, 1, 0] },
 };
 
+const OXUM_CIFRA = `F#m
+Iê iê iê iê
+
+Iê iê iê iê
+
+F#m                       Bm7
+A sua luz reluz os seus encantos
+C#m                       Bm7
+A sua luz reluz o seu axé
+C#m                       Bm7
+A sua luz que vem da cachoeira
+C#m                              F#m
+Das santas águas doces de mamãe Oxum
+
+F#m                       Bm7
+A sua luz reluz os seus encantos
+C#m                       Bm7
+A sua luz reluz o seu axé
+C#m                       Bm7
+A sua luz que vem da cachoeira
+C#m                              F#m
+Das santas águas doces de mamãe Oxum
+
+F#m    Bm7
+Iê, iê, ô
+Bm7   C#m7  
+Iê, iê, ô
+
+C#m7                              Bm7
+Meu caminhar se enfeita com as miçangas
+                                  F#m
+Das santas águas doces de mamãe Oxum
+
+F#m    Bm7
+Iê, iê, ô
+Bm7   C#m7  
+Iê, iê, ô
+
+C#m7                              Bm7
+Meu caminhar se enfeita com as miçangas
+                                  F#m
+Das santas águas doces de mamãe Oxum`;
+
+const OXUM_DIG = {
+  'F#m': { frets: [2, 4, 4, 2, 2, 2], barre: { fret: 2, from: 0, to: 5 } },
+  'Bm7': { frets: [-1, 2, 4, 2, 3, 2], barre: { fret: 2, from: 1, to: 5 } },
+  'C#m': { frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 } },
+  'C#m7': { frets: [-1, 4, 6, 4, 5, 4], barre: { fret: 4, from: 1, to: 5 } },
+};
+
+const QUEREMOS_CIFRA = `[Intro] Em7  Am7  Em7  Am7  Cm6
+
+G               G/F
+Queremos saber
+
+O que vão fazer
+C/E    D7(4)        G 
+Com as novas invenções
+C
+Queremos notícia mais séria
+F7M                       Em7   
+Sobre a descoberta da antimatéria
+  Bm7
+e suas implicações
+C  Am7            Bm7 
+Na emancipação do homem
+C   Am7            Bm7
+Das grandes populações
+C      Am7           Bm7
+Homens pobres das cidades
+C      C#°          C/D  Am7 
+Das estepes dos sertões
+G               G/F
+Queremos saber
+
+Quando vamos ter
+C/E  D7(4)         G 
+Raio laser mais barato
+    C     
+Queremos, de fato, um relato
+F7M          Bb7M        Em7
+Retrato mais sério do mistério da luz
+       Bm7
+Luz do disco voador
+C   Am7           Bm7 
+Pra iluminação do homem
+C      Am7         Bm7 
+Tão carente, sofredor
+C       Am7        Bm7   
+Tão perdido na distância
+C    C#°         C/D  Am7
+Da morada do senhor
+G               G/F
+Queremos saber
+
+Queremos viver
+C/E  D7(4)        G 
+Confiantes no futuro
+C   Am7                        F7M
+Por isso se faz necessário prever
+                        Em7
+Qual o itinerário da ilusão
+     Bm7
+A ilusão do poder
+C       Am7              Bm7  
+Pois se foi permitido ao homem
+C      Am7         Bm7 
+Tantas coisas conhecer
+C     Am7           Bm7
+É melhor que todos saibam
+C     C#°         C/D  Am7
+O que pode acontecer
+G7M            F7M 
+Queremos saber, queremos saber
+G7M            F7M                    G7M 
+Queremos saber, todos queremos saber`;
+
+const DISFARCA_CIFRA = `F7M                   C#7
+Chora, disfarça e chora
+     C7               Am/E                 Cm/Eb   D7
+Aproveita a voz do lamento que já vem a auro____ra
+   Gm7                 C7/E
+A pessoa que tanto querias
+       Am7(5-)          D7
+Antes mesmo de raiar o dia
+    Gm7            C#7  C7
+Deixou o ensaio por outra
+               F7M
+Óh, triste senhora
+
+                                   C#7
+Disfarça e chora, todo pranto tem hora
+     C7             Am7/E                   Cm/Eb     D7
+E eu vejo o seu pranto cair no momento mais cer_____to
+Gm7                   C7/E
+Olhar, gostar só de longe
+ Am7(5-)                  D7
+Não faz ninguém chegar perto
+        Gm7     G7             C#7
+E o seu pranto, óh, triste senhora
+     C7          F7M
+Vai molhar o deserto`;
+
+const MEDEMOTIVO_CIFRA = `[Intro] Dm  Gm7
+
+(Dm  Gm7)
+É engraçado, ás vezes a gente sente fica pensando
+Que está sendo amado, que está amando e que
+Encontrou tudo o que a vida poderia oferecer
+E em cima disso a gente constrói os nossos sonhos
+Os nossos castelos e cria um mundo DE ENCANTO onde tudo é belo
+Até que a mulher que a gente ama, vacila e põe tudo a perder
+E põe tudo a perder
+
+( Dm  Gm7 ) A7
+
+   Dm              Gm7
+Mê de motivo, para ir embora
+      C7(4)        C7  C7(9-)    F7M
+Estou vendo a hora           de te perder
+   Em7(5-)    C#m5-       Dm         Dm7/C
+Mê de motivo,         vai ser agora
+      E7            Em7(5-)      A7
+Estou indo embora o que fazer
+       Dm             Gm7
+Estou indo embora não faz sentido
+  C7(4)       C7  C7(9-)   F7M
+Ficar contigo           melhor assim
+    Em7(5-)     A7        Dm          Dm7/C
+E é nessa hora     que o homem chora
+  E7          Em7(5-)        A7
+A dor é forte demais pra mim
+
+(Dm  Gm7) A7
+
+Já que você quis assim, tudo bem
+Cada um pra o seu lado, a vida é assim mesmo
+Eu vou procurar e sei que vou encontrar
+Alguém melhor que você, espero que seja feliz
+No seu novo caminho, ficar contigo
+Não faz sentido, melhor assim
+
+   Dm              Gm7
+Mê de motivo, foi jogo sujo
+    C7(4)       C7  C7(9-)     F7M
+E agora eu fujo           pra não sofrer
+    Em7(5-)    A7    Dm          Dm7/C
+Fui teu amigo,    te dei o mundo
+  E7                Em7(5-)   A7
+Você foi fundo quis me perder
+ Dm               Gm7
+Agora é tarde não tem mais jeito
+  C7(4)       C7(9-)        F7M
+O teu defeito           não tem perdão
+   Em7(5-)    A7          Dm            Dm7/C
+Eu vou a luta,   que a    vida é curta
+     E7           Em7(5-)       A7
+Não vale a pena sofrer em vão
+
+     Gm7
+Pode crer você pôs tudo a perder
+      Dm
+Não podia me fazer o que fez
+      E7                    Em7(5-)    A7   Dm    D7/F#
+E por mais que voce tente negar,    me dê motivo
+      Gm7
+Podes crer eu vou sair por aí
+     Dm
+E mostrar que posso ser bem feliz
+     E7                       Em7(5-)
+Encontrar alguém que saiba me dar
+   A7    Dm
+Me dar motivo
+         Gm7
+Me dar motivo
+
+( Dm  Gm7 )
+Tchurururu`;
+
 export async function importSamples() {
   const done = [];
   // -- Paralelas (imagem) --
@@ -164,7 +383,7 @@ export async function importSamples() {
       await DB.saveBlob(blobId, blob);
       const fagner = await upsertArtist('Fagner');
       await saveSong({
-        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', favorita: false,
+        id: uid(), artistId: fagner.id, title: 'Paralelas', tom: 'G', fonte: 'Songbook', favorita: false,
         createdAt: Date.now(),
         cifra: {
           fonte: 'imagem',
@@ -180,7 +399,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'Andança')) {
     const beth = await upsertArtist('Beth Carvalho');
     await saveSong({
-      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', favorita: false,
+      id: uid(), artistId: beth.id, title: 'Andança', tom: 'A', fonte: 'CifraClub', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: ANDANCA_CIFRA, digitacoes: ANDANCA_DIGITACOES,
@@ -222,7 +441,7 @@ export async function importSamples() {
   if (!S.songs.some((s) => s.title === 'As Pastorinhas')) {
     const noel = await upsertArtist('Noel Rosa');
     await saveSong({
-      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', favorita: false,
+      id: uid(), artistId: noel.id, title: 'As Pastorinhas', tom: 'G', fonte: 'CifraClub', favorita: false,
       createdAt: Date.now(),
       cifra: {
         fonte: 'texto', texto: PASTORINHAS_CIFRA, digitacoes: PASTORINHAS_DIG,
@@ -231,6 +450,50 @@ export async function importSamples() {
       letra: '', stems: [], full: [],
     });
     done.push('As Pastorinhas (Noel Rosa) — cifra em texto + 15 digitações conferidas');
+  }
+  // -- Oxum (Serena Assumpção) — importada do CifraClub (texto + 4 acordes) --
+  if (!S.songs.some((s) => s.title === 'Oxum')) {
+    const serena = await upsertArtist('Serena Assumpção');
+    await saveSong({
+      id: uid(), artistId: serena.id, title: 'Oxum', tom: 'F#m', fonte: 'CifraClub', favorita: false,
+      createdAt: Date.now(),
+      cifra: {
+        fonte: 'texto', texto: OXUM_CIFRA, digitacoes: OXUM_DIG,
+        acordes: ['F#m', 'Bm7', 'C#m', 'C#m7'],
+      },
+      letra: '', stems: [], full: [],
+    });
+    done.push('Oxum (Serena Assumpção) — cifra em texto importada do CifraClub');
+  }
+  if (!S.songs.some((s) => s.title === "Queremos Saber")) {
+    const a = await upsertArtist("Cássia Eller");
+    await saveSong({
+      id: uid(), artistId: a.id, title: "Queremos Saber", tom: "Em", fonte: 'CifraClub', favorita: false,
+      createdAt: Date.now(),
+      cifra: { fonte: 'texto', texto: QUEREMOS_CIFRA, digitacoes: null, acordes: ["Em7", "Am7", "Cm6", "G", "G/F", "C/E", "D7(4)", "C", "F7M", "Bm7", "C#°", "C/D", "Bb7M", "G7M"] },
+      letra: '', stems: [], full: [],
+    });
+    done.push("Queremos Saber (Cássia Eller) — importada do CifraClub");
+  }
+  if (!S.songs.some((s) => s.title === "Disfarça e Chora")) {
+    const a = await upsertArtist("Cartola");
+    await saveSong({
+      id: uid(), artistId: a.id, title: "Disfarça e Chora", tom: "Dm", fonte: 'CifraClub', favorita: false,
+      createdAt: Date.now(),
+      cifra: { fonte: 'texto', texto: DISFARCA_CIFRA, digitacoes: null, acordes: ["F7M", "C#7", "C7", "Am/E", "Cm/Eb", "D7", "Gm7", "C7/E", "Am7(5-)", "Am7/E", "G7"] },
+      letra: '', stems: [], full: [],
+    });
+    done.push("Disfarça e Chora (Cartola) — importada do CifraClub");
+  }
+  if (!S.songs.some((s) => s.title === "Me Dê Motivo")) {
+    const a = await upsertArtist("Tim Maia");
+    await saveSong({
+      id: uid(), artistId: a.id, title: "Me Dê Motivo", tom: "Dm", fonte: 'CifraClub', favorita: false,
+      createdAt: Date.now(),
+      cifra: { fonte: 'texto', texto: MEDEMOTIVO_CIFRA, digitacoes: null, acordes: ["Dm", "Gm7", "A7", "C7(4)", "C7", "C7(9-)", "F7M", "Em7(5-)", "C#m5-", "Dm7/C", "E7", "D7/F#"] },
+      letra: '', stems: [], full: [],
+    });
+    done.push("Me Dê Motivo (Tim Maia) — importada do CifraClub");
   }
   return done;
 }

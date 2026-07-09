@@ -70,6 +70,7 @@ Artista
         │     ├── arquivo de áudio
         │     ├── volume
         │     └── mute (ativo/silenciado)
+        ├── fonte (origem: CifraClub | Songbook | ...)  (rótulo exibido no cabeçalho; auto pelo tipo da cifra)
         └── favorita (sim/não)               (coração → alimenta a lista "Favoritas")
 
 Lista  (coleção pessoal — ver §7)

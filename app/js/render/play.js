@@ -55,6 +55,18 @@ function parsedCifra(song) {
 }
 
 // -------- blocos --------
+// Cabeçalho de identidade da música (no topo do conteúdo, rola junto).
+function songHeaderHTML(song) {
+  const meta = [];
+  if (song.tom) meta.push(`<span class="tag-tom">Tom ${esc(song.tom)}</span>`);
+  if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
+  return `<div class="song-id">
+    <div class="ttl">${esc(song.title)}</div>
+    <div class="art">${esc(artistName(song))}</div>
+    ${meta.length ? `<div class="meta">${meta.join('<span class="mdot">·</span>')}</div>` : ''}
+  </div>`;
+}
+
 function chordsGridHTML(song, chordNames) {
   if (!chordNames.length) return '';
   const favs = S.chordFavs[song.id] || [];
@@ -102,6 +114,7 @@ function cifraTextHTML(song) {
   }).join('');
   const chordNames = song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsed);
   return `<div class="cifra-scroll" data-autoscroll="1">
+    ${songHeaderHTML(song)}
     <div class="cifra-text" style="font-size:${Math.round(20 * zoom)}px">${lines || '<div class="ly" style="color:var(--muted)">Sem cifra em texto.</div>'}</div>
     ${chordsGridHTML(song, chordNames)}
   </div>`;
@@ -116,6 +129,7 @@ function cifraImageHTML(song) {
   const chordNames = song.cifra?.acordes || [];
   return `<div class="cifra-imgwrap" data-autoscroll="1" data-imgscroll="1">
     <div class="inner">
+      ${songHeaderHTML(song)}
       ${url ? `<img src="${url}" alt="Cifra" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : '<div style="padding:60px;color:var(--muted)">Imagem não encontrada</div>'}
       ${chordNames.length ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}</div>` : ''}
     </div>
@@ -125,6 +139,7 @@ function cifraImageHTML(song) {
 function karaokeHTML(song) {
   const verses = (song.letra || '').replace(/\r\n?/g, '\n').split(/\n{2,}/).map((v) => v.split('\n').filter(Boolean));
   return `<div class="cifra-scroll" data-autoscroll="1">
+    ${songHeaderHTML(song)}
     <div class="karaoke">
       ${verses.map((v, i) => `<div class="verse ${i === 0 ? 'cur' : ''}">${v.map((l) => `<div>${esc(l)}</div>`).join('')}</div>`).join('')
         || '<div style="color:var(--muted)">Sem letra cadastrada.</div>'}
@@ -270,11 +285,8 @@ export function renderPlay() {
   return `<div class="screen">
     <div class="play-head">
       <button class="btn-icon" data-a="goBack" title="Voltar">${I.back()}</button>
-      <div class="play-title">
-        <div class="t">${esc(song.title)}</div>
-        <div class="sub">${esc(artistName(song))}${song.tom ? ` <span class="tag-tom">Tom ${esc(song.tom)}</span>` : ''}</div>
-      </div>
       ${modeSwitch}
+      <span style="flex:1"></span>
       ${zoomCtl}
       <div class="menu-wrap">
         <button class="btn-icon ${S.imgMenuOpen ? 'accent-on' : ''}" data-a="toggleImgMenu" title="Opções">${I.dots()}</button>

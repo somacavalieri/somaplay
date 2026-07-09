@@ -7,6 +7,7 @@ export const CATALOG = {
   // — semente: formas antes embutidas em chords.js (cada uma vira a padrão do seu nome) —
   'C':    [{ frets: [-1, 3, 2, 0, 1, 0], default: true }],
   'C#m':  [{ frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
+  'C#m7': [{ frets: [-1, 4, 6, 4, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
   'D':    [{ frets: [-1, -1, 0, 2, 3, 2], default: true }],
   'D7':   [{ frets: [-1, -1, 0, 2, 1, 2], default: true }],
   'Dm':   [{ frets: [-1, -1, 0, 2, 3, 1], default: true }],
@@ -46,6 +47,29 @@ export const CATALOG = {
   'G/D':    [{ frets: [-1, 5, 5, 4, 3, -1], label: 'baixo em Ré', default: true }],
   'G7/B':   [{ frets: [-1, 2, 3, 0, 3, -1], default: true }],
   'Gm6/Bb': [{ frets: [-1, 1, 2, 0, 3, 0], default: true }],
+  // — cauda longa (MPB/samba/jazz): Queremos Saber, Disfarça e Chora, Me Dê Motivo.
+  //   Voicings derivados e verificados por notas; podem diferir do CifraClub — ajustáveis no app.
+  'Cm6':     [{ frets: [-1, 3, 1, 2, 1, 3], default: true }],
+  'G/F':     [{ frets: [1, -1, 0, 0, 0, 3], default: true }],
+  'D7(4)':   [{ frets: [-1, -1, 0, 2, 1, 3], default: true }],
+  'F7M':     [{ frets: [-1, -1, 3, 2, 1, 0], default: true }],
+  'C#°':     [{ frets: [-1, 4, 5, 3, 5, 3], default: true }],
+  'C/D':     [{ frets: [-1, -1, 0, 0, 1, 0], default: true }],
+  'Bb7M':    [{ frets: [-1, 1, 3, 2, 3, -1], default: true }],
+  'C#7':     [{ frets: [-1, 4, 3, 4, 2, 4], default: true }],
+  'C7':      [{ frets: [-1, 3, 2, 3, 1, 0], default: true }],
+  'Am/E':    [{ frets: [0, 0, 2, 2, 1, 0], default: true }],
+  'Cm/Eb':   [{ frets: [-1, -1, 1, 0, 1, 3], default: true }],
+  'Gm7':     [{ frets: [3, 5, 3, 3, 3, 3], barre: { fret: 3, from: 0, to: 5 }, default: true }],
+  'C7/E':    [{ frets: [0, 3, 2, 3, 1, 0], default: true }],
+  'Am7(5-)': [{ frets: [-1, 0, 1, 0, 1, -1], default: true }],
+  'Am7/E':   [{ frets: [0, 0, 2, 0, 1, 0], default: true }],
+  'C7(4)':   [{ frets: [-1, 3, 3, 3, 1, 1], default: true }],
+  'C7(9-)':  [{ frets: [-1, 3, 2, 3, 2, 3], default: true }],
+  'Em7(5-)': [{ frets: [-1, -1, 2, 3, 3, 3], default: true }],
+  'C#m5-':   [{ frets: [-1, 4, 2, 0, -1, -1], default: true }],
+  'Dm7/C':   [{ frets: [-1, 3, 0, 2, 1, 1], default: true }],
+  'D7/F#':   [{ frets: [2, 0, 0, 2, 1, 2], default: true }],
 };
 
 export function catalogShapes(name) {

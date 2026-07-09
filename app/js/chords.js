@@ -5,7 +5,7 @@ import { catalogDefault } from './chords-catalog.js';
 
 // Token parece um acorde? (aceita extensões com parênteses: 7(b5), 7(13), etc.)
 export function isChordTok(t) {
-  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|\+|\d)*(\([^)]{1,7}\))*(\/[A-G][#b]?)?$/.test(t);
+  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|\+|-|\d)*(\([^)]{1,7}\))*(\/[A-G][#b]?)?$/.test(t);
 }
 
 // Linha é "linha de acordes"? — todos os tokens são acordes (ou marcas comuns)

@@ -476,3 +476,19 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .pick-opt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text)}
 .pick-opt.sel{border-color:var(--accent)}
 .pick-opt .lbl{font-size:11px;color:var(--muted)}
+
+/* ---- cabeçalho de identidade da música (no corpo, rola junto) ---- */
+.song-id{padding:2px 2px 16px}
+.song-id .ttl{font-family:var(--f-title);font-weight:700;font-size:26px;line-height:1.12;color:var(--accent);text-wrap:balance}
+.song-id .art{font-family:var(--f-title);font-weight:600;font-size:16px;color:var(--accent);opacity:.8;margin-top:3px}
+.song-id .meta{display:flex;align-items:center;gap:9px;margin-top:9px;color:var(--muted);font-size:13px}
+.song-id .meta .src{color:var(--muted)}
+.song-id .meta .mdot{color:var(--muted3)}
+/* fonte no formulário de adicionar/editar */
+.fonte-row{display:flex;gap:8px;align-items:center}
+.fonte-row .input{flex:1}
+.btn-ghost.sm.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+@media (max-width:640px){
+  .song-id .ttl{font-size:22px}
+  .song-id .art{font-size:15px}
+}
