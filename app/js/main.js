@@ -357,7 +357,8 @@ const actions = {
     try { await exportLibrary(); toast('Backup exportado'); }
     catch (e) { toast('Falha ao exportar: ' + e.message); }
   },
-  importBackup() { document.getElementById('file-backup').click(); },
+  importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
+  importBackupMerge() { S.importMode = 'merge'; document.getElementById('file-backup').click(); },
   async importSamples() {
     try {
       const done = await importSamples();
@@ -422,8 +423,7 @@ function wireAddEditFiles() {
   };
 }
 
-// A tela de Configurações tem o <input id="file-backup">. Este handler precisa
-// ser religado a cada render da tela (o innerHTML recria o elemento).
+// A tela de Configurações tem o <input id="file-backup">. Religado a cada render.
 function wireBackupInput() {
   const backup = document.getElementById('file-backup');
   if (!backup) return;
@@ -431,14 +431,21 @@ function wireBackupInput() {
     const f = backup.files[0];
     backup.value = '';
     if (!f) return;
+    const merge = S.importMode === 'merge';
     const total = S.songs.length;
-    if (total > 0 && !confirm(`Importar "${f.name}" vai SUBSTITUIR a biblioteca deste aparelho (${total} música${total === 1 ? '' : 's'}) pela do backup. As músicas atuais deste aparelho serão apagadas. Continuar?`)) return;
-    toast('Importando biblioteca...');
+    if (merge) {
+      if (!confirm(`Adicionar/atualizar do backup "${f.name}"? As músicas atuais NÃO serão apagadas — as com o mesmo id são atualizadas.`)) return;
+    } else if (total > 0 && !confirm(`Importar "${f.name}" vai SUBSTITUIR a biblioteca deste aparelho (${total} música${total === 1 ? '' : 's'}) pela do backup. As músicas atuais deste aparelho serão apagadas. Continuar?`)) {
+      return;
+    }
+    toast(merge ? 'Mesclando do backup...' : 'Importando biblioteca...');
     try {
-      const res = await importLibrary(f);
+      const res = await importLibrary(f, { merge });
       applyTheme();
       update();
-      toast(`Biblioteca importada: ${res.artists} artistas, ${res.songs} músicas`);
+      toast(merge
+        ? `Backup mesclado: +${res.added} nova${res.added === 1 ? '' : 's'}, ${res.updated} atualizada${res.updated === 1 ? '' : 's'}`
+        : `Biblioteca importada: ${res.artists} artistas, ${res.songs} músicas`);
     } catch (e) { toast('Falha na importação: ' + e.message); }
   };
 }

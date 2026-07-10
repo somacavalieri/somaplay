@@ -58,8 +58,9 @@ export function renderSettings() {
           <div class="storage-bar"><div id="storage-fill" style="width:2%"></div></div>
           <div class="pair-btns">
             <button data-a="exportBackup">${I.download()}Exportar biblioteca</button>
-            <button data-a="importBackup">${I.uploadSm()}Importar biblioteca</button>
+            <button data-a="importBackup">${I.uploadSm()}Importar (substituir)</button>
           </div>
+          <button class="btn-ghost" style="width:100%;margin-top:8px;height:44px;justify-content:center" data-a="importBackupMerge">${I.uploadSm()}Adicionar/atualizar do backup</button>
         </div>
 
         <button class="setting-row link" data-a="importSamples">
