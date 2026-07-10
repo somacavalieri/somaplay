@@ -20,6 +20,7 @@ export const S = {
 
   // popover adicionar-à-lista
   popoverSongId: null,
+  importMode: 'replace',   // replace | merge — modo do próximo import de backup
 
   // biblioteca (cache em memória, espelho do IDB)
   artists: [],

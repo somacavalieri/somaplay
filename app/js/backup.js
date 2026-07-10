@@ -3,6 +3,7 @@
 // concatenados na ordem do manifest. Sem base64 — leitura por slice (memória ok).
 import { DB } from './db.js';
 import { S } from './state.js';
+import { mergePlan } from './merge.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -42,7 +43,7 @@ export async function exportLibrary() {
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
 
-export async function importLibrary(file) {
+export async function importLibrary(file, { merge = false } = {}) {
   const headProbe = await file.slice(0, MAGIC.length + 11).text();
   if (!headProbe.startsWith(MAGIC)) throw new Error('Arquivo não é um backup do Soma_play');
   const jsonLen = parseInt(headProbe.slice(MAGIC.length, MAGIC.length + 10), 10);
@@ -51,27 +52,39 @@ export async function importLibrary(file) {
   const manifest = JSON.parse(json);
   if (!manifest.songs || !manifest.artists) throw new Error('Backup inválido');
 
-  // Substitui a biblioteca deste aparelho pela do backup (evita duplicatas ao
-  // reimportar). É seguro: settings ficam; o backup traz artistas/músicas/listas/arquivos.
-  await DB.wipe();
+  // Substituir apaga tudo antes; merge preserva a biblioteca (upsert por id).
+  if (!merge) await DB.wipe();
 
-  // blobs
+  // blobs — upsert por id nos dois modos
   let off = jsonStart + jsonLen;
   for (const meta of manifest.blobs || []) {
     const chunk = file.slice(off, off + meta.size, meta.type);
     await DB.saveBlob(meta.id, chunk);
     off += meta.size;
   }
-  // metadados (substitui a biblioteca)
-  for (const a of manifest.artists) await DB.putArtist(a);
-  for (const s of manifest.songs) await DB.putSong(s);
-  for (const l of manifest.lists || []) await DB.putList(l);
-  if (manifest.settings) {
-    S.settings = { ...S.settings, ...manifest.settings };
-    await DB.saveSettings(S.settings);
+
+  let result;
+  if (merge) {
+    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists }, manifest);
+    for (const a of plan.artists) await DB.putArtist(a);
+    for (const s of plan.songs) await DB.putSong(s);
+    for (const l of plan.lists) await DB.putList(l);
+    result = { added: plan.added, updated: plan.updated };
+  } else {
+    for (const a of manifest.artists) await DB.putArtist(a);
+    for (const s of manifest.songs) await DB.putSong(s);
+    for (const l of manifest.lists || []) await DB.putList(l);
+    if (manifest.settings) {
+      S.settings = { ...S.settings, ...manifest.settings };
+      await DB.saveSettings(S.settings);
+    }
+    result = { artists: manifest.artists.length, songs: manifest.songs.length };
   }
-  S.artists = manifest.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
-  S.songs = manifest.songs;
-  S.lists = manifest.lists || [];
-  return { songs: S.songs.length, artists: S.artists.length };
+
+  // recarrega o estado do IndexedDB (consistente nos dois modos)
+  const all = await DB.loadAll();
+  S.artists = all.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+  S.songs = all.songs;
+  S.lists = all.lists;
+  return result;
 }

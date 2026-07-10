@@ -185,7 +185,7 @@ Todos os canais de uma música tocam **alinhados ao mesmo relógio** (começam j
 - **Tamanho/zoom** padrão da cifra.
 - **Velocidade padrão** da rolagem automática.
 - **Volume master** e, no desktop, **escolha da saída de áudio**.
-- **Backup:** exportar/importar a biblioteca, **incluindo listas e favoritas** (seguro contra perda e para levar a outro aparelho).
+- **Backup:** exportar/importar a biblioteca, **incluindo listas e favoritas** (seguro contra perda e para levar a outro aparelho). **Importar** tem dois modos: **substituir** (apaga e troca pela do backup) e **adicionar/atualizar (merge)** — upsert por id, deduplica artista por nome e **não apaga** a biblioteca. Ver design [`../specs/2026-07-10-import-com-merge-design.md`](2026-07-10-import-com-merge-design.md).
 
 ---
 
