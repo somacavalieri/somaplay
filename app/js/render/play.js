@@ -240,6 +240,7 @@ export function renderPlay() {
   const song = currentSong();
   if (!song) { S.screen = 'home'; return '<div></div>'; }
   const isImg = S.viewMode === 'cifra' && song.cifra?.fonte === 'imagem';
+  const isTextCifra = song.cifra?.fonte !== 'imagem';
   const isKar = S.viewMode === 'karaoke';
   const hasKaraoke = !!(song.letra && song.letra.trim());
   const hasMixer = (song.stems || []).length > 0 || (song.full || []).length > 0;
@@ -264,6 +265,9 @@ export function renderPlay() {
       <button data-a="menuFav"><span style="display:flex;color:${song.favorita ? 'var(--accent)' : 'var(--muted)'}">${I.heart(song.favorita, 18)}</span><span style="flex:1;text-align:left">Favoritar</span><span class="state ${song.favorita ? 'on' : ''}">${song.favorita ? 'Favoritada' : ''}</span></button>
       <button data-a="menuAddList">${I.addList(18)}<span style="flex:1;text-align:left">Adicionar à lista</span></button>
       <div class="sep"></div>
+      ${isTextCifra ? `
+        <button data-a="toggleMiniaturas">${I.gridChord(18)}<span style="flex:1;text-align:left">Miniaturas na música</span><span class="state ${S.settings.cifraMiniaturas ? 'on' : ''}">${S.settings.cifraMiniaturas ? 'Ligado' : 'Desligado'}</span></button>
+        <div class="sep"></div>` : ''}
       ${isImg ? `
         <button data-a="toggleInvert">${I.invert()}<span style="flex:1;text-align:left">Inverter cores</span><span class="state ${S.imgInvert ? 'on' : ''}">${S.imgInvert ? 'Ligado' : 'Desligado'}</span></button>
         <button data-a="toggleVariant" ${variantEnabled ? '' : 'disabled'}>${I.swap()}<span style="flex:1;text-align:left">Formato da cifra</span><span class="state">${S.imgVariant === 'fechada' ? 'Fechada' : 'Aberta'}</span></button>

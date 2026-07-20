@@ -205,6 +205,11 @@ const actions = {
   menuFav() { toggleFav(S.currentSongId); S.imgMenuOpen = false; update(); },
   menuAddList() { S.imgMenuOpen = false; S.popoverSongId = S.currentSongId; update(); },
   toggleInvert() { S.imgInvert = !S.imgInvert; update(); },
+  toggleMiniaturas() {
+    S.settings.cifraMiniaturas = !S.settings.cifraMiniaturas;
+    saveSettings();
+    update();
+  },
   toggleVariant() {
     S.imgVariant = S.imgVariant === 'fechada' ? 'aberta' : 'fechada';
     S.imgMenuOpen = false;
