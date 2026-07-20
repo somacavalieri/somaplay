@@ -59,6 +59,24 @@ export function extractChords(parsed) {
   return out;
 }
 
+// Layout da fileira de miniaturas (spec 2026-07-20): tokens da linha de acordes
+// → posição x (px) na coluna do caractere (fonte mono), colisões empurram para
+// a direita e o empurrão se propaga. blockWidth(tok, isChord) → largura px.
+export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
+  const out = [];
+  let cursor = 0;
+  const re = /\S+/g;
+  let m;
+  while ((m = re.exec(chordLine))) {
+    const tok = m[0];
+    const isChord = isChordTok(tok);
+    const x = Math.max(m.index * chPx, cursor);
+    out.push({ tok, isChord, x });
+    cursor = x + blockWidth(tok, isChord) + gap;
+  }
+  return out;
+}
+
 // Margem esquerda do indicador de casa (ex.: "3ª") — 0 quando a forma começa na 1ª posição.
 function diagLm(d, small) {
   if (!d) return 0;
