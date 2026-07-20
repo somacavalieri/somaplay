@@ -4,7 +4,7 @@
 import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
-import { parseCifraText, extractChords, chordSVG } from '../chords.js';
+import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow } from '../chords.js';
 import { catalogShapes } from '../chords-catalog.js';
 import { offlineBadge } from './home.js';
 
@@ -102,20 +102,59 @@ function pinnedBarHTML(song, chordNames) {
   </div>`;
 }
 
+// ---- miniaturas inline (spec 2026-07-20) ----
+// Medição de texto com as fontes reais (canvas compartilhado; não toca o DOM).
+let _measureCtx = null;
+function textMeasurer(px, family, weight = 700) {
+  if (!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d');
+  const font = `${weight} ${px}px ${family}`;
+  return (t) => { _measureCtx.font = font; return _measureCtx.measureText(t).width; };
+}
+
+// Medidores da fileira — recriados a cada render da cifra (acompanham o zoom).
+function rowMeasurers(cifraFontPx) {
+  const css = getComputedStyle(document.documentElement);
+  const mono = css.getPropertyValue('--f-mono');
+  const title = css.getPropertyValue('--f-title');
+  return {
+    chPx: textMeasurer(cifraFontPx, mono)('0'), // largura do caractere da cifra (.ch é mono bold)
+    label: textMeasurer(13, title),             // nome do acorde (.ch-diag .nm)
+    tok: textMeasurer(13, mono),                // token não-acorde (.ch-tok)
+  };
+}
+
+// Fileira nome+diagrama no lugar da linha de acordes (só linhas com letra).
+function chordDiagRowHTML(chordLine, dict, meas) {
+  const items = layoutChordRow(chordLine, meas.chPx, (tok, isChord) =>
+    (isChord ? Math.max(chordDiagWidth(tok, true, dict), meas.label(tok)) : meas.tok(tok)));
+  const inner = items.map((it) => (it.isChord
+    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPicker" data-id="${esc(it.tok)}" title="Trocar variação"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.tok, true, dict)}</button>`
+    : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
+  return `<div class="ch-diag-row">${inner}</div>`;
+}
+
 function cifraTextHTML(song) {
   const parsed = parsedCifra(song);
   const zoom = S.settings.cifraZoom / 100;
+  const fontPx = Math.round(20 * zoom);
+  const mini = S.settings.cifraMiniaturas;
+  const dict = song.cifra?.digitacoes || null;
+  const meas = mini ? rowMeasurers(fontPx) : null;
   const lines = parsed.map((ln) => {
     let h = '';
     if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
-    if (ln.hasChords) h += `<div class="ch">${esc(ln.chords)}</div>`;
+    if (ln.hasChords) {
+      h += (mini && ln.hasLyric)
+        ? chordDiagRowHTML(ln.chords, dict, meas)
+        : `<div class="ch">${esc(ln.chords)}</div>`;
+    }
     if (ln.hasLyric) h += `<div class="ly">${esc(ln.lyric)}</div>`;
     return h;
   }).join('');
   const chordNames = song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsed);
   return `<div class="cifra-scroll" data-autoscroll="1">
     ${songHeaderHTML(song)}
-    <div class="cifra-text" style="font-size:${Math.round(20 * zoom)}px">${lines || '<div class="ly" style="color:var(--muted)">Sem cifra em texto.</div>'}</div>
+    <div class="cifra-text" style="font-size:${fontPx}px">${lines || '<div class="ly" style="color:var(--muted)">Sem cifra em texto.</div>'}</div>
     ${chordsGridHTML(song, chordNames)}
   </div>`;
 }

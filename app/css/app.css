@@ -239,6 +239,12 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .cifra-text .ch{color:var(--accent);font-weight:700;white-space:pre;min-height:6px}
 .cifra-text .ly{color:var(--text);white-space:pre-wrap;margin-bottom:5px}
 
+/* miniaturas inline ("Miniaturas na música") */
+.cifra-text .ch-diag-row{position:relative;height:100px;margin:6px 0 2px}
+.ch-diag{position:absolute;top:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:none;border:0;padding:0;cursor:pointer}
+.ch-diag .nm{font-family:var(--f-title);font-weight:700;font-size:13px;line-height:1;color:var(--accent);white-space:nowrap}
+.ch-diag-row .ch-tok{position:absolute;top:0;font-family:var(--f-mono);font-weight:700;font-size:13px;color:var(--accent);white-space:pre}
+
 .chords-block{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
 .chords-block .hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
 .chords-block .hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
