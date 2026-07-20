@@ -59,19 +59,47 @@ export function extractChords(parsed) {
   return out;
 }
 
+// Layout da fileira de miniaturas (spec 2026-07-20): tokens da linha de acordes
+// → posição x (px) na coluna do caractere (fonte mono), colisões empurram para
+// a direita e o empurrão se propaga. blockWidth(tok, isChord) → largura px.
+export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
+  const out = [];
+  let cursor = 0;
+  const re = /\S+/g;
+  let m;
+  while ((m = re.exec(chordLine))) {
+    const tok = m[0];
+    const isChord = isChordTok(tok);
+    const x = Math.max(m.index * chPx, cursor);
+    out.push({ tok, isChord, x });
+    cursor = x + blockWidth(tok, isChord) + gap;
+  }
+  return out;
+}
+
+// Margem esquerda do indicador de casa (ex.: "3ª") — 0 quando a forma começa na 1ª posição.
+function diagLm(d, small) {
+  if (!d) return 0;
+  const FR = 4;
+  const p = d.frets.filter((f) => f > 0);
+  const mx = p.length ? Math.max(...p) : 1, mn = p.length ? Math.min(...p) : 1;
+  return (mx <= FR ? 1 : mn) > 1 ? (small ? 12 : 15) : 0;
+}
+
+// Largura total (px) do SVG que chordSVG(name, small, dict) gera — permite ao
+// layout das miniaturas inline calcular posições sem renderizar o SVG.
+export function chordDiagWidth(name, small, dict) {
+  const d = (dict && dict[name]) || catalogDefault(name);
+  return (small ? 64 : 84) + diagLm(d, small);
+}
+
 // Diagrama SVG do acorde (portado do design; dict = digitações da música)
 export function chordSVG(name, small, dict) {
   const d = (dict && dict[name]) || catalogDefault(name);
   const W0 = small ? 64 : 84, H = small ? 80 : 104;
   const padX = small ? 9 : 11, padTop = small ? 17 : 21, padBot = small ? 7 : 9;
   const S = 6, FR = 4, gh = H - padTop - padBot;
-  let baseCalc = 1;
-  if (d) {
-    const p = d.frets.filter((f) => f > 0);
-    const mx = p.length ? Math.max(...p) : 1, mn = p.length ? Math.min(...p) : 1;
-    baseCalc = mx <= FR ? 1 : mn;
-  }
-  const lm = baseCalc > 1 ? (small ? 12 : 15) : 0;
+  const lm = diagLm(d, small);
   const W = W0 + lm, gw = W0 - padX * 2;
   const cs = gw / (S - 1), rs = gh / FR, xOf = (i) => padX + lm + i * cs;
   const strCol = 'var(--muted2)', dotCol = 'var(--accent)', nutCol = 'var(--muted3)', mkCol = 'var(--muted3)', txtCol = 'var(--muted)';

@@ -53,6 +53,7 @@ export const S = {
   // configurações
   settings: {
     theme: 'dark', awake: true, cifraZoom: 110, defaultSpeed: 3, masterVol: 80,
+    cifraMiniaturas: false,
   },
 };
 
