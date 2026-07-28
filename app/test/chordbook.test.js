@@ -101,3 +101,18 @@ test('songsUsingVar: só as músicas que apontam para aquela variação', () => 
   ];
   assert.deepEqual(songsUsingVar(songs, 'Bb7M', 'u:1').map((s) => s.id), ['s1']);
 });
+
+test('mergeShapes: a forma devolvida não compartilha frets/barre com o catálogo', () => {
+  const l = mergeShapes(builtinShapes('F'), null);
+  l[0].frets[0] = 99;
+  l[0].barre.fret = 9;
+  const de_novo = mergeShapes(builtinShapes('F'), null);
+  assert.equal(de_novo[0].frets[0], 1);
+  assert.equal(de_novo[0].barre.fret, 1);
+});
+
+test('mergeShapes: a forma devolvida não compartilha frets com o registro do usuário', () => {
+  const rec = { name: 'E7', vars: [{ id: 'u:1', frets: [0, 2, 0, 1, 3, 0] }], hidden: [], defaultId: null };
+  mergeShapes(builtinShapes('E7'), rec)[2].frets[0] = 99;
+  assert.equal(rec.vars[0].frets[0], 0);
+});

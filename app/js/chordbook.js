@@ -5,8 +5,15 @@
 import { CATALOG } from './chords-catalog.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
+// Copia frets e barre para isolar da semente só-leitura do catálogo.
 export function builtinShapes(name) {
-  return (CATALOG[name] || []).map((s, i) => ({ ...s, id: `b:${name}:${i}`, origin: 'builtin' }));
+  return (CATALOG[name] || []).map((s, i) => ({
+    ...s,
+    frets: s.frets.slice(),
+    ...(s.barre ? { barre: { ...s.barre } } : {}),
+    id: `b:${name}:${i}`,
+    origin: 'builtin',
+  }));
 }
 
 // Identidade de uma forma (casas + pestana) — usada para não duplicar variação.
@@ -34,7 +41,12 @@ export function mergeShapes(builtins, rec) {
   const defId = (wanted && out.some((s) => s.id === wanted) ? wanted : null)
     || (out.find((s) => s.default) || {}).id
     || (out[0] ? out[0].id : null);
-  return out.map((s) => ({ ...s, isDefault: s.id === defId }));
+  return out.map((s) => ({
+    ...s,
+    frets: s.frets.slice(),
+    ...(s.barre ? { barre: { ...s.barre } } : {}),
+    isDefault: s.id === defId,
+  }));
 }
 
 // Reconciliação de dois registros no import com merge — o local vence o conflito.
