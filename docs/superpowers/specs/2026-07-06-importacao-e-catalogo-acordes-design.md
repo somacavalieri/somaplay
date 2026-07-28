@@ -30,7 +30,7 @@ O MVP já está no ar. Ao subir a primeira música real (**As Pastorinhas**, Noe
 - **D. Pipeline de importação (autoria comigo)** — convenção de arquivo por música no repo + gerador → `.somaplay`.
 
 **Fora deste MVP (registrado):**
-- Catálogo **editável dentro do app**, botão **"promover voicing"** para o catálogo, e **sincronização do catálogo no backup**.
+- ~~Catálogo **editável dentro do app**, botão **"promover voicing"** para o catálogo, e **sincronização do catálogo no backup**.~~ → **entrou** em [`2026-07-28-editor-de-acordes-e-dicionario-design.md`](2026-07-28-editor-de-acordes-e-dicionario-design.md).
 - **Imagem chapada dos diagramas** como fallback de exibição por acorde.
 - Geração de diagramas a partir do texto / transposição (já em §11 do PRD).
 
