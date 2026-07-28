@@ -4,7 +4,7 @@
 //   lists { id, nome, fixada, musicas[] } · settings { key:'main', ... }
 
 const DB_NAME = 'somaplay';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _db = null;
 let _opfsRoot = null; // null = ainda não checado; false = indisponível
@@ -20,6 +20,7 @@ function idb() {
       if (!d.objectStoreNames.contains('lists')) d.createObjectStore('lists', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
       if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'id' }); // fallback OPFS
+      if (!d.objectStoreNames.contains('chordbook')) d.createObjectStore('chordbook', { keyPath: 'name' });
     };
     req.onsuccess = () => { _db = req.result; resolve(_db); };
     req.onerror = () => reject(req.error);
@@ -75,6 +76,10 @@ export const DB = {
   deleteSong(id) { return tx('songs', 'readwrite', (s) => s.delete(id)); },
   putList(l) { return tx('lists', 'readwrite', (s) => s.put(l)); },
   deleteList(id) { return tx('lists', 'readwrite', (s) => s.delete(id)); },
+
+  loadChordbook() { return reqAll('chordbook'); },
+  putChordName(rec) { return tx('chordbook', 'readwrite', (s) => s.put(rec)); },
+  clearChordbook() { return tx('chordbook', 'readwrite', (s) => s.clear()); },
 
   loadSettings() {
     return idb().then((d) => new Promise((resolve) => {

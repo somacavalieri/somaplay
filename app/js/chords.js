@@ -1,7 +1,7 @@
 // chords.js — diagramas SVG e parser de cifra em texto.
 // As formas (voicings) vivem no catálogo (chords-catalog.js); aqui só o desenho.
 // Portado do design visual aprovado (Soma Play.html).
-import { catalogDefault } from './chords-catalog.js';
+import { defaultShape } from './chordbook.js';
 
 // Token parece um acorde? (aceita extensões com parênteses: 7(b5), 7(13), etc.)
 export function isChordTok(t) {
@@ -89,13 +89,13 @@ function diagLm(d, small) {
 // Largura total (px) do SVG que chordSVG(name, small, dict) gera — permite ao
 // layout das miniaturas inline calcular posições sem renderizar o SVG.
 export function chordDiagWidth(name, small, dict) {
-  const d = (dict && dict[name]) || catalogDefault(name);
+  const d = (dict && dict[name]) || defaultShape(name);
   return (small ? 64 : 84) + diagLm(d, small);
 }
 
 // Diagrama SVG do acorde (portado do design; dict = digitações da música)
 export function chordSVG(name, small, dict) {
-  const d = (dict && dict[name]) || catalogDefault(name);
+  const d = (dict && dict[name]) || defaultShape(name);
   const W0 = small ? 64 : 84, H = small ? 80 : 104;
   const padX = small ? 9 : 11, padTop = small ? 17 : 21, padBot = small ? 7 : 9;
   const S = 6, FR = 4, gh = H - padTop - padBot;

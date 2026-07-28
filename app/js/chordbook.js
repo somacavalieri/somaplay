@@ -3,6 +3,7 @@
 // forma fundida: { id, frets, barre?, label?, origin:'builtin'|'user', isDefault }
 // registro do usuário: { name, vars:[{id,frets,barre?,label}], hidden:[id], defaultId }
 import { CATALOG } from './chords-catalog.js';
+import { DB, uid } from './db.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
 // Copia frets e barre para isolar da semente só-leitura do catálogo.
@@ -69,4 +70,99 @@ export function songsUsingVar(songs, name, varId) {
     const d = s && s.cifra && s.cifra.digitacoes && s.cifra.digitacoes[name];
     return !!d && d.varId === varId;
   });
+}
+
+// ---------- estado (espelho do store 'chordbook') ----------
+const BOOK = new Map();   // nome -> registro do usuário
+const CACHE = new Map();  // nome -> lista fundida (invalidada a cada escrita)
+
+function rec(name) {
+  let r = BOOK.get(name);
+  if (!r) { r = { name, vars: [], hidden: [], defaultId: null }; BOOK.set(name, r); }
+  return r;
+}
+
+// Persistência é "melhor esforço": em Node (testes) não há IndexedDB e o
+// dicionário funciona só em memória.
+function persist(r) {
+  CACHE.delete(r.name);
+  DB.putChordName(r).catch(() => {});
+}
+
+export async function loadChordbook() {
+  BOOK.clear(); CACHE.clear();
+  let recs = [];
+  try { recs = await DB.loadChordbook(); } catch (e) { recs = []; }
+  for (const r of recs) BOOK.set(r.name, { name: r.name, vars: r.vars || [], hidden: r.hidden || [], defaultId: r.defaultId || null });
+}
+
+export function chordbookRecords() { return [...BOOK.values()]; }
+
+export function shapesOf(name) {
+  if (CACHE.has(name)) return CACHE.get(name);
+  const list = mergeShapes(builtinShapes(name), BOOK.get(name));
+  CACHE.set(name, list);
+  return list;
+}
+
+export function defaultShape(name) { return shapesOf(name).find((s) => s.isDefault) || null; }
+export function shapeById(name, id) { return shapesOf(name).find((s) => s.id === id) || null; }
+export function labelsOf(name) { return shapesOf(name).map((s) => s.label || '').filter(Boolean); }
+export function hasHidden(name) { const r = BOOK.get(name); return !!(r && r.hidden.length); }
+
+export function findShape(name, frets, barre) {
+  const k = shapeKey({ frets, barre: barre || null });
+  return shapesOf(name).find((s) => shapeKey(s) === k) || null;
+}
+
+export function allNames() {
+  return [...new Set([...Object.keys(CATALOG), ...BOOK.keys()])].sort((a, b) => a.localeCompare(b, 'pt'));
+}
+
+// Grava/atualiza uma variação; sem id, cria uma nova. Devolve o id.
+export function upsertVar(name, shape) {
+  const r = rec(name);
+  const v = {
+    id: shape.id || ('u:' + uid()),
+    frets: shape.frets.slice(),
+    ...(shape.barre ? { barre: { ...shape.barre } } : {}),
+    label: shape.label || '',
+  };
+  const i = r.vars.findIndex((x) => x.id === v.id);
+  if (i >= 0) r.vars[i] = v; else r.vars.push(v);
+  r.hidden = r.hidden.filter((x) => x !== v.id);
+  persist(r);
+  return v.id;
+}
+
+export function removeVar(name, id) {
+  const r = rec(name);
+  r.vars = r.vars.filter((v) => v.id !== id);
+  if (id.startsWith('b:') && !r.hidden.includes(id)) r.hidden.push(id);
+  if (r.defaultId === id) r.defaultId = null;
+  persist(r);
+}
+
+export function setDefault(name, id) { const r = rec(name); r.defaultId = id; persist(r); }
+export function restoreBuiltins(name) { const r = rec(name); r.hidden = []; persist(r); }
+
+// ---------- backup (Task 8) ----------
+export async function replaceChordbook(recs) {
+  try { await DB.clearChordbook(); } catch (e) { /* sem IndexedDB */ }
+  BOOK.clear(); CACHE.clear();
+  for (const r of recs || []) {
+    const n = { name: r.name, vars: r.vars || [], hidden: r.hidden || [], defaultId: r.defaultId || null };
+    BOOK.set(n.name, n);
+    await DB.putChordName(n).catch(() => {});
+  }
+}
+
+export async function mergeChordbookRecords(recs) {
+  for (const inc of recs || []) {
+    if (!inc || !inc.name) continue;
+    const m = mergeRecords(BOOK.get(inc.name), inc);
+    BOOK.set(m.name, m);
+    CACHE.delete(m.name);
+    await DB.putChordName(m).catch(() => {});
+  }
 }

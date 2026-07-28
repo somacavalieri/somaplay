@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { builtinShapes, mergeShapes, shapeKey, mergeRecords, songsUsingVar } from '../js/chordbook.js';
+import {
+  builtinShapes, mergeShapes, shapeKey, mergeRecords, songsUsingVar,
+  shapesOf, defaultShape, shapeById, findShape, labelsOf,
+  upsertVar, removeVar, setDefault, restoreBuiltins, hasHidden, allNames,
+} from '../js/chordbook.js';
 
 test('builtinShapes: ids sintéticos pela posição no catálogo', () => {
   const l = builtinShapes('E7'); // E7 tem 2 formas no catálogo
@@ -115,4 +119,77 @@ test('mergeShapes: a forma devolvida não compartilha frets com o registro do us
   const rec = { name: 'E7', vars: [{ id: 'u:1', frets: [0, 2, 0, 1, 3, 0] }], hidden: [], defaultId: null };
   mergeShapes(builtinShapes('E7'), rec)[2].frets[0] = 99;
   assert.equal(rec.vars[0].frets[0], 0);
+});
+
+test('upsertVar: cria variação nova com id u: e ela aparece em shapesOf', () => {
+  const id = upsertVar('A7', { frets: [-1, 0, 2, 0, 2, 3], label: 'com 9ª' });
+  assert.ok(id.startsWith('u:'));
+  const l = shapesOf('A7');
+  assert.equal(l.length, 2); // 1 embutida + 1 nova
+  assert.equal(l[1].id, id);
+  assert.equal(l[1].label, 'com 9ª');
+});
+
+test('upsertVar com id existente atualiza no lugar (não duplica)', () => {
+  const id = upsertVar('Am7', { frets: [-1, 0, 2, 0, 1, 3] });
+  upsertVar('Am7', { id, frets: [-1, 0, 2, 0, 1, 0], label: 'ajustada' });
+  const l = shapesOf('Am7');
+  assert.equal(l.length, 2);
+  assert.deepEqual(l[1].frets, [-1, 0, 2, 0, 1, 0]);
+  assert.equal(l[1].label, 'ajustada');
+});
+
+test('upsertVar com id de embutida vira override e o desenho muda', () => {
+  upsertVar('D7', { id: 'b:D7:0', frets: [-1, -1, 0, 2, 1, 3] });
+  const l = shapesOf('D7');
+  assert.equal(l.length, 1);
+  assert.deepEqual(l[0].frets, [-1, -1, 0, 2, 1, 3]);
+  assert.deepEqual(defaultShape('D7').frets, [-1, -1, 0, 2, 1, 3]);
+});
+
+test('removeVar: variação do usuário some da lista', () => {
+  const id = upsertVar('Dm7', { frets: [-1, -1, 0, 2, 1, 1] });
+  assert.equal(shapesOf('Dm7').length, 2);
+  removeVar('Dm7', id);
+  assert.equal(shapesOf('Dm7').length, 1);
+});
+
+test('removeVar: embutida vira lápide e restoreBuiltins traz de volta', () => {
+  removeVar('Em7', 'b:Em7:0');
+  assert.equal(shapesOf('Em7').length, 0);
+  assert.equal(hasHidden('Em7'), true);
+  restoreBuiltins('Em7');
+  assert.equal(shapesOf('Em7').length, 1);
+  assert.equal(hasHidden('Em7'), false);
+});
+
+test('setDefault muda a padrão e defaultShape acompanha', () => {
+  const id = upsertVar('G7', { frets: [3, 5, 3, 4, 3, 3], label: 'pestana 3ª' });
+  setDefault('G7', id);
+  assert.equal(defaultShape('G7').id, id);
+  assert.equal(shapeById('G7', id).label, 'pestana 3ª');
+});
+
+test('findShape acha forma idêntica (dedupe) e ignora forma diferente', () => {
+  const id = upsertVar('B7', { frets: [-1, 2, 1, 2, 0, 2], barre: { fret: 2, from: 1, to: 5 } });
+  const achou = findShape('B7', [-1, 2, 1, 2, 0, 2], { fret: 2, from: 1, to: 5 });
+  assert.equal(achou.id, id);
+  assert.equal(findShape('B7', [-1, 2, 1, 2, 0, 2], null).id, 'b:B7:0'); // sem pestana = a embutida
+  assert.equal(findShape('B7', [9, 9, 9, 9, 9, 9], null), null);
+});
+
+test('labelsOf devolve os rótulos já usados naquele nome', () => {
+  upsertVar('Bm', { frets: [-1, 2, 4, 4, 3, 2], label: 'minha pestana' });
+  assert.ok(labelsOf('Bm').includes('minha pestana'));
+});
+
+test('allNames inclui nome que só existe no dicionário do usuário', () => {
+  upsertVar('Zz9', { frets: [1, 1, 1, 1, 1, 1] });
+  const n = allNames();
+  assert.ok(n.includes('Zz9'));
+  assert.ok(n.includes('C'));
+});
+
+test('defaultShape: nome desconhecido → null', () => {
+  assert.equal(defaultShape('Qq0'), null);
 });

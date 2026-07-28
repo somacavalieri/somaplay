@@ -1,6 +1,7 @@
 // state.js — estado central + operações da biblioteca (write-through pro IndexedDB)
 import { DB, uid } from './db.js';
 import { AudioEngine } from './audio.js';
+import { loadChordbook } from './chordbook.js';
 
 export const S = {
   // navegação
@@ -99,6 +100,7 @@ export async function initState() {
   S.artists = lib.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   S.songs = lib.songs;
   S.lists = lib.lists;
+  await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
   S.scrollSpeed = S.settings.defaultSpeed;
