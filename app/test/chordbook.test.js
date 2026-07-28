@@ -1,0 +1,103 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { builtinShapes, mergeShapes, shapeKey, mergeRecords, songsUsingVar } from '../js/chordbook.js';
+
+test('builtinShapes: ids sintéticos pela posição no catálogo', () => {
+  const l = builtinShapes('E7'); // E7 tem 2 formas no catálogo
+  assert.equal(l.length, 2);
+  assert.equal(l[0].id, 'b:E7:0');
+  assert.equal(l[1].id, 'b:E7:1');
+  assert.equal(l[0].origin, 'builtin');
+});
+
+test('builtinShapes: nome desconhecido → lista vazia', () => {
+  assert.deepEqual(builtinShapes('Zx9'), []);
+});
+
+test('mergeShapes: sem delta do usuário sai o catálogo com a padrão marcada', () => {
+  const l = mergeShapes(builtinShapes('E7'), null);
+  assert.equal(l.length, 2);
+  assert.equal(l[0].isDefault, true);
+  assert.equal(l[1].isDefault, false);
+});
+
+test('mergeShapes: variação do usuário entra depois das embutidas', () => {
+  const rec = { name: 'E7', vars: [{ id: 'u:1', frets: [0, 2, 0, 1, 3, 0], label: 'minha' }], hidden: [], defaultId: null };
+  const l = mergeShapes(builtinShapes('E7'), rec);
+  assert.equal(l.length, 3);
+  assert.equal(l[2].id, 'u:1');
+  assert.equal(l[2].origin, 'user');
+});
+
+test('mergeShapes: override por id substitui a embutida no lugar dela', () => {
+  const rec = { name: 'E7', vars: [{ id: 'b:E7:0', frets: [0, 2, 0, 1, 0, 3], label: 'corrigida' }], hidden: [], defaultId: null };
+  const l = mergeShapes(builtinShapes('E7'), rec);
+  assert.equal(l.length, 2);
+  assert.equal(l[0].id, 'b:E7:0');
+  assert.equal(l[0].label, 'corrigida');
+  assert.deepEqual(l[0].frets, [0, 2, 0, 1, 0, 3]);
+  assert.equal(l[0].origin, 'user');
+});
+
+test('mergeShapes: override sem pestana apaga a pestana da embutida', () => {
+  // F embutido tem barre {fret:1,from:0,to:5}; o override não tem
+  const rec = { name: 'F', vars: [{ id: 'b:F:0', frets: [-1, -1, 3, 2, 1, 1] }], hidden: [], defaultId: null };
+  const l = mergeShapes(builtinShapes('F'), rec);
+  assert.equal(l[0].barre, undefined);
+});
+
+test('mergeShapes: lápide esconde a embutida e a padrão cai para a que sobrou', () => {
+  const rec = { name: 'E7', vars: [], hidden: ['b:E7:0'], defaultId: null };
+  const l = mergeShapes(builtinShapes('E7'), rec);
+  assert.equal(l.length, 1);
+  assert.equal(l[0].id, 'b:E7:1');
+  assert.equal(l[0].isDefault, true);
+});
+
+test('mergeShapes: defaultId do usuário vence o default do catálogo', () => {
+  const rec = { name: 'E7', vars: [], hidden: [], defaultId: 'b:E7:1' };
+  const l = mergeShapes(builtinShapes('E7'), rec);
+  assert.equal(l[0].isDefault, false);
+  assert.equal(l[1].isDefault, true);
+});
+
+test('mergeShapes: defaultId órfão volta para o padrão do catálogo', () => {
+  const rec = { name: 'E7', vars: [], hidden: [], defaultId: 'u:apagada' };
+  const l = mergeShapes(builtinShapes('E7'), rec);
+  assert.equal(l[0].isDefault, true);
+});
+
+test('shapeKey: pestana faz parte da identidade da forma', () => {
+  const a = shapeKey({ frets: [1, 3, 3, 2, 1, 1], barre: { fret: 1, from: 0, to: 5 } });
+  const b = shapeKey({ frets: [1, 3, 3, 2, 1, 1] });
+  assert.notEqual(a, b);
+  assert.equal(shapeKey({ frets: [1, 3, 3, 2, 1, 1] }), b);
+});
+
+test('mergeRecords: une por id e o local vence o conflito', () => {
+  const local = { name: 'C', vars: [{ id: 'u:1', frets: [1, 1, 1, 1, 1, 1], label: 'local' }], hidden: ['b:C:0'], defaultId: 'u:1' };
+  const inc = { name: 'C', vars: [{ id: 'u:1', frets: [2, 2, 2, 2, 2, 2], label: 'importada' }, { id: 'u:2', frets: [3, 3, 3, 3, 3, 3] }], hidden: ['b:C:9'], defaultId: 'u:2' };
+  const m = mergeRecords(local, inc);
+  assert.equal(m.vars.length, 2);
+  assert.equal(m.vars[0].label, 'local');
+  assert.deepEqual(m.hidden.slice().sort(), ['b:C:0', 'b:C:9']);
+  assert.equal(m.defaultId, 'u:1');
+});
+
+test('mergeRecords: sem registro local adota o importado', () => {
+  const m = mergeRecords(null, { name: 'C', vars: [{ id: 'u:9', frets: [0, 0, 0, 0, 0, 0] }], hidden: [], defaultId: 'u:9' });
+  assert.equal(m.name, 'C');
+  assert.equal(m.vars.length, 1);
+  assert.equal(m.defaultId, 'u:9');
+});
+
+test('songsUsingVar: só as músicas que apontam para aquela variação', () => {
+  const songs = [
+    { id: 's1', cifra: { digitacoes: { Bb7M: { frets: [], varId: 'u:1' } } } },
+    { id: 's2', cifra: { digitacoes: { Bb7M: { frets: [], varId: 'u:2' } } } },
+    { id: 's3', cifra: { digitacoes: { Bb7M: { frets: [] } } } }, // legado, sem varId
+    { id: 's4', cifra: { digitacoes: {} } },
+    { id: 's5' },
+  ];
+  assert.deepEqual(songsUsingVar(songs, 'Bb7M', 'u:1').map((s) => s.id), ['s1']);
+});
