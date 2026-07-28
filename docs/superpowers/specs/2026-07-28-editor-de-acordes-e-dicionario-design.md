@@ -69,7 +69,7 @@ SEU        IndexedDB store 'chordbook' (keyPath 'name'), um registro por nome:
 | `removeVar(nome, id)` | remove sua / adiciona lápide de embutida; limpa `defaultId` se era ela |
 | `setDefault(nome, id)` | define `defaultId` |
 | `restoreBuiltins(nome)` | esvazia `hidden` daquele nome |
-| `usageCount(nome, id)` | quantas músicas usam aquela variação (por `varId`) |
+| `songsUsingVar(songs, nome, id)` | músicas que usam aquela variação (por `varId`) — pura, recebe a lista de músicas para o módulo não depender do estado da biblioteca |
 
 O merge é síncrono sobre objeto em memória, então `chordSVG` continua síncrono e os testes em Node (sem IndexedDB) rodam vendo só as embutidas.
 
@@ -138,12 +138,12 @@ A variação entra no dicionário **no ato de salvar**, inclusive no `kind:'draf
   - sem pestana → cria `{fret:F, from:0, to:5}`; toda corda com `frets[i] < F` (inclui `-1` abafada e `0` solta) passa a `F`; corda presa acima de `F` fica onde está;
   - pestana já naquela casa → remove a barra; as cordas **mantêm os valores** (viram pontos normais);
   - pestana em outra casa → move para a nova casa com vão cheio (a anterior vira pontos normais). Uma pestana por forma.
-- **Toque numa célula da MESMA casa da pestana** → move a **ponta mais próxima** até aquela corda (encurta ou estende): você toca na corda onde quer que a ponta **fique**. Se o vão ficaria com menos de 2 cordas, a pestana é removida e sobra um ponto normal. Corda que entra no vão e está abaixo de `F` sobe para `F`; corda que sai **mantém o valor** (ponto normal em `F`), e a partir daí a cabeça ✕/○ dela volta a funcionar.
+- **Toque numa célula da MESMA casa da pestana** → move a **ponta mais próxima** até aquela corda (encurta ou estende): você toca na corda onde quer que a ponta **fique**. Corda que entra no vão e está abaixo de `F` sobe para `F`; corda que sai **mantém o valor** (ponto normal em `F`), e a partir daí a cabeça ✕/○ dela volta a funcionar. Por esse caminho o vão nunca fica menor que 2 cordas — para tirar a barra inteira, o botão `[⌐]`.
   Com pestana ativa, **tocar na casa `F` sempre significa mover a ponta** — inclusive fora do vão (é assim que se estende). Não há como criar um ponto avulso na mesma casa da barra; para o violão dá no mesmo som, e a regra fica sem exceção.
 - **Toque numa célula de outra casa, ou na cabeça (✕/○):**
   - corda **fora** do vão → comportamento normal (alterna valor; tocar na casa já marcada solta a corda);
   - corda **dentro** do vão, casa **acima** de `F` → permitido, a barra continua (nota tocada por outro dedo);
-  - corda **dentro** do vão, casa **abaixo** de `F` ou cabeça ✕/○ → se a corda é uma **ponta**, o vão encolhe uma corda e o valor é aplicado; se é **interna**, o toque não faz nada (não se abre buraco embaixo da própria barra). Essas células internas são desenhadas **travadas** (esmaecidas), para o toque morto não parecer bug.
+  - corda **dentro** do vão, casa **abaixo** de `F` ou cabeça ✕/○ → se a corda é uma **ponta**, o vão encolhe uma corda e o valor é aplicado (e se sobrar uma corda só, a pestana some e fica o ponto normal); se é **interna**, o toque não faz nada (não se abre buraco embaixo da própria barra). Essas células internas são desenhadas **travadas** (esmaecidas), para o toque morto não parecer bug.
 
 ### 5.2 Casa base
 
