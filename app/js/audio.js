@@ -57,6 +57,9 @@ export class AudioEngine {
       t.gain = this.ctx.createGain();
       src.connect(t.gain);
       t.gain.connect(this.masterGain);
+      // o el.volume pré-conexão (fonte inativa = 0) multiplicaria a saída do
+      // MediaElementSource para sempre; a partir daqui quem manda é o GainNode
+      t.el.volume = 1;
     } catch (e) { /* elemento já conectado — ignora */ }
   }
 

@@ -265,8 +265,19 @@ const actions = {
   // mixer / transporte
   toggleMixer() { S.mixerCollapsed = !S.mixerCollapsed; update(); },
   selectSource(d) {
+    const jaAtiva = S.t2Source === d.id;
     S.t2Source = d.id;
     audio.setSource(d.id);
+    // A fileira de versão completa é um botão de play/pause, não só um seletor
+    if (d.id !== 'stems') {
+      if (jaAtiva) {
+        S.transportPlaying = !S.transportPlaying;
+        if (S.transportPlaying) audio.play(); else audio.pause();
+      } else if (!S.transportPlaying) {
+        S.transportPlaying = true;
+        audio.play();
+      }
+    }
     update();
   },
   toggleMute(d) {

@@ -221,7 +221,7 @@ function mixerHTML(song) {
       ${fulls.map((v) => {
         const on = S.t2Source === v.id;
         return `<div class="ver-row ${on ? 'on' : ''}" data-a="selectSource" data-id="${v.id}">
-          <div class="ic">${on ? I.pause(18) : I.play(18)}</div>
+          <div class="ic">${on && S.transportPlaying ? I.pause(18) : I.play(18)}</div>
           <div class="meta"><div class="n">${esc(v.nome)}</div><div class="m">${esc(v.meta || '')}</div></div>
           ${on && S.transportPlaying ? '<span class="amber-live" style="display:flex;align-items:center;gap:5px"><span class="live-dot"></span><span class="live-lbl">Tocando</span></span>' : ''}
         </div>`;
