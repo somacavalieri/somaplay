@@ -31,10 +31,34 @@ function toast(msg) {
 }
 
 // ---------- render ----------
+let lastScreen = null;
+
+// Rolagens e foco só são preservados quando a tela é a mesma da renderização
+// anterior — trocar de tela continua começando do topo.
+function captureUI(same) {
+  if (!same) return null;
+  const scrolls = [...document.querySelectorAll('.content-scroll,[data-autoscroll]')].map((el) => el.scrollTop);
+  const a = document.activeElement;
+  const focus = a && a.id && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text'))
+    ? { id: a.id, start: a.selectionStart, end: a.selectionEnd }
+    : null;
+  return { scrolls, focus };
+}
+
+function restoreUI(snap) {
+  if (!snap) return;
+  const els = document.querySelectorAll('.content-scroll,[data-autoscroll]');
+  els.forEach((el, i) => { if (snap.scrolls[i] != null) el.scrollTop = snap.scrolls[i]; });
+  if (!snap.focus) return;
+  const el = document.getElementById(snap.focus.id);
+  if (!el) return;
+  el.focus();
+  try { el.setSelectionRange(snap.focus.start, snap.focus.end); } catch (e) { /* tipo sem seleção */ }
+}
+
 export function update() {
   const scr = S.screen;
-  // preserva a rolagem da cifra entre re-renders da tela de toque
-  const prevScroll = scr === 'play' ? document.querySelector('[data-autoscroll]')?.scrollTop : null;
+  const snap = captureUI(lastScreen === scr);
   let html = '';
   if (scr === 'home') html = renderHome();
   else if (scr === 'artist') html = renderArtist();
@@ -45,10 +69,8 @@ export function update() {
   else if (scr === 'settings') html = renderSettings();
   html += renderPopover();
   app.innerHTML = html;
-  if (prevScroll != null) {
-    const el = document.querySelector('[data-autoscroll]');
-    if (el) el.scrollTop = prevScroll;
-  }
+  restoreUI(snap);
+  lastScreen = scr;
   afterRender();
 }
 
