@@ -17,7 +17,7 @@ import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
-import { shapesOf, defaultShape, shapeById, findShape, upsertVar, labelsOf, shapeKey } from './chordbook.js';
+import { shapesOf, defaultShape, shapeById, findShape, upsertVar, labelsOf } from './chordbook.js';
 
 const app = document.getElementById('app');
 
