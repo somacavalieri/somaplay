@@ -329,7 +329,7 @@ const actions = {
     S.chordFavs[id] = cur.includes(d.id) ? cur.filter((x) => x !== d.id) : [...cur, d.id];
     update();
   },
-  openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; update(); },
+  openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; S.chordPop = null; update(); },
   closeChordPicker() { S.chordPicker = null; S.chordEd = null; update(); },
   // ---- popover do acorde na cifra (spec 2026-07-29) ----
   openChordPop(d, ev, el) {

@@ -399,6 +399,7 @@ export function afterRenderPlay(update) {
       el.addEventListener(ev, showControls, { passive: true }));
     el.addEventListener('scroll', () => { if (!S.scrollPlaying) showControls(); }, { passive: true });
     el.addEventListener('scroll', () => {
+      if (!el.isConnected) return; // evento atrasado do container antigo (destacado) lê scrollTop 0
       // rolagem real fecha o popover do acorde; o restoreUI do re-render repõe
       // o MESMO scrollTop, então não dispara este fechamento
       if (S.chordPop && Math.abs(el.scrollTop - S.chordPop.scrollTop) > 1) { S.chordPop = null; update(); }
