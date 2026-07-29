@@ -110,7 +110,9 @@ function afterRender() {
   const cbq = document.getElementById('cb-query');
   if (cbq) cbq.addEventListener('input', () => { S.cbQuery = cbq.value; update(); });
   const cbn = document.getElementById('cb-new-name');
-  if (cbn) cbn.focus();
+  const foco = document.activeElement;
+  const jaDigitando = foco && (foco.tagName === 'TEXTAREA' || (foco.tagName === 'INPUT' && foco.type === 'text'));
+  if (cbn && !jaDigitando) cbn.focus();
   const nl = document.getElementById('new-list-name');
   if (nl) nl.focus();
   const rn = document.getElementById('rename-input');
@@ -496,9 +498,10 @@ const actions = {
     const s = shapeById(d.id, el.dataset.var);
     if (!s) return;
     S.chordEd = openEditor(d.id, s, { kind: 'book', varId: s.id });
+    S.cbAdding = false;
     update();
   },
-  cbNewVar(d) { S.chordEd = openEditor(d.id, null, { kind: 'book', varId: null }); update(); },
+  cbNewVar(d) { S.chordEd = openEditor(d.id, null, { kind: 'book', varId: null }); S.cbAdding = false; update(); },
   cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast('Padrão do acorde atualizada'); },
   cbDeleteVar(d, ev, el) {
     const id = el.dataset.var;
@@ -510,7 +513,7 @@ const actions = {
     update();
   },
   cbRestore(d) { restoreBuiltins(d.id); update(); toast('Formas embutidas restauradas'); },
-  cbStartAdd() { S.cbAdding = true; update(); },
+  cbStartAdd() { S.cbAdding = true; S.chordEd = null; update(); },
   cbCancelAdd() { S.cbAdding = false; update(); },
   cbConfirmAdd() {
     const inp = document.getElementById('cb-new-name');

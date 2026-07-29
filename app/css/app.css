@@ -513,6 +513,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 /* ---- dicionário de acordes ---- */
 .cb-wrap{max-width:900px;margin:0 auto}
 .cb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+/* .searchin fora do .dropdown (busca de artista) precisa da própria caixa —
+   mesmos valores de .dropdown .searchin/input (app.css:345-346), só sem o
+   escopo ao ancestral que essa tela não tem */
+.cb-bar .searchin{display:flex;align-items:center;gap:9px;flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);border-radius:10px;height:44px;padding:0 12px}
+.cb-bar .searchin input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text);font-size:14px}
 .cb-group{font-family:var(--f-title);font-weight:700;font-size:13px;color:var(--muted);margin:16px 0 6px;letter-spacing:.04em}
 .cb-row{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
 .cb-row.on{border-color:var(--accent)}
