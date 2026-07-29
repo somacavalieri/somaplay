@@ -165,7 +165,7 @@ const actions = {
   // navegação
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
-  goAdd() { S.editSongId = null; S.draft = newDraft(null); S.screen = 'addedit'; update(); },
+  goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
   openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
   openEstilo(d) { S.estiloId = d.id; S.screen = 'estilo'; update(); },
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
@@ -279,6 +279,7 @@ const actions = {
     leavePlay();
     S.editSongId = song.id;
     S.draft = newDraft(song);
+    S.chordEd = null;
     S.screen = 'addedit';
     update();
   },
@@ -302,7 +303,7 @@ const actions = {
   closeChordPicker() { S.chordPicker = null; update(); },
   async pickChordShape(d, ev, el) {
     const song = currentSong(); if (!song) return;
-    const s = catalogShapes(d.id)[+el.dataset.ix]; if (!s) return;
+    const s = shapesOf(d.id)[+el.dataset.ix]; if (!s) return;
     song.cifra.digitacoes = { ...(song.cifra.digitacoes || {}), [d.id]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}) } };
     await saveSong(song);
     S.chordPicker = null;
@@ -422,12 +423,13 @@ const actions = {
   addFull() { fileTarget = { kind: 'full', index: -1 }; document.getElementById('file-audio-single').click(); },
   pickFullFile(d) { fileTarget = { kind: 'full', index: +d.id }; document.getElementById('file-audio-single').click(); },
   removeFull(d) { syncDraftFromDOM(); S.draft.full.splice(+d.id, 1); update(); },
-  cancelAddEdit() { S.draft = null; S.editSongId = null; S.screen = 'home'; update(); },
+  cancelAddEdit() { S.draft = null; S.editSongId = null; S.chordEd = null; S.screen = 'home'; update(); },
   async saveDraft() {
     try {
       const song = await commitDraft();
       S.draft = null;
       S.editSongId = null;
+      S.chordEd = null;
       S.screen = 'home';
       update();
       toast(`"${song.title}" salva na biblioteca`);
