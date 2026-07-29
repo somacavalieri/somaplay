@@ -47,6 +47,7 @@ export const S = {
   ctlVisible: true,
   chordFavs: {},           // songId -> [acorde]
   chordPicker: null,       // nome do acorde com o seletor de variação aberto
+  chordPop: null,          // popover do acorde tocado na cifra: { name, anchor, modo:'mini'|'carrossel', selId, scrollTop }
   pinnedOpen: true,
   transportPlaying: false,
   position: 0,

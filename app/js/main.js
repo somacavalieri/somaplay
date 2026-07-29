@@ -19,7 +19,7 @@ import { renderChordbook } from './render/chordbookscreen.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
-import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf } from './chordbook.js';
+import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
 
 const app = document.getElementById('app');
@@ -124,6 +124,7 @@ function afterRender() {
 function leavePlay() {
   S.transportPlaying = false;
   S.scrollPlaying = false;
+  S.chordPop = null;
   stopPlayTimers();
   unloadSongMedia();
 }
@@ -152,6 +153,16 @@ function syncChordEd() {
 // já é no-op quando S.draft é null, então este helper serve às três origens do
 // editor (rascunho, música, dicionário) sem checar qual é.
 function syncCE() { syncDraftFromDOM(); syncChordEd(); }
+
+// Grava a forma como digitação do acorde na música inteira — usada pelo
+// picker (pickChordShape) e pelo Aplicar do popover (chordPopApply).
+async function applyShapeToSong(song, name, s) {
+  song.cifra.digitacoes = {
+    ...(song.cifra.digitacoes || {}),
+    [name]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}), varId: s.id },
+  };
+  await saveSong(song);
+}
 
 // Forma que a música/rascunho usa hoje para um acorde (ou a padrão do dicionário).
 function shapeAtual(dict, name) {
@@ -320,16 +331,50 @@ const actions = {
   },
   openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; update(); },
   closeChordPicker() { S.chordPicker = null; S.chordEd = null; update(); },
+  // ---- popover do acorde na cifra (spec 2026-07-29) ----
+  openChordPop(d, ev, el) {
+    const r = el.getBoundingClientRect();
+    const sc = document.querySelector('[data-autoscroll]');
+    S.chordPop = {
+      name: d.id,
+      anchor: { x: r.left, y: r.top, w: r.width, h: r.height },
+      modo: 'mini',
+      selId: null,
+      scrollTop: sc ? sc.scrollTop : 0,  // rolagem REAL fecha; o restore do re-render (mesmo valor) não
+    };
+    update();
+  },
+  chordPopVariar() {
+    const song = currentSong(); if (!song || !S.chordPop) return;
+    const cur = (song.cifra?.digitacoes || {})[S.chordPop.name] || null;
+    S.chordPop.modo = 'carrossel';
+    S.chordPop.selId = pickerShapes(S.chordPop.name, cur).selId;
+    update();
+  },
+  chordPopSelect(d, ev, el) {
+    if (!S.chordPop) return;
+    S.chordPop.selId = el.dataset.var;
+    update();
+  },
+  chordPopReset() {
+    const song = currentSong(); if (!song || !S.chordPop) return;
+    const cur = (song.cifra?.digitacoes || {})[S.chordPop.name] || null;
+    S.chordPop.selId = pickerShapes(S.chordPop.name, cur).selId;
+    update();
+  },
+  async chordPopApply() {
+    const song = currentSong(); if (!song || !S.chordPop) return;
+    const { name, selId } = S.chordPop;
+    const s = selId && selId !== '__song' ? shapeById(name, selId) : null;
+    if (s) await applyShapeToSong(song, name, s);
+    S.chordPop = null;
+    update();
+  },
   async pickChordShape(d, ev, el) {
     const song = currentSong(); if (!song) return;
     const id = el.dataset.var;
     const s = id === '__song' ? null : shapeById(d.id, id);
-    if (!s) { S.chordPicker = null; update(); return; }
-    song.cifra.digitacoes = {
-      ...(song.cifra.digitacoes || {}),
-      [d.id]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}), varId: s.id },
-    };
-    await saveSong(song);
+    if (s) await applyShapeToSong(song, d.id, s);
     S.chordPicker = null;
     update();
   },
@@ -637,6 +682,7 @@ document.addEventListener('click', (e) => {
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
+  if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
 });
 
 document.addEventListener('input', (e) => {
@@ -683,7 +729,8 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (S.popoverSongId) { S.popoverSongId = null; update(); }
+    if (S.chordPop) { S.chordPop = null; update(); }
+    else if (S.popoverSongId) { S.popoverSongId = null; update(); }
     else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
       S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
       update();
