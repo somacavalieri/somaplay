@@ -4,7 +4,7 @@ import { S } from '../state.js';
 import { I, esc } from '../icons.js';
 import { allNames, shapesOf, hasHidden, songsUsingVar } from '../chordbook.js';
 import { chordSVG } from '../chords.js';
-import { chordEditorHTML } from './chordeditor.js';
+import { chordEditorHTML, descreveForma } from './chordeditor.js';
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const tonica = (n) => n[0].toUpperCase();
@@ -14,7 +14,7 @@ function varHTML(name, s, ed) {
   return `<div class="cb-var ${ed && ed.origin.varId === s.id ? 'on' : ''}">
     <button class="pick-opt ${s.isDefault ? 'sel' : ''}" data-a="cbEditVar" data-id="${esc(name)}" data-var="${esc(s.id)}">
       ${chordSVG(name, true, { [name]: s })}
-      <span class="lbl">${esc(s.label || 'variação')}${s.isDefault ? ' ★' : ''}</span>
+      <span class="lbl">${esc(s.label || descreveForma(s))}${s.isDefault ? ' ★' : ''}</span>
     </button>
     <div class="cb-uso">${usos ? `${usos} música${usos === 1 ? '' : 's'}` : ''}</div>
   </div>`;

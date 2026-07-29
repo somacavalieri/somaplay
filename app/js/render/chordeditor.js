@@ -80,9 +80,24 @@ export function setBase(st, delta) {
   return { ...st, base: Math.max(1, Math.min(15, st.base + delta)) };
 }
 
+// Descrição textual de uma forma (pestana Nª / casa Nª / aberto) a partir de
+// frets/barre. Aceita tanto uma forma "crua" (frets/barre, sem base — deriva a
+// casa base dos frets do mesmo jeito que openEditor) quanto o estado do editor
+// (que já traz base pronta, a janela de 5 linhas escolhida pelo usuário — usada
+// como está, mesmo quando diverge do que os frets sozinhos indicariam).
+export function descreveForma(shape) {
+  if (shape.barre) return `pestana ${shape.barre.fret}ª`;
+  let base = shape.base;
+  if (base == null) {
+    const pos = (shape.frets || []).filter((f) => f > 0);
+    base = pos.length && Math.max(...pos) > 4 ? Math.min(...pos) : 1;
+  }
+  return base > 1 ? `casa ${base}ª` : 'aberto';
+}
+
 // Rótulo sugerido para uma forma nova, sem repetir os já usados no acorde.
 export function suggestLabel(st, usados) {
-  const base = st.barre ? `pestana ${st.barre.fret}ª` : (st.base > 1 ? `casa ${st.base}ª` : 'aberto');
+  const base = descreveForma(st);
   if (!usados.includes(base)) return base;
   let n = 2;
   while (usados.includes(`${base} (${n})`)) n++;
@@ -146,12 +161,14 @@ export function chordEditorHTML(st, opts = {}) {
   </div>`;
 }
 
-// Fileira de variações (miniatura + rótulo). Quem chama decide a ação.
-export function shapeStripHTML(name, shapes, selId, action) {
+// Fileira de variações (miniatura + rótulo). Quem chama decide a ação e o tamanho
+// do diagrama — small=true (padrão) nos lugares compactos (formulário, dicionário);
+// small=false no seletor da tela de toque, usada em pé, no palco.
+export function shapeStripHTML(name, shapes, selId, action, small = true) {
   if (!shapes.length) return '';
   return `<div class="shape-strip">${shapes.map((s) => `
     <button class="pick-opt ${s.id === selId ? 'sel' : ''}" data-a="${action}" data-id="${esc(name)}" data-var="${esc(s.id)}">
-      ${chordSVG(name, true, { [name]: s })}
-      <span class="lbl">${esc(s.label || 'variação')}${s.isDefault ? ' ★' : ''}</span>
+      ${chordSVG(name, small, { [name]: s })}
+      <span class="lbl">${esc(s.label || descreveForma(s))}${s.isDefault ? ' ★' : ''}</span>
     </button>`).join('')}</div>`;
 }
