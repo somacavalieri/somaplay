@@ -59,6 +59,14 @@ export function extractChords(parsed) {
   return out;
 }
 
+// Segmentos da linha de acordes para render tocável: split preservando os
+// espaços (grupos capturados) — concatenar os text reproduz a linha byte a
+// byte, obrigatório para o white-space:pre não desalinhar acorde↔sílaba.
+export function chordLineSegs(line) {
+  return String(line).split(/(\s+)/).filter((t) => t !== '')
+    .map((t) => ({ text: t, isChord: !/\s/.test(t[0]) && isChordTok(t) }));
+}
+
 // Layout da fileira de miniaturas (spec 2026-07-20): tokens da linha de acordes
 // → posição x (px) na coluna do caractere (fonte mono), colisões empurram para
 // a direita e o empurrão se propaga. blockWidth(tok, isChord) → largura px.
