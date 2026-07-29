@@ -62,6 +62,21 @@ test('tapCell fora do vão estende a pestana', () => {
   assert.equal(r.frets[0], 2);
 });
 
+test('tapCell numa casa abaixo encolhe o vão pela ponta e a pestana sobrevive', () => {
+  const st = { name: 'X', frets: [-1, 3, 3, 3, 3, -1], barre: { fret: 3, from: 1, to: 4 }, base: 1, label: '', origin: ORIG };
+  const r = tapCell(st, 1, 2);
+  assert.deepEqual(r.barre, { fret: 3, from: 2, to: 4 });
+  assert.deepEqual(r.frets, [-1, 2, 3, 3, 3, -1]);
+});
+
+test('tapCell encolhendo até sobrar uma corda remove a pestana', () => {
+  const st = { name: 'X', frets: [0, 3, 3, 0, 0, 0], barre: { fret: 3, from: 1, to: 2 }, base: 1, label: '', origin: ORIG };
+  const r = tapCell(st, 2, 1);
+  assert.equal(r.barre, null);
+  assert.equal(r.frets[2], 1);
+  assert.equal(r.frets[1], 3);
+});
+
 test('corda interna abaixo da pestana está travada (no-op)', () => {
   const st = toggleBarre(openEditor('F', null, ORIG), 3);
   assert.equal(tapCell(st, 2, 1), st);
