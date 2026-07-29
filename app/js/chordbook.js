@@ -55,10 +55,15 @@ export function mergeRecords(local, incoming) {
   const inc = incoming || {};
   const base = local || { name: inc.name, vars: [], hidden: [], defaultId: null };
   const ids = new Set((base.vars || []).map((v) => v.id));
+  const vars = [...(base.vars || []), ...((inc.vars || []).filter((v) => !ids.has(v.id)))];
+  const varIds = new Set(vars.map((v) => v.id));
   return {
     name: base.name,
-    vars: [...(base.vars || []), ...((inc.vars || []).filter((v) => !ids.has(v.id)))],
-    hidden: [...new Set([...(base.hidden || []), ...(inc.hidden || [])])],
+    vars,
+    // Uma lápide importada não pode matar um override local do mesmo id — senão
+    // "o local vence" vira mentira pra esse caso (mergeShapes checa hidden antes
+    // de vars, e id 'b:...' não entra no laço de variações novas).
+    hidden: [...new Set([...(base.hidden || []), ...(inc.hidden || [])])].filter((id) => !varIds.has(id)),
     defaultId: base.defaultId || inc.defaultId || null,
   };
 }
@@ -151,6 +156,7 @@ export async function replaceChordbook(recs) {
   try { await DB.clearChordbook(); } catch (e) { /* sem IndexedDB */ }
   BOOK.clear(); CACHE.clear();
   for (const r of recs || []) {
+    if (!r || !r.name) continue;
     const n = { name: r.name, vars: r.vars || [], hidden: r.hidden || [], defaultId: r.defaultId || null };
     BOOK.set(n.name, n);
     await DB.putChordName(n).catch(() => {});

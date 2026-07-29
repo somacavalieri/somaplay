@@ -95,6 +95,20 @@ test('mergeRecords: sem registro local adota o importado', () => {
   assert.equal(m.defaultId, 'u:9');
 });
 
+test('mergeRecords: lápide importada não apaga override local do mesmo id', () => {
+  // local tem um override salvo por cima da embutida b:E7:0; o arquivo importado
+  // (de outro aparelho, que apagou essa mesma variação) traz uma lápide pro mesmo
+  // id. "O local vence" precisa valer aqui também — a forma não pode sumir.
+  const local = { name: 'E7', vars: [{ id: 'b:E7:0', frets: [0, 2, 0, 1, 0, 3], label: 'corrigida' }], hidden: [], defaultId: null };
+  const inc = { name: 'E7', vars: [], hidden: ['b:E7:0'], defaultId: null };
+  const m = mergeRecords(local, inc);
+  assert.deepEqual(m.hidden, []);
+  const l = mergeShapes(builtinShapes('E7'), m);
+  const achou = l.find((s) => s.id === 'b:E7:0');
+  assert.ok(achou, 'override b:E7:0 devia continuar aparecendo em mergeShapes');
+  assert.equal(achou.label, 'corrigida');
+});
+
 test('songsUsingVar: só as músicas que apontam para aquela variação', () => {
   const songs = [
     { id: 's1', cifra: { digitacoes: { Bb7M: { frets: [], varId: 'u:1' } } } },
