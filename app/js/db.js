@@ -22,7 +22,16 @@ function idb() {
       if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'id' }); // fallback OPFS
       if (!d.objectStoreNames.contains('chordbook')) d.createObjectStore('chordbook', { keyPath: 'name' });
     };
-    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    // Outra aba/janela do Soma Play com uma conexão v1 aberta impede o upgrade —
+    // sem isto, open() nunca resolve nem rejeita e o boot fica travado em silêncio.
+    req.onblocked = () => reject(new Error('Feche as outras abas ou janelas do Soma Play abertas neste navegador e tente de novo.'));
+    req.onsuccess = () => {
+      _db = req.result;
+      // Se outra aba abrir uma versão mais nova do banco, solta esta conexão pra
+      // não ser ela a bloquear a atualização da outra aba.
+      _db.onversionchange = () => { _db.close(); _db = null; };
+      resolve(_db);
+    };
     req.onerror = () => reject(req.error);
   });
 }
