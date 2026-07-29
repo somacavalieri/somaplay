@@ -2,6 +2,15 @@
 // a marcada `default:true` (ou a primeira) é a padrão. Só-leitura em runtime (MVP);
 // cresce no repo à medida que músicas são importadas.
 // forma: { frets:[Mi grave, Lá, Ré, Sol, Si, Mi agudo], barre?:{fret,from,to}, label?, default? }
+//
+// ATENÇÃO — o ÍNDICE de cada forma no array vira o id persistido `b:<nome>:<índice>`
+// (chordbook.js:builtinShapes). Esse id é gravado como referência em vários lugares:
+// lápides (`hidden`) e overrides no store `chordbook`, e o `varId` salvo em
+// `digitacoes` das músicas. Inserir uma forma NO MEIO do array de um nome (ou
+// reordenar/remover uma existente) desloca o índice das formas seguintes e re-liga
+// silenciosamente essas referências pra formas erradas. Regra: só ACRESCENTE formas
+// no FIM do array de cada nome; nunca reordene nem remova uma forma já publicada
+// (pra tirar uma de circulação, esconda pelo dicionário em vez de apagar daqui).
 
 export const CATALOG = {
   // — semente: formas antes embutidas em chords.js (cada uma vira a padrão do seu nome) —
