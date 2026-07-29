@@ -6,6 +6,7 @@ import {
   persistCurrentStems, applyVarToSongs,
 } from './state.js';
 import { DB } from './db.js';
+import { esc } from './icons.js';
 import { renderHome, homeResults } from './render/home.js';
 import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
@@ -142,6 +143,15 @@ function syncChordEd() {
   const el = document.getElementById('ce-label');
   if (el && S.chordEd) S.chordEd.label = el.value;
 }
+
+// Toda ação do editor de casas re-renderiza a tela inteira (update() → app.innerHTML).
+// Quando o editor está embutido no formulário de Adicionar/editar (origin 'draft'),
+// esse re-render também redesenha os campos de texto do formulário a partir de
+// S.draft — então, sem sincronizar o draft primeiro, texto digitado em Título/Tom/
+// Fonte/Estilo/Acordes/Cifra em texto/Letra volta ao valor antigo. syncDraftFromDOM()
+// já é no-op quando S.draft é null, então este helper serve às três origens do
+// editor (rascunho, música, dicionário) sem checar qual é.
+function syncCE() { syncDraftFromDOM(); syncChordEd(); }
 
 // Forma que a música/rascunho usa hoje para um acorde (ou a padrão do dicionário).
 function shapeAtual(dict, name) {
@@ -411,19 +421,20 @@ const actions = {
     update();
   },
   refreshChords() { syncDraftFromDOM(); update(); },
-  ceCell(d) { syncChordEd(); S.chordEd = tapCell(S.chordEd, +d.id, +d.fret); update(); },
-  ceHead(d) { syncChordEd(); S.chordEd = tapHead(S.chordEd, +d.id); update(); },
-  ceBarre(d) { syncChordEd(); S.chordEd = toggleBarre(S.chordEd, +d.id); update(); },
-  ceBase(d) { syncChordEd(); S.chordEd = setBase(S.chordEd, +d.id); update(); },
-  ceClose() { S.chordEd = null; update(); },
+  ceCell(d) { syncCE(); S.chordEd = tapCell(S.chordEd, +d.id, +d.fret); update(); },
+  ceHead(d) { syncCE(); S.chordEd = tapHead(S.chordEd, +d.id); update(); },
+  ceBarre(d) { syncCE(); S.chordEd = toggleBarre(S.chordEd, +d.id); update(); },
+  ceBase(d) { syncCE(); S.chordEd = setBase(S.chordEd, +d.id); update(); },
+  ceClose() { syncCE(); S.chordEd = null; update(); },
   ceUseVar(d, ev, el) {
+    syncCE();
     const s = shapeById(d.id, el.dataset.var);
     if (!s) return;
     S.chordEd = openEditor(d.id, s, { ...S.chordEd.origin, varId: s.id });
     update();
   },
   async ceSave() {   // atualizar a variação de origem (e propagar)
-    syncChordEd();
+    syncCE();
     const st = S.chordEd;
     const shape = editorShape(st);
     upsertVar(st.name, { id: st.origin.varId, ...shape });
@@ -434,7 +445,7 @@ const actions = {
     toast(n ? `Variação atualizada · ${n} música${n === 1 ? '' : 's'} atualizada${n === 1 ? '' : 's'}` : 'Variação atualizada');
   },
   async ceSaveNew() {   // salvar como variação nova (reaproveitando forma idêntica)
-    syncChordEd();
+    syncCE();
     const st = S.chordEd;
     const shape = editorShape(st);
     const igual = findShape(st.name, shape.frets, shape.barre);
@@ -502,7 +513,7 @@ const actions = {
     update();
   },
   cbNewVar(d) { S.chordEd = openEditor(d.id, null, { kind: 'book', varId: null }); S.cbAdding = false; update(); },
-  cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast('Padrão do acorde atualizada'); },
+  cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast('Padrão do acorde atualizado'); },
   cbDeleteVar(d, ev, el) {
     const id = el.dataset.var;
     const s = shapeById(d.id, id);
@@ -721,7 +732,21 @@ document.addEventListener('visibilitychange', () => {
 
 // ---------- boot ----------
 (async function boot() {
-  await initState();
+  try {
+    await initState();
+  } catch (e) {
+    // Tela branca sem explicação é o pior desfecho aqui (ex.: outra aba com o app
+    // aberto segurando a conexão do IndexedDB numa versão antiga — indexedDB.open
+    // fica bloqueado sem resolver nem rejeitar até db.js's onblocked entrar em ação).
+    // O #toast não serve pra isto: ele é pensado pra conviver com uma tela já
+    // desenhada, e neste ponto #app ainda está vazio — um toast sozinho ficaria
+    // solto. Um bloco de texto simples dentro do próprio #app é mais honesto.
+    app.innerHTML = `<div style="padding:60px 24px;max-width:440px;margin:0 auto;text-align:center">
+      <div style="font-family:var(--f-title);font-weight:700;font-size:19px;margin-bottom:10px">Não foi possível abrir o Soma Play</div>
+      <div style="color:var(--muted);font-size:14px;line-height:1.5">${esc((e && e.message) || 'Falha ao iniciar o banco de dados local.')}</div>
+    </div>`;
+    return;
+  }
   update();
   manageWakeLock();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
