@@ -42,6 +42,7 @@ export const I = {
   volFull: (w = 22) => s(w, '<path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/>', 'fill="none" stroke="#9A9AA5" stroke-width="2"'),
   invert: (w = 18) => stroke(w, '<path d="M12 3v18a9 9 0 0 0 0-18z"/><circle cx="12" cy="12" r="9"/>'),
   swap: (w = 17) => stroke(w, '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>'),
+  undo: (w = 16) => stroke(w, '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'),
   gridChord: (w = 18) => stroke(w, '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M4 14h16M9 4v16M14 4v16"/>'),
   starSmall: (w = 16) => fill(w, '<path d="M12 2.6l2.7 5.9 6.4.6-4.8 4.3 1.4 6.3L12 20.4 6.3 19.7l1.4-6.3L2.9 9.1l6.4-.6z"/>'),
   img: (w = 19) => stroke(w, '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>'),

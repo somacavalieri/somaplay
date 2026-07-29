@@ -4,9 +4,10 @@
 import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
-import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow } from '../chords.js';
+import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs } from '../chords.js';
 import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
+import { chordPopHTML, popPosition } from './chordpop.js';
 import { offlineBadge } from './home.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
@@ -129,9 +130,17 @@ function chordDiagRowHTML(chordLine, dict, meas) {
   const items = layoutChordRow(chordLine, meas.chPx, (tok, isChord) =>
     (isChord ? Math.max(chordDiagWidth(tok, true, dict), meas.label(tok)) : meas.tok(tok)));
   const inner = items.map((it) => (it.isChord
-    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPicker" data-id="${esc(it.tok)}" title="Trocar variação"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.tok, true, dict)}</button>`
+    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.tok)}" title="Ver acorde"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.tok, true, dict)}</button>`
     : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
   return `<div class="ch-diag-row">${inner}</div>`;
+}
+
+// Linha de acordes tocável: só tokens-acorde viram botão (mesma fonte/cor —
+// visual idêntico); espaços seguem no fluxo do white-space:pre.
+function chordLineHTML(chordLine) {
+  return chordLineSegs(chordLine).map((sg) => (sg.isChord
+    ? `<button class="ch-btn" data-a="openChordPop" data-id="${esc(sg.text)}">${esc(sg.text)}</button>`
+    : esc(sg.text))).join('');
 }
 
 function cifraTextHTML(song) {
@@ -147,7 +156,7 @@ function cifraTextHTML(song) {
     if (ln.hasChords) {
       h += (mini && ln.hasLyric)
         ? chordDiagRowHTML(ln.chords, dict, meas)
-        : `<div class="ch">${esc(ln.chords)}</div>`;
+        : `<div class="ch">${chordLineHTML(ln.chords)}</div>`;
     }
     if (ln.hasLyric) h += `<div class="ly">${esc(ln.lyric)}</div>`;
     return h;
@@ -350,6 +359,7 @@ export function renderPlay() {
     </div>
     ${hasMixer ? transportHTML() : ''}
     ${S.chordPicker ? chordPickerHTML(song) : ''}
+    ${S.chordPop ? chordPopHTML(song) : ''}
   </div>`;
 }
 
@@ -388,8 +398,22 @@ export function afterRenderPlay(update) {
     ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'touchmove'].forEach((ev) =>
       el.addEventListener(ev, showControls, { passive: true }));
     el.addEventListener('scroll', () => { if (!S.scrollPlaying) showControls(); }, { passive: true });
+    el.addEventListener('scroll', () => {
+      // rolagem real fecha o popover do acorde; o restoreUI do re-render repõe
+      // o MESMO scrollTop, então não dispara este fechamento
+      if (S.chordPop && Math.abs(el.scrollTop - S.chordPop.scrollTop) > 1) { S.chordPop = null; update(); }
+    }, { passive: true });
   }
   showControls();
+
+  // popover do acorde: re-posiciona com o tamanho real (o render usou estimativa)
+  const pop = document.querySelector('.chord-pop');
+  if (pop && S.chordPop) {
+    const r = pop.getBoundingClientRect();
+    const p = popPosition(S.chordPop.anchor, r.width, r.height, window.innerWidth, window.innerHeight);
+    pop.style.left = p.left + 'px';
+    pop.style.top = p.top + 'px';
+  }
 
   // anima a entrada do bottom sheet só quando ele acabou de abrir (não a cada re-render)
   const mx = document.querySelector('.mixer');

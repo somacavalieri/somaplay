@@ -530,4 +530,20 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .cb-plus{width:64px;height:80px;border:1px dashed var(--border2);border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .cb-plus:hover{border-color:var(--accent);color:var(--accent)}
 .cb-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+/* --- Popover do acorde na cifra (spec 2026-07-29) --- */
+.ch-btn{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;white-space:pre}
+.chord-pop{position:fixed;z-index:70;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.chord-pop .nm{font-family:var(--f-title);font-weight:700;font-size:15px;color:var(--accent)}
+.chord-pop .dots{display:flex;gap:5px}
+.chord-pop .dot{width:7px;height:7px;border-radius:50%;background:var(--muted3)}
+.chord-pop .dot.on{background:var(--accent)}
+.chord-pop .variar{width:100%}
+.chord-pop .variar:disabled{opacity:.45;cursor:default}
+.chord-pop .hint{font-size:12px;color:var(--muted);max-width:170px;text-align:center}
+.chord-pop.car{align-items:stretch}
+.chord-pop.car .strip-wrap{overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.chord-pop.car .strip-wrap .shape-strip{flex-wrap:nowrap;width:max-content;margin-top:0}
+.chord-pop.car .strip-wrap .pick-opt{scroll-snap-align:center}
+.chord-pop.car .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
 .btn-ghost.sm.danger{color:var(--red)}
