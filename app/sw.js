@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-v9';
+const VERSION = 'somaplay-v10';
 const SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const SHELL = [
   './js/audio.js',
   './js/chords.js',
   './js/chords-catalog.js',
+  './js/chordbook.js',
   './js/backup.js',
   './js/merge.js',
   './js/icons.js',
@@ -19,8 +20,11 @@ const SHELL = [
   './js/render/artist.js',
   './js/render/listscreen.js',
   './js/render/play.js',
+  './js/render/chordeditor.js',
+  './js/render/chordbookscreen.js',
   './js/render/addedit.js',
   './js/render/settings.js',
+  './js/render/estilo.js',
   './js/render/popover.js',
   './fonts/sora-latin.woff2',
   './fonts/sora-latin-ext.woff2',

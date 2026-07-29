@@ -4,6 +4,7 @@
 import { DB } from './db.js';
 import { S } from './state.js';
 import { mergePlan } from './merge.js';
+import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -29,6 +30,7 @@ export async function exportLibrary() {
     songs: S.songs,
     lists: S.lists,
     settings: S.settings,
+    chordbook: chordbookRecords(),
     blobs: manifestBlobs,
   };
   const json = JSON.stringify(manifest);
@@ -69,6 +71,7 @@ export async function importLibrary(file, { merge = false } = {}) {
     for (const a of plan.artists) await DB.putArtist(a);
     for (const s of plan.songs) await DB.putSong(s);
     for (const l of plan.lists) await DB.putList(l);
+    await mergeChordbookRecords(manifest.chordbook || []);
     result = { added: plan.added, updated: plan.updated };
   } else {
     for (const a of manifest.artists) await DB.putArtist(a);
@@ -78,6 +81,7 @@ export async function importLibrary(file, { merge = false } = {}) {
       S.settings = { ...S.settings, ...manifest.settings };
       await DB.saveSettings(S.settings);
     }
+    await replaceChordbook(manifest.chordbook || []);
     result = { artists: manifest.artists.length, songs: manifest.songs.length };
   }
 

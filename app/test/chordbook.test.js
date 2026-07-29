@@ -193,3 +193,16 @@ test('allNames inclui nome que só existe no dicionário do usuário', () => {
 test('defaultShape: nome desconhecido → null', () => {
   assert.equal(defaultShape('Qq0'), null);
 });
+
+test('mergeRecords sobre uma lista: nomes novos entram, existentes se fundem', () => {
+  const locais = new Map([['C', { name: 'C', vars: [{ id: 'u:a', frets: [0, 0, 0, 0, 0, 0] }], hidden: [], defaultId: null }]]);
+  const incoming = [
+    { name: 'C', vars: [{ id: 'u:b', frets: [1, 1, 1, 1, 1, 1] }], hidden: [], defaultId: 'u:b' },
+    { name: 'G', vars: [{ id: 'u:c', frets: [3, 2, 0, 0, 0, 3] }], hidden: [], defaultId: null },
+  ];
+  const out = incoming.map((inc) => mergeRecords(locais.get(inc.name), inc));
+  assert.equal(out[0].vars.length, 2);
+  assert.equal(out[0].defaultId, 'u:b');   // local não tinha padrão → adota a do arquivo
+  assert.equal(out[1].name, 'G');
+  assert.equal(out[1].vars.length, 1);
+});
