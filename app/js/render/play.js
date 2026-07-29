@@ -5,7 +5,7 @@ import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
 import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow } from '../chords.js';
-import { shapesOf, shapeById, shapeKey, defaultShape } from '../chordbook.js';
+import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { offlineBadge } from './home.js';
 
@@ -257,24 +257,7 @@ function transportHTML() {
 function chordPickerHTML(song) {
   const name = S.chordPicker;
   const dict = song.cifra?.digitacoes || {};
-  const cur = dict[name] || null;
-  const shapes = shapesOf(name).slice();
-  let selId = null;
-  if (cur) {
-    const k = shapeKey(cur);
-    const achou = (cur.varId && shapes.find((s) => s.id === cur.varId)) || shapes.find((s) => shapeKey(s) === k);
-    if (achou) selId = achou.id;
-    else {
-      selId = '__song';
-      shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: 'desta música' });
-    }
-  } else {
-    // Sem digitação própria (nem da música, nem do rascunho) o desenho exibido é
-    // a padrão do dicionário (§4.3) — é ela que precisa aparecer marcada, senão
-    // nenhuma miniatura fica selecionada e o botão "Editar" some do rodapé.
-    const def = defaultShape(name);
-    if (def) selId = def.id;
-  }
+  const { shapes, selId } = pickerShapes(name, dict[name] || null);
   const ed = S.chordEd && S.chordEd.origin.kind === 'song' ? S.chordEd : null;
   const corpo = ed
     ? chordEditorHTML(ed, { fromLabel: (shapeById(name, ed.origin.varId) || {}).label })

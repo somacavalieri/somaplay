@@ -112,6 +112,31 @@ export function shapesOf(name) {
 
 export function defaultShape(name) { return shapesOf(name).find((s) => s.isDefault) || null; }
 export function shapeById(name, id) { return shapesOf(name).find((s) => s.id === id) || null; }
+
+// Formas para seletor/popover + qual está selecionada. cur = digitação da
+// música (cifra.digitacoes[nome]) ou null. Sem digitação, a selecionada é a
+// padrão do dicionário (§4.3) — senão nenhuma miniatura fica marcada e o
+// "Editar" some do rodapé do picker. Digitação que não bate com nenhuma forma
+// vira o pseudo-item '__song' ("desta música") no fim da lista.
+export function pickerShapes(name, cur) {
+  const shapes = shapesOf(name).slice();
+  let selId = null;
+  if (cur) {
+    const k = shapeKey(cur);
+    const achou = (cur.varId && shapes.find((s) => s.id === cur.varId))
+      || shapes.find((s) => shapeKey(s) === k);
+    if (achou) selId = achou.id;
+    else {
+      selId = '__song';
+      shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: 'desta música' });
+    }
+  } else {
+    const def = defaultShape(name);
+    if (def) selId = def.id;
+  }
+  return { shapes, selId };
+}
+
 export function labelsOf(name) { return shapesOf(name).map((s) => s.label || '').filter(Boolean); }
 export function hasHidden(name) { const r = BOOK.get(name); return !!(r && r.hidden.length); }
 
