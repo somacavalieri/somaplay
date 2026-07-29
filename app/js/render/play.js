@@ -5,7 +5,8 @@ import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
 import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow } from '../chords.js';
-import { catalogShapes } from '../chords-catalog.js';
+import { shapesOf, shapeById, shapeKey } from '../chordbook.js';
+import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { offlineBadge } from './home.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
@@ -256,20 +257,32 @@ function transportHTML() {
 function chordPickerHTML(song) {
   const name = S.chordPicker;
   const dict = song.cifra?.digitacoes || {};
-  const atual = dict[name] ? JSON.stringify(dict[name].frets) : null;
-  const shapes = catalogShapes(name);
-  const opts = shapes.map((s, ix) => {
-    const sel = atual && JSON.stringify(s.frets) === atual;
-    return `<button class="pick-opt ${sel ? 'sel' : ''}" data-a="pickChordShape" data-id="${esc(name)}" data-ix="${ix}">
-      ${chordSVG(name, false, { [name]: s })}
-      <span class="lbl">${esc(s.label || ('variação ' + (ix + 1)))}</span>
-    </button>`;
-  }).join('');
+  const cur = dict[name] || null;
+  const shapes = shapesOf(name).slice();
+  let selId = null;
+  if (cur) {
+    const k = shapeKey(cur);
+    const achou = (cur.varId && shapes.find((s) => s.id === cur.varId)) || shapes.find((s) => shapeKey(s) === k);
+    if (achou) selId = achou.id;
+    else {
+      selId = '__song';
+      shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: 'desta música' });
+    }
+  }
+  const ed = S.chordEd && S.chordEd.origin.kind === 'song' ? S.chordEd : null;
+  const corpo = ed
+    ? chordEditorHTML(ed, { fromLabel: (shapeById(name, ed.origin.varId) || {}).label })
+    : (shapeStripHTML(name, shapes, selId, 'pickChordShape')
+       || '<div style="padding:14px;color:var(--muted);font-size:13px">Nenhuma forma registrada — toque em “Nova variação”.</div>');
   return `<div class="scrim" data-a="closeChordPicker">
     <div class="popover" data-stop="1">
       <div class="head"><div class="head-row"><div class="title">Variações de ${esc(name)}</div>
         <button class="btn-icon xs" data-a="closeChordPicker">${I.close()}</button></div></div>
-      <div class="body pick-grid">${opts || '<div style="padding:14px;color:var(--muted);font-size:13px">Só a forma atual — edite as casas em “Editar música”.</div>'}</div>
+      <div class="body">${corpo}</div>
+      ${ed ? '' : `<div class="foot">
+        <button class="btn-ghost sm" data-a="pickNewVar" data-id="${esc(name)}">${I.plus(16)}Nova variação</button>
+        ${selId ? `<button class="btn-ghost sm" data-a="pickEditVar" data-id="${esc(name)}" data-var="${esc(selId)}">${I.pencil(16)}Editar</button>` : ''}
+      </div>`}
     </div>
   </div>`;
 }

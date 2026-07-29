@@ -17,7 +17,7 @@ import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
-import { shapesOf, defaultShape, shapeById, findShape, upsertVar, labelsOf } from './chordbook.js';
+import { defaultShape, shapeById, findShape, upsertVar, labelsOf } from './chordbook.js';
 
 const app = document.getElementById('app');
 
@@ -299,14 +299,35 @@ const actions = {
     S.chordFavs[id] = cur.includes(d.id) ? cur.filter((x) => x !== d.id) : [...cur, d.id];
     update();
   },
-  openChordPicker(d) { S.chordPicker = d.id; update(); },
-  closeChordPicker() { S.chordPicker = null; update(); },
+  openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; update(); },
+  closeChordPicker() { S.chordPicker = null; S.chordEd = null; update(); },
   async pickChordShape(d, ev, el) {
     const song = currentSong(); if (!song) return;
-    const s = shapesOf(d.id)[+el.dataset.ix]; if (!s) return;
-    song.cifra.digitacoes = { ...(song.cifra.digitacoes || {}), [d.id]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}) } };
+    const id = el.dataset.var;
+    const s = id === '__song' ? null : shapeById(d.id, id);
+    if (!s) { S.chordPicker = null; update(); return; }
+    song.cifra.digitacoes = {
+      ...(song.cifra.digitacoes || {}),
+      [d.id]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}), varId: s.id },
+    };
     await saveSong(song);
     S.chordPicker = null;
+    update();
+  },
+  pickNewVar(d) {
+    S.chordEd = openEditor(d.id, null, { kind: 'song', songId: S.currentSongId, varId: null });
+    update();
+  },
+  pickEditVar(d, ev, el) {
+    const song = currentSong(); if (!song) return;
+    const id = el.dataset.var;
+    if (id === '__song') {
+      const cur = song.cifra.digitacoes[d.id];
+      S.chordEd = openEditor(d.id, cur, { kind: 'song', songId: song.id, varId: null });
+    } else {
+      const s = shapeById(d.id, id);
+      S.chordEd = openEditor(d.id, s, { kind: 'song', songId: song.id, varId: id });
+    }
     update();
   },
   togglePinnedBar() { S.pinnedOpen = !S.pinnedOpen; update(); },
