@@ -19,6 +19,12 @@ export function renderSettings() {
           ${I.chevR()}
         </button>
 
+        <button class="setting-row link" data-a="goChordbook">
+          <div style="width:46px;height:46px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--accent-tint2);color:var(--accent)">${I.gridChord(22)}</div>
+          <div class="info"><div class="t title">Dicionário de acordes</div><div class="s">Variações de cada acorde, usadas em todas as músicas</div></div>
+          ${I.chevR()}
+        </button>
+
         <div class="setting-row">
           <div class="info"><div class="t">Manter a tela ligada</div><div class="s">Evita que o tablet apague durante o uso</div></div>
           <button class="toggle-sw ${st.awake ? 'on' : ''}" data-a="toggleAwake"><span></span></button>

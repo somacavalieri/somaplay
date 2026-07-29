@@ -14,10 +14,12 @@ import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScro
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
+import { renderChordbook } from './render/chordbookscreen.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
-import { defaultShape, shapeById, findShape, upsertVar, labelsOf } from './chordbook.js';
+import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf } from './chordbook.js';
+import { isChordTok } from './chords.js';
 
 const app = document.getElementById('app');
 
@@ -68,6 +70,7 @@ export function update() {
   else if (scr === 'play') html = renderPlay();
   else if (scr === 'addedit') html = renderAddEdit();
   else if (scr === 'settings') html = renderSettings();
+  else if (scr === 'chordbook') html = renderChordbook();
   html += renderPopover();
   app.innerHTML = html;
   restoreUI(snap);
@@ -104,6 +107,10 @@ function afterRender() {
       update();
     });
   }
+  const cbq = document.getElementById('cb-query');
+  if (cbq) cbq.addEventListener('input', () => { S.cbQuery = cbq.value; update(); });
+  const cbn = document.getElementById('cb-new-name');
+  if (cbn) cbn.focus();
   const nl = document.getElementById('new-list-name');
   if (nl) nl.focus();
   const rn = document.getElementById('rename-input');
@@ -481,6 +488,41 @@ const actions = {
       toast(done.length ? `Importado: ${done.join(' · ')}` : 'Exemplos já estavam na biblioteca');
     } catch (e) { toast('Falha ao importar exemplos: ' + e.message); }
   },
+
+  // dicionário de acordes
+  goChordbook() { S.screen = 'chordbook'; S.chordEd = null; S.cbQuery = ''; S.cbFilter = null; S.cbAdding = false; update(); },
+  cbLetter(d) { S.cbFilter = S.cbFilter === d.id ? null : d.id; update(); },
+  cbEditVar(d, ev, el) {
+    const s = shapeById(d.id, el.dataset.var);
+    if (!s) return;
+    S.chordEd = openEditor(d.id, s, { kind: 'book', varId: s.id });
+    update();
+  },
+  cbNewVar(d) { S.chordEd = openEditor(d.id, null, { kind: 'book', varId: null }); update(); },
+  cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast('Padrão do acorde atualizada'); },
+  cbDeleteVar(d, ev, el) {
+    const id = el.dataset.var;
+    const s = shapeById(d.id, id);
+    if (!s) return;
+    if (!confirm(`Apagar a variação “${s.label || 'variação'}” de ${d.id}? As músicas que já a usam mantêm a forma delas.`)) return;
+    removeVar(d.id, id);
+    S.chordEd = null;
+    update();
+  },
+  cbRestore(d) { restoreBuiltins(d.id); update(); toast('Formas embutidas restauradas'); },
+  cbStartAdd() { S.cbAdding = true; update(); },
+  cbCancelAdd() { S.cbAdding = false; update(); },
+  cbConfirmAdd() {
+    const inp = document.getElementById('cb-new-name');
+    const nome = inp ? inp.value.trim() : '';
+    if (!nome) return;
+    if (!isChordTok(nome)) { toast('Nome de acorde inválido'); return; }
+    S.cbAdding = false;
+    S.cbQuery = nome;
+    S.cbFilter = null;   // senão o chip de tônica pode esconder o acorde recém-criado
+    S.chordEd = openEditor(nome, null, { kind: 'book', varId: null });
+    update();
+  },
 };
 
 function moveList(idx, dir) {
@@ -637,6 +679,7 @@ document.addEventListener('keydown', (e) => {
     if (document.activeElement?.id === 'new-list-name') actions.confirmCreateList();
     if (document.activeElement?.id === 'pop-new-name') actions.popCreateList();
     if (document.activeElement?.id === 'rename-input') actions.confirmRename();
+    if (document.activeElement?.id === 'cb-new-name') actions.cbConfirmAdd();
   }
   // espaço = play/pause do transporte na tela de toque (fora de inputs)
   if (e.key === ' ' && S.screen === 'play' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) {

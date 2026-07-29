@@ -488,7 +488,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 
 /* ---- seletor de variação (Tela Cifra) ---- */
 .chord-diag{background:none;border:none;padding:0;cursor:pointer;display:block}
-.pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
 .pick-opt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text)}
 .pick-opt.sel{border-color:var(--accent)}
 .pick-opt .lbl{font-size:11px;color:var(--muted)}
@@ -510,3 +509,20 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .song-id .ttl{font-size:22px}
   .song-id .art{font-size:15px}
 }
+
+/* ---- dicionário de acordes ---- */
+.cb-wrap{max-width:900px;margin:0 auto}
+.cb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.cb-group{font-family:var(--f-title);font-weight:700;font-size:13px;color:var(--muted);margin:16px 0 6px;letter-spacing:.04em}
+.cb-row{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.cb-row.on{border-color:var(--accent)}
+.cb-name{font-family:var(--f-title);font-weight:700;font-size:15px;min-width:84px;padding-top:22px}
+.cb-body{flex:1;min-width:0}
+.cb-vars{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.cb-var{display:flex;flex-direction:column;align-items:center;gap:3px}
+.cb-var.on .pick-opt{border-color:var(--accent)}
+.cb-uso{font-size:10px;color:var(--muted3)}
+.cb-plus{width:64px;height:80px;border:1px dashed var(--border2);border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cb-plus:hover{border-color:var(--accent);color:var(--accent)}
+.cb-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn-ghost.sm.danger{color:var(--red)}

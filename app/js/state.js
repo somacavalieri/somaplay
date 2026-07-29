@@ -5,7 +5,7 @@ import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 
 export const S = {
   // navegação
-  screen: 'home',          // home | artist | list | play | addedit | settings
+  screen: 'home',          // home | artist | list | play | addedit | settings | chordbook
   tab: 'artists',          // artists | songs | estilos | lists
   backTo: 'home',          // de onde a tela play foi aberta
   query: '',
@@ -18,6 +18,11 @@ export const S = {
   listMenuOpen: false,
   creatingList: false,
   renamingList: false,
+
+  // dicionário de acordes
+  cbQuery: '',
+  cbFilter: null,          // tônica filtrada (A..G) ou null
+  cbAdding: false,         // campo "novo acorde" aberto
 
   // popover adicionar-à-lista
   popoverSongId: null,
