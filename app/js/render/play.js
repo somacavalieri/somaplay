@@ -5,7 +5,7 @@ import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
 import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow } from '../chords.js';
-import { shapesOf, shapeById, shapeKey } from '../chordbook.js';
+import { shapesOf, shapeById, shapeKey, defaultShape } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { offlineBadge } from './home.js';
 
@@ -268,11 +268,17 @@ function chordPickerHTML(song) {
       selId = '__song';
       shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: 'desta música' });
     }
+  } else {
+    // Sem digitação própria (nem da música, nem do rascunho) o desenho exibido é
+    // a padrão do dicionário (§4.3) — é ela que precisa aparecer marcada, senão
+    // nenhuma miniatura fica selecionada e o botão "Editar" some do rodapé.
+    const def = defaultShape(name);
+    if (def) selId = def.id;
   }
   const ed = S.chordEd && S.chordEd.origin.kind === 'song' ? S.chordEd : null;
   const corpo = ed
     ? chordEditorHTML(ed, { fromLabel: (shapeById(name, ed.origin.varId) || {}).label })
-    : (shapeStripHTML(name, shapes, selId, 'pickChordShape')
+    : (shapeStripHTML(name, shapes, selId, 'pickChordShape', false)
        || '<div style="padding:14px;color:var(--muted);font-size:13px">Nenhuma forma registrada — toque em “Nova variação”.</div>');
   return `<div class="scrim" data-a="closeChordPicker">
     <div class="popover" data-stop="1">
