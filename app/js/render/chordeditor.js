@@ -2,6 +2,8 @@
 // dicionário e seletor da tela de toque). Reducers puros + HTML derivado.
 // estado: { name, frets:[6], barre:null|{fret,from,to}, base, label, origin }
 // origin: { kind:'draft'|'song'|'book', songId?, varId? } — diz onde a forma é gravada.
+import { I, esc } from '../icons.js';
+import { chordSVG } from '../chords.js';
 
 export const VAZIO = [-1, -1, -1, -1, -1, -1];
 
@@ -90,4 +92,66 @@ export function suggestLabel(st, usados) {
 // Dado (forma) a partir do estado do editor.
 export function editorShape(st) {
   return { frets: st.frets.slice(), ...(st.barre ? { barre: { ...st.barre } } : {}), label: st.label };
+}
+
+// ---------- HTML ----------
+const CW = 34, GAP = 8; // precisam bater com .fcell{width} e .fcells{gap} no CSS
+const CORDAS = ['Mi', 'Lá', 'Ré', 'Sol', 'Si', 'Mi'];
+
+export function chordEditorHTML(st, opts = {}) {
+  const travada = (i) => !!st.barre && i > st.barre.from && i < st.barre.to;
+
+  const heads = st.frets.map((f, i) =>
+    `<button class="fcell head ${f === -1 ? 'x' : ''} ${f === 0 ? 'o' : ''} ${travada(i) ? 'lock' : ''}" data-a="ceHead" data-id="${i}">${f === -1 ? '✕' : (f === 0 ? '○' : '·')}</button>`).join('');
+
+  let linhas = '';
+  for (let r = 0; r < 5; r++) {
+    const casa = st.base + r;
+    const naCasa = !!st.barre && st.barre.fret === casa;
+    const bar = naCasa
+      ? `<div class="fbar" style="left:${st.barre.from * (CW + GAP)}px;width:${(st.barre.to - st.barre.from) * (CW + GAP) + CW}px"></div>`
+      : '';
+    const cells = st.frets.map((f, i) =>
+      `<button class="fcell ${f === casa ? 'on' : ''} ${travada(i) && st.barre.fret > casa ? 'lock' : ''}" data-a="ceCell" data-id="${i}" data-fret="${casa}"></button>`).join('');
+    linhas += `<div class="frow">
+      <button class="fbarre ${naCasa ? 'on' : ''}" data-a="ceBarre" data-id="${casa}" title="Pestana na ${casa}ª casa">⌐</button>
+      <span class="fnum">${casa}ª</span>
+      <div class="fcells">${cells}${bar}</div></div>`;
+  }
+
+  const meta = [];
+  if (opts.fromLabel) meta.push(`vindo de “${esc(opts.fromLabel)}”`);
+  if (opts.usage) meta.push(`usada em ${opts.usage} música${opts.usage === 1 ? '' : 's'}`);
+
+  const foot = st.origin.varId
+    ? `<button class="btn-ghost sm" data-a="ceSave">Atualizar variação</button><button class="btn-save sm" data-a="ceSaveNew">Salvar como nova</button>`
+    : `<button class="btn-save sm" data-a="ceSaveNew">Salvar</button>`;
+
+  return `<div class="chord-editor">
+    <div class="ce-hd"><b>${esc(st.name)}</b>
+      <span class="ce-base">casa base
+        <button class="btn-icon xs" data-a="ceBase" data-id="-1">−</button><b>${st.base}ª</b><button class="btn-icon xs" data-a="ceBase" data-id="1">+</button></span>
+      <button class="btn-icon xs" style="margin-left:auto" data-a="ceClose" title="Fechar">${I.close()}</button></div>
+    <div class="fgrid">
+      <div class="frow"><span class="fbarre-pad"></span><span class="fnum"></span>
+        <div class="fcells">${CORDAS.map((n) => `<span class="fstr">${n}</span>`).join('')}</div></div>
+      <div class="frow"><span class="fbarre-pad"></span><span class="fnum"></span>
+        <div class="fcells">${heads}</div></div>
+      ${linhas}
+    </div>
+    ${meta.length ? `<div class="ce-meta">${meta.join(' · ')}</div>` : ''}
+    <div class="ce-foot">
+      <input type="text" class="input" id="ce-label" placeholder="rótulo (ex.: pestana 3ª)" value="${esc(st.label)}">
+      ${foot}</div>
+  </div>`;
+}
+
+// Fileira de variações (miniatura + rótulo). Quem chama decide a ação.
+export function shapeStripHTML(name, shapes, selId, action) {
+  if (!shapes.length) return '';
+  return `<div class="shape-strip">${shapes.map((s) => `
+    <button class="pick-opt ${s.id === selId ? 'sel' : ''}" data-a="${action}" data-id="${esc(name)}" data-var="${esc(s.id)}">
+      ${chordSVG(name, true, { [name]: s })}
+      <span class="lbl">${esc(s.label || 'variação')}${s.isDefault ? ' ★' : ''}</span>
+    </button>`).join('')}</div>`;
 }

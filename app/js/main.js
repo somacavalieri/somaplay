@@ -3,7 +3,7 @@ import {
   S, audio, initState, applyTheme, saveSettings,
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
   createList, listById, toggleSongInList, moveInList, favList,
-  persistCurrentStems,
+  persistCurrentStems, applyVarToSongs,
 } from './state.js';
 import { DB } from './db.js';
 import { renderHome, homeResults } from './render/home.js';
@@ -16,7 +16,8 @@ import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { exportLibrary, importLibrary } from './backup.js';
 import { importSamples } from './samples.js';
-import { catalogShapes, catalogDefault } from './chords-catalog.js';
+import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
+import { shapesOf, defaultShape, shapeById, findShape, upsertVar, labelsOf, shapeKey } from './chordbook.js';
 
 const app = document.getElementById('app');
 
@@ -125,6 +126,38 @@ async function openSongAction(id, from) {
   const sid = S.currentSongId;
   await loadSongMedia(song);
   if (S.currentSongId === sid && S.screen === 'play') update();
+}
+
+// O rótulo é um input dentro do editor — precisa ir pro estado antes de qualquer re-render.
+function syncChordEd() {
+  const el = document.getElementById('ce-label');
+  if (el && S.chordEd) S.chordEd.label = el.value;
+}
+
+// Forma que a música/rascunho usa hoje para um acorde (ou a padrão do dicionário).
+function shapeAtual(dict, name) {
+  const cur = dict && dict[name];
+  if (cur) {
+    const varId = cur.varId || (findShape(name, cur.frets, cur.barre) || {}).id || null;
+    return { shape: { ...cur, label: (shapeById(name, varId) || {}).label || '' }, varId };
+  }
+  const def = defaultShape(name);
+  return { shape: def, varId: def ? def.id : null };
+}
+
+// Grava a forma no destino do editor (rascunho, música ou nada, no caso do dicionário).
+async function gravarNoDestino(st, shape, varId) {
+  const dado = { frets: shape.frets.slice(), ...(shape.barre ? { barre: { ...shape.barre } } : {}), varId };
+  if (st.origin.kind === 'draft' && S.draft) {
+    S.draft.digitacoes = { ...(S.draft.digitacoes || {}), [st.name]: dado };
+  } else if (st.origin.kind === 'song') {
+    const song = songById(st.origin.songId);
+    if (song) {
+      song.cifra = song.cifra || {};
+      song.cifra.digitacoes = { ...(song.cifra.digitacoes || {}), [st.name]: dado };
+      await saveSong(song);
+    }
+  }
 }
 
 // ---------- ações ----------
@@ -339,25 +372,46 @@ const actions = {
   },
   setFonte(d) { syncDraftFromDOM(); S.draft.fonte = d.id; update(); },
   setEstilo(d) { syncDraftFromDOM(); S.draft.estilo = d.id; update(); },
-  editChord(d) { syncDraftFromDOM(); S.draft.editingChord = d.id || null; update(); },
-  refreshChords() { syncDraftFromDOM(); update(); },
-  setFret(d) {
+  editChord(d) {
     syncDraftFromDOM();
-    const name = S.draft.editingChord; if (!name) return;
-    const dict = S.draft.digitacoes || (S.draft.digitacoes = {});
-    const base = dict[name] || catalogDefault(name) || { frets: [-1, -1, -1, -1, -1, -1] };
-    const frets = base.frets.slice();
-    const i = +d.id; const fret = +d.fret;
-    frets[i] = (frets[i] === fret) ? 0 : fret;
-    dict[name] = { frets, ...(base.barre ? { barre: { ...base.barre } } : {}) };
+    if (!d.id) { S.chordEd = null; update(); return; }
+    const { shape, varId } = shapeAtual(S.draft.digitacoes, d.id);
+    S.chordEd = openEditor(d.id, shape, { kind: 'draft', varId });
     update();
   },
-  useCatShape(d, ev, el) {
-    syncDraftFromDOM();
-    const name = d.id; const s = catalogShapes(name)[+el.dataset.ix]; if (!s) return;
-    const dict = S.draft.digitacoes || (S.draft.digitacoes = {});
-    dict[name] = { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}) };
+  refreshChords() { syncDraftFromDOM(); update(); },
+  ceCell(d) { syncChordEd(); S.chordEd = tapCell(S.chordEd, +d.id, +d.fret); update(); },
+  ceHead(d) { syncChordEd(); S.chordEd = tapHead(S.chordEd, +d.id); update(); },
+  ceBarre(d) { syncChordEd(); S.chordEd = toggleBarre(S.chordEd, +d.id); update(); },
+  ceBase(d) { syncChordEd(); S.chordEd = setBase(S.chordEd, +d.id); update(); },
+  ceClose() { S.chordEd = null; update(); },
+  ceUseVar(d, ev, el) {
+    const s = shapeById(d.id, el.dataset.var);
+    if (!s) return;
+    S.chordEd = openEditor(d.id, s, { ...S.chordEd.origin, varId: s.id });
     update();
+  },
+  async ceSave() {   // atualizar a variação de origem (e propagar)
+    syncChordEd();
+    const st = S.chordEd;
+    const shape = editorShape(st);
+    upsertVar(st.name, { id: st.origin.varId, ...shape });
+    const n = await applyVarToSongs(st.name, st.origin.varId, shape);
+    await gravarNoDestino(st, shape, st.origin.varId);
+    S.chordEd = null;
+    update();
+    toast(n ? `Variação atualizada · ${n} música${n === 1 ? '' : 's'} atualizada${n === 1 ? '' : 's'}` : 'Variação atualizada');
+  },
+  async ceSaveNew() {   // salvar como variação nova (reaproveitando forma idêntica)
+    syncChordEd();
+    const st = S.chordEd;
+    const shape = editorShape(st);
+    const igual = findShape(st.name, shape.frets, shape.barre);
+    const varId = igual ? igual.id : upsertVar(st.name, { ...shape, label: st.label || suggestLabel(st, labelsOf(st.name)) });
+    await gravarNoDestino(st, shape, varId);
+    S.chordEd = null;
+    update();
+    toast(igual ? 'Forma já existia no dicionário' : 'Variação salva no dicionário');
   },
   pickImages() { document.getElementById('file-images').click(); },
   setImgTipo(d, ev, el) { syncDraftFromDOM(); S.draft.imagens[+d.id].tipo = el.dataset.tipo; update(); },

@@ -1,7 +1,7 @@
 // state.js — estado central + operações da biblioteca (write-through pro IndexedDB)
 import { DB, uid } from './db.js';
 import { AudioEngine } from './audio.js';
-import { loadChordbook } from './chordbook.js';
+import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 
 export const S = {
   // navegação
@@ -50,6 +50,7 @@ export const S = {
   // edição
   editSongId: null,        // null = novo
   draft: null,             // rascunho da tela adicionar/editar
+  chordEd: null,           // estado do editor de casas (render/chordeditor.js)
 
   // configurações
   settings: {
@@ -185,6 +186,22 @@ export function moveInList(listId, idx, dir) {
   if (j < 0 || j >= l.musicas.length) return;
   [l.musicas[idx], l.musicas[j]] = [l.musicas[j], l.musicas[idx]];
   DB.putList(l);
+}
+
+// Propaga a forma para as músicas que apontam para aquela variação. Devolve quantas mudaram.
+export async function applyVarToSongs(name, varId, shape) {
+  let n = 0;
+  for (const s of songsUsingVar(S.songs, name, varId)) {
+    const cur = s.cifra.digitacoes[name];
+    if (shapeKey(cur) === shapeKey(shape)) continue;
+    s.cifra.digitacoes = {
+      ...s.cifra.digitacoes,
+      [name]: { frets: shape.frets.slice(), ...(shape.barre ? { barre: { ...shape.barre } } : {}), varId },
+    };
+    await saveSong(s);
+    n++;
+  }
+  return n;
 }
 
 // "Favoritas" — lista virtual de sistema

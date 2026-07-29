@@ -463,17 +463,27 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .digchip .dnm{font-family:var(--f-title);font-weight:600;font-size:13px}
 .chord-editor{margin-top:14px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:14px}
 .ce-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:14px}
-.ce-hd .mut{color:var(--muted);font-size:12px}
-.fgrid{display:flex;gap:8px;justify-content:center}
-.fcol{display:flex;flex-direction:column;gap:5px;align-items:center}
-.fstr{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.fgrid{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.frow{display:flex;align-items:center;gap:8px}
+.fcells{position:relative;display:flex;gap:8px}
+.fstr{width:34px;text-align:center;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.fnum{width:24px;text-align:right;font-size:11px;color:var(--muted)}
+.fbarre{width:26px;height:26px;border:1px solid var(--border2);border-radius:7px;background:var(--surface);color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0}
+.fbarre.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.fbarre-pad{width:26px}
+.fbar{position:absolute;top:3px;height:24px;border-radius:12px;background:var(--accent);pointer-events:none}
 .fcell{width:34px;height:30px;border:1px solid var(--border2);border-radius:7px;background:var(--surface);color:var(--muted);cursor:pointer;font-size:13px}
 .fcell.head{background:transparent;border-style:dashed}
 .fcell.head.x{color:var(--red)}
 .fcell.head.o{color:var(--muted)}
 .fcell.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-.ce-cat{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
-.ce-cat .mut{color:var(--muted);font-size:12px}
+.fcell.lock{opacity:.3;cursor:default}
+.ce-base{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.ce-meta{margin-top:10px;color:var(--muted);font-size:12px}
+.ce-foot{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.ce-foot .input{flex:1;min-width:140px}
+.btn-save.sm{height:40px;padding:0 16px;font-size:14px}
+.shape-strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .btn-ghost.sm{height:32px;padding:0 12px;font-size:12px}
 
 /* ---- seletor de variação (Tela Cifra) ---- */
