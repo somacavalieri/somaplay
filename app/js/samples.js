@@ -8,7 +8,7 @@ A7M
   Vim, tanta areia andei
 F7M
   Da lua cheia eu sei
-Bb7M        Bm7(b5) E7(13)E7(b13)
+Bb7M        Bm7(b5) E7(13) E7(b13)
   Uma saudade imensa
 A7M
   Vagando em verso eu vim
@@ -52,7 +52,7 @@ A7M
   Rodei de roda andei
 F7M
   Dança da moda eu sei
-Bb7M          Bm7(b5)  E7(13)E7(b13)
+Bb7M          Bm7(b5)  E7(13) E7(b13)
   Cansei de ser sozinho
 A7M
   Verso encantado usei

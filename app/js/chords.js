@@ -3,16 +3,67 @@
 // Portado do design visual aprovado (Soma Play.html).
 import { defaultShape } from './chordbook.js';
 
-// Token parece um acorde? (aceita extensões com parênteses: 7(b5), 7(13), etc.)
+// Token parece um acorde? Aceita extensões entre parênteses — 7(b5), 7(13) — e,
+// depois da barra, tanto o baixo (D/F#, Cm6/Eb) quanto a extensão no estilo
+// CifraClub (Bm5-/7, A7/13, Em7/5-, E7/4(9)).
 export function isChordTok(t) {
-  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|\+|-|\d)*(\([^)]{1,7}\))*(\/[A-G][#b]?)?$/.test(t);
+  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|\+|-|\d)*(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
 }
 
-// Linha é "linha de acordes"? — todos os tokens são acordes (ou marcas comuns)
+// A fonte às vezes cola no acorde algo que não é acorde: asterisco ou ponto de
+// nota de rodapé ("C*", "F#m7(b5)*", "E."), ou o delimitador de um trecho que
+// ficou grudado ("(Dm", "Gm7)", "[A#m7"). chordName devolve o acorde limpo — é
+// ele que reconhece, desenha o diagrama e abre o popover. O token cru continua
+// na tela: o alinhamento acorde↔sílaba depende de cada caractere.
+export function chordName(tok) {
+  if (isChordTok(tok)) return tok;                      // "Bm7(b5)": parêntese é extensão
+  const semNota = String(tok).replace(/[*.]+$/, '');
+  if (isChordTok(semNota)) return semNota;
+  const semDelim = semNota.replace(/^[([]+/, '').replace(/[)\]]+$/, '');
+  return isChordTok(semDelim) ? semDelim : tok;
+}
+
+// Marcas que dividem a linha com os acordes sem serem acorde: repetição/compasso,
+// ornamentos e setas da fonte ("^^^", "->", "!---->"), delimitador de trecho que
+// ficou sozinho, e digitação inline ("x2x243").
+const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
+const isChordOrMark = (t) => isChordTok(chordName(t)) || MARK.test(t);
+
+// Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7
+// Am7", "Fm7  Bb/D  [Frase 1]". Mas um trecho entre parênteses pode ser só
+// acordes: "( G  F  G  F )". Daí a regra em stripLabels: trecho cujo conteúdo é
+// todo acorde/marca permanece (só os delimitadores saem); qualquer outro é rótulo
+// e sai inteiro.
+// Dois detalhes do casamento: (a) só conta como trecho o que abre e fecha em
+// fronteira de token, porque parêntese colado no acorde é extensão dele —
+// "Am7(9)/G" — e apagá-lo partiria o acorde em dois; (b) o trecho aceita um nível
+// de aninhamento, senão a extensão o fecharia cedo: "( C4+(9)  C9  C2(9)  G5 )".
+const LABEL = /(?<=^|\s)(?:\[[^\]]*\]|\((?:[^()]|\([^()]*\))*\))(?=\s|$)/g;
+
+// Parte das cifras escreve o rótulo com dois-pontos em vez de colchetes —
+// "Intro: Am  G  F", "INTRO : E". Só no começo da linha e só uma palavra, senão
+// "Ela disse: ..." entraria na conta.
+const LABEL_DOISPONTOS = /^\s*\p{L}[\p{L}\p{M}]*\s*:/u;
+
+// Tira os rótulos da linha trocando-os por espaço do mesmo tamanho: isChordLine
+// não pode deslocar as colunas, que o alinhamento acorde↔sílaba depende delas.
+function stripLabels(line) {
+  return String(line)
+    .replace(LABEL_DOISPONTOS, (m) => ' '.repeat(m.length))
+    .replace(LABEL, (span) => {
+      const inner = span.slice(1, -1);
+      const toks = inner.trim().split(/\s+/).filter(Boolean);
+      return toks.length && toks.every(isChordOrMark) ? ` ${inner} ` : ' '.repeat(span.length);
+    });
+}
+
+// Linha é "linha de acordes"? — fora os rótulos, todos os tokens são acordes ou
+// marcas, e ao menos um é acorde de verdade (linha só de ornamento é letra).
 function isChordLine(line) {
-  const toks = line.trim().split(/\s+/).filter(Boolean);
+  const toks = stripLabels(line).trim().split(/\s+/).filter(Boolean);
   if (!toks.length) return false;
-  return toks.every((t) => isChordTok(t) || /^(N\.C\.|%|\|+|x\d+|\(\d+x\))$/i.test(t));
+  if (!toks.some((t) => isChordTok(chordName(t)))) return false;
+  return toks.every(isChordOrMark);
 }
 
 // Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra.
@@ -47,13 +98,14 @@ export function parseCifraText(text) {
   }));
 }
 
-// Extrai acordes únicos das linhas de acordes (ordem de aparição)
+// Extrai acordes únicos das linhas de acordes (ordem de aparição), pelo nome limpo
 export function extractChords(parsed) {
   const out = [];
   parsed.forEach((l) => {
     if (!l.hasChords) return;
     l.chords.trim().split(/\s+/).forEach((t) => {
-      if (t && isChordTok(t) && !out.includes(t)) out.push(t);
+      const nome = t && chordName(t);
+      if (nome && isChordTok(nome) && !out.includes(nome)) out.push(nome);
     });
   });
   return out;
@@ -62,24 +114,31 @@ export function extractChords(parsed) {
 // Segmentos da linha de acordes para render tocável: split preservando os
 // espaços (grupos capturados) — concatenar os text reproduz a linha byte a
 // byte, obrigatório para o white-space:pre não desalinhar acorde↔sílaba.
+// text = o que vai na tela; name = o acorde para diagrama/popover.
 export function chordLineSegs(line) {
   return String(line).split(/(\s+)/).filter((t) => t !== '')
-    .map((t) => ({ text: t, isChord: !/\s/.test(t[0]) && isChordTok(t) }));
+    .map((t) => {
+      const nome = /\s/.test(t[0]) ? t : chordName(t);
+      return { text: t, name: nome, isChord: !/\s/.test(t[0]) && isChordTok(nome) };
+    });
 }
 
 // Layout da fileira de miniaturas (spec 2026-07-20): tokens da linha de acordes
 // → posição x (px) na coluna do caractere (fonte mono), colisões empurram para
 // a direita e o empurrão se propaga. blockWidth(tok, isChord) → largura px.
+// Rótulo entre colchetes conta como um token só: "[Frase 1]" tem espaço dentro e
+// partido em dois viraria "[Frase    1]" depois que a miniatura empurra o resto.
 export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
   const out = [];
   let cursor = 0;
-  const re = /\S+/g;
+  const re = /\[[^\]]*\]|\S+/g;
   let m;
   while ((m = re.exec(chordLine))) {
     const tok = m[0];
-    const isChord = isChordTok(tok);
+    const name = chordName(tok);
+    const isChord = isChordTok(name);
     const x = Math.max(m.index * chPx, cursor);
-    out.push({ tok, isChord, x });
+    out.push({ tok, name, isChord, x });
     cursor = x + blockWidth(tok, isChord) + gap;
   }
   return out;

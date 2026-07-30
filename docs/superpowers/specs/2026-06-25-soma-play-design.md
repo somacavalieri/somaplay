@@ -83,6 +83,7 @@ Lista  (coleção pessoal — ver §7)
 
 - Conteúdo entra por **importação manual** de arquivos já prontos no aparelho.
 - **Cifra por imagem _ou_ texto, escolhido por música** (não há formato obrigatório): a maior parte é **imagem** (coluna única, estilo CifraClub); quando a fonte torna o **texto** mais prático, a música usa texto. **Aberta vs fechada:** na imagem = **duas figuras** (tipo `aberta`/`fechada`); no texto = **mesma cifra com/sem diagramas**. O toggle do T1 (§8) fica habilitado conforme as versões existirem.
+- Na cifra em **texto**, o texto colado é guardado **cru** e reprocessado a cada abertura; que linhas contam como **linha de acordes** (rótulo na mesma linha, trecho instrumental entre parênteses, notação aceita no acorde) está em [`2026-07-30-reconhecimento-de-linha-de-acordes-design.md`](2026-07-30-reconhecimento-de-linha-de-acordes-design.md).
 - O **modo é uma lente global** (ver §6), padrão **T1 Cifra**. A biblioteca lista apenas o conteúdo disponível no modo ativo (ex.: música só com imagem aparece em T1; com imagem + stems aparece em T1 e T2; com base + letra aparece em T3). **Não há seletor de modo por música** — tocar numa música a abre direto no modo ativo.
 
 ---

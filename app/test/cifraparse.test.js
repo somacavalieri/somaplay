@@ -1,0 +1,197 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName } from '../js/chords.js';
+
+// Helper: só as linhas com acordes, na ordem
+const chordLines = (t) => parseCifraText(t).filter((l) => l.hasChords).map((l) => l.chords);
+
+// --- Rótulo de seção na mesma linha dos acordes (estilo CifraClub) ---------
+
+test('[Intro] com acordes na mesma linha é linha de acordes', () => {
+  const p = parseCifraText('[Intro] Em7  Am7  Em7  Am7  Cm6');
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].chords, '[Intro] Em7  Am7  Em7  Am7  Cm6');
+});
+
+test('[Intro] com acordes: o rótulo não entra na lista de acordes', () => {
+  assert.deepEqual(extractChords(parseCifraText('[Intro] Em7  Am7  Cm6')), ['Em7', 'Am7', 'Cm6']);
+});
+
+test('rótulo de duas palavras no fim da linha ([Frase 1]) mantém o par acorde/letra', () => {
+  const p = parseCifraText('     Fm7        Bb/D  [Frase 1]\nAlvorada lá no morro');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].lyric, 'Alvorada lá no morro');
+});
+
+test('rótulo entre parênteses ((Frase 2)) também é ignorado na classificação', () => {
+  assert.equal(parseCifraText('  Gb°   Fm7 (Frase 2)')[0].hasChords, true);
+});
+
+test('rótulo com dois-pontos no início da linha ("Intro: Am  G  F")', () => {
+  assert.equal(parseCifraText('Intro: Am  G  F  E7')[0].hasChords, true);
+  assert.equal(parseCifraText('INTRO : E')[0].hasChords, true);
+  assert.equal(parseCifraText('Tone: Am')[0].hasChords, true);
+});
+
+test('rótulo com dois-pontos preserva as colunas', () => {
+  assert.equal(parseCifraText('Intro:  Am   G')[0].chords, 'Intro:  Am   G');
+});
+
+test('dois-pontos no meio da letra não transforma a linha em acordes', () => {
+  assert.equal(parseCifraText('Ela disse: eu vou')[0].hasChords, false);
+  assert.equal(parseCifraText('E ela: me ama')[0].hasChords, false);
+});
+
+test('linha só com [Seção] continua sendo seção, não linha de acordes', () => {
+  const p = parseCifraText('[Intro]');
+  assert.equal(p[0].isSection, true);
+  assert.equal(p[0].hasChords, false);
+});
+
+test('letra com trecho entre parênteses não vira linha de acordes', () => {
+  const p = parseCifraText('Ela (ela) me ama');
+  assert.equal(p[0].hasChords, false);
+  assert.equal(p[0].hasLyric, true);
+});
+
+// --- Trecho instrumental entre parênteses ---------------------------------
+
+test('acordes entre parênteses soltos: "( G  F  G  F )" é linha de acordes', () => {
+  const p = parseCifraText('( G  F  G  F )');
+  assert.equal(p[0].hasChords, true);
+  assert.deepEqual(extractChords(p), ['G', 'F']);
+});
+
+test('parênteses com acordes complexos: "( C4+(9)  C9  C2(9)  G5 )"', () => {
+  assert.equal(parseCifraText('( C4+(9)  C9  C2(9)  G5 )')[0].hasChords, true);
+});
+
+// --- Alinhamento: a linha de acordes é preservada byte a byte --------------
+
+test('linha de acordes preserva espaços originais (alinhamento com a letra)', () => {
+  const linha = '     Fm7        Bb/D  [Frase 1]';
+  assert.equal(chordLines(linha + '\nAlvorada lá no morro')[0], linha);
+});
+
+// --- isChordTok: notação CifraClub de extensão depois da barra ------------
+
+test('isChordTok aceita extensão após a barra (/9, /13, /5-, /11, /4, /6)', () => {
+  ['C7M/6', 'Bm5-/7', 'A7/13', 'F#m5-/7', 'D7/9-', 'Em7/9', 'E7/4', 'D7/9',
+    'D#5-/6', 'E6/9', 'Em7/5-', 'Bm7/5-', 'G7M/5-', 'C#m7/5-', 'Bm7/11', 'D7/4(9)',
+  ].forEach((t) => assert.equal(isChordTok(t), true, `${t} deveria ser acorde`));
+});
+
+test('isChordTok continua aceitando baixo depois da barra', () => {
+  ['D/F#', 'Am/E', 'C/E', 'Cm6/Eb', 'E6/B', 'G7/B'].forEach((t) => assert.equal(isChordTok(t), true, t));
+});
+
+test('isChordTok continua recusando palavra comum', () => {
+  ['Alvorada', 'Ela', 'de', 'Frase', 'Cansei', 'Bb7M/oi'].forEach((t) => assert.equal(isChordTok(t), false, t));
+});
+
+test('linha com acorde de extensão pós-barra é linha de acordes', () => {
+  const p = parseCifraText('Em7              F#m5-/7 B7    Bm5-/7                E9-\nletra aqui');
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].lyric, 'letra aqui');
+});
+
+// --- Ornamentos e sujeira que a fonte cola na linha -----------------------
+
+test('chordName limpa o que a fonte cola no acorde sem ser acorde', () => {
+  assert.equal(chordName('C*'), 'C');
+  assert.equal(chordName('F#m7(b5)*'), 'F#m7(b5)');
+  assert.equal(chordName('E.'), 'E');
+  assert.equal(chordName('(Dm'), 'Dm');
+  assert.equal(chordName('Gm7)'), 'Gm7');
+  assert.equal(chordName('[A#m7'), 'A#m7');
+  assert.equal(chordName('D#7]'), 'D#7');
+});
+
+test('chordName não mexe em acorde já válido (parêntese de extensão fica)', () => {
+  ['Bm7(b5)', 'Am7(9)/G', 'C4+(9)', 'D7(4)', 'E7(13)'].forEach((t) => assert.equal(chordName(t), t));
+});
+
+test('chordName devolve o token cru quando não é acorde', () => {
+  ['Alvorada', 'x2x243', '^^^^', 'E7(13)E7(b13)'].forEach((t) => assert.equal(chordName(t), t));
+});
+
+test('asterisco de nota de rodapé não derruba a linha', () => {
+  assert.equal(parseCifraText('A7/13     F#m7(b5)*   B7(b9)')[0].hasChords, true);
+  assert.equal(parseCifraText('Gm   F   C*   D   D(sus9)')[0].hasChords, true);
+});
+
+test('setas e ornamentos da fonte não derrubam a linha', () => {
+  ['Am ^^^^^^ Gm7        C7', 'F7M     Bm7(5-) ^ E7', '-> B7          Em7(9)',
+    'G !----> F#  !----->  Bm', 'B7(#5) - x2x243',
+  ].forEach((l) => assert.equal(parseCifraText(l)[0].hasChords, true, l));
+});
+
+test('parêntese que nunca fecha não derruba a linha', () => {
+  assert.equal(parseCifraText('( Am  G  Am  G  Am  Bm')[0].hasChords, true);
+});
+
+test('acorde sujo é tocável com o nome limpo, mas na tela sai como está', () => {
+  const segs = chordLineSegs('Gm   F   C*   D');
+  assert.equal(segs.map((s) => s.text).join(''), 'Gm   F   C*   D'); // alinhamento intacto
+  const cs = segs.filter((s) => s.isChord);
+  assert.deepEqual(cs.map((s) => s.text), ['Gm', 'F', 'C*', 'D']);
+  assert.deepEqual(cs.map((s) => s.name), ['Gm', 'F', 'C', 'D']);
+});
+
+test('extractChords usa o nome limpo e não repete', () => {
+  assert.deepEqual(extractChords(parseCifraText('C*  Gm7)  C  (Dm')), ['C', 'Gm7', 'Dm']);
+});
+
+test('layoutChordRow expõe o nome limpo junto do token cru', () => {
+  const items = layoutChordRow('C*  ^^  Dm', 10, () => 30);
+  assert.deepEqual(items.map((i) => [i.tok, i.name, i.isChord]),
+    [['C*', 'C', true], ['^^', '^^', false], ['Dm', 'Dm', true]]);
+});
+
+test('linha sem nenhum acorde não é linha de acordes (só ornamento/marca)', () => {
+  assert.equal(parseCifraText('^^^^^^')[0].hasChords, false);
+  assert.equal(parseCifraText('-> ->')[0].hasChords, false);
+});
+
+// --- Fileira de miniaturas: rótulo não se parte ao meio -------------------
+
+test('layoutChordRow: "[Frase 1]" é um token só (não quebra em "[Frase" + "1]")', () => {
+  const items = layoutChordRow('  Fm7   Bb/D  [Frase 1]', 10, () => 40);
+  assert.deepEqual(items.map((i) => i.tok), ['Fm7', 'Bb/D', '[Frase 1]']);
+  assert.deepEqual(items.map((i) => i.isChord), [true, true, false]);
+});
+
+test('layoutChordRow: "[Intro] Em7 Am7" — rótulo primeiro, acordes tocáveis', () => {
+  const items = layoutChordRow('[Intro] Em7  Am7', 10, () => 40);
+  assert.deepEqual(items.map((i) => i.tok), ['[Intro]', 'Em7', 'Am7']);
+  assert.deepEqual(items.map((i) => i.isChord), [false, true, true]);
+});
+
+// --- Não-regressão do comportamento já existente --------------------------
+
+test('parêntese colado no acorde é extensão, não rótulo (Am7(9)/G segue acorde)', () => {
+  ['Am7(9)/G', 'C6(9)/G', 'Db6(9)/Ab', 'Eb7(9)(11#)', 'A7(13b)', 'D7M(6)', 'Am6(5+)', 'F#m7(5b)',
+  ].forEach((t) => assert.equal(isChordTok(t), true, `${t} deveria ser acorde`));
+});
+
+test('linha com extensão entre parênteses seguida de baixo continua linha de acordes', () => {
+  assert.equal(parseCifraText('   Em7               Am7(9)   Am7(9)/G')[0].hasChords, true);
+  assert.equal(parseCifraText('Am6(5+)         Db6(9)/Ab    D6(9)/A     D7M(6)')[0].hasChords, true);
+});
+
+test('marcas comuns seguem aceitas na linha de acordes', () => {
+  assert.equal(parseCifraText('C N.C. x2 Bm7 | % (2x)')[0].hasChords, true);
+});
+
+test('linha de acordes sem letra embaixo fica sozinha', () => {
+  const p = parseCifraText('C  G\n\nAm');
+  assert.equal(p[0].chords, 'C  G');
+  assert.equal(p[0].hasLyric, false);
+});
+
+test('par acorde/letra clássico continua pareado', () => {
+  const p = parseCifraText('C       G\nQuando eu vi');
+  assert.equal(p.length, 1);
+  assert.deepEqual([p[0].chords, p[0].lyric], ['C       G', 'Quando eu vi']);
+});

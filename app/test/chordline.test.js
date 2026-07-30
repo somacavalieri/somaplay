@@ -17,5 +17,5 @@ test('chordLineSegs: linha vazia → sem segmentos', () => {
 });
 
 test('chordLineSegs: linha só de espaços vira um segmento não-acorde', () => {
-  assert.deepEqual(chordLineSegs('   '), [{ text: '   ', isChord: false }]);
+  assert.deepEqual(chordLineSegs('   '), [{ text: '   ', name: '   ', isChord: false }]);
 });

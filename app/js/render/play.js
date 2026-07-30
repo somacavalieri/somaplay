@@ -4,7 +4,7 @@
 import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
-import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs } from '../chords.js';
+import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs, chordName } from '../chords.js';
 import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
@@ -128,9 +128,9 @@ function rowMeasurers(cifraFontPx) {
 // Fileira nome+diagrama no lugar da linha de acordes (só linhas com letra).
 function chordDiagRowHTML(chordLine, dict, meas) {
   const items = layoutChordRow(chordLine, meas.chPx, (tok, isChord) =>
-    (isChord ? Math.max(chordDiagWidth(tok, true, dict), meas.label(tok)) : meas.tok(tok)));
+    (isChord ? Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok)) : meas.tok(tok)));
   const inner = items.map((it) => (it.isChord
-    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.tok)}" title="Ver acorde"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.tok, true, dict)}</button>`
+    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="Ver acorde"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.name, true, dict)}</button>`
     : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
   return `<div class="ch-diag-row">${inner}</div>`;
 }
@@ -139,7 +139,7 @@ function chordDiagRowHTML(chordLine, dict, meas) {
 // visual idêntico); espaços seguem no fluxo do white-space:pre.
 function chordLineHTML(chordLine) {
   return chordLineSegs(chordLine).map((sg) => (sg.isChord
-    ? `<button class="ch-btn" data-a="openChordPop" data-id="${esc(sg.text)}">${esc(sg.text)}</button>`
+    ? `<button class="ch-btn" data-a="openChordPop" data-id="${esc(sg.name)}">${esc(sg.text)}</button>`
     : esc(sg.text))).join('');
 }
 
