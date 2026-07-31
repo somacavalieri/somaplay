@@ -2,7 +2,7 @@
 import {
   S, audio, initState, applyTheme, saveSettings,
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
-  createList, listById, toggleSongInList, moveInList, favList,
+  createList, listById, toggleSongInList, reorderInList, favList,
   persistCurrentStems, applyVarToSongs,
 } from './state.js';
 import { DB } from './db.js';
@@ -586,7 +586,7 @@ const actions = {
 
 function moveList(idx, dir) {
   if (S.openListId === '__fav') return; // Favoritas: ordem automática
-  moveInList(S.openListId, idx, dir);
+  reorderInList(S.openListId, idx, idx + dir);
   update();
 }
 
