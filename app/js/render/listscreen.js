@@ -33,15 +33,18 @@ export function renderListScreen() {
       </div>` : ''}
     </div>` : '';
 
+  const total = l.musicas.length;
+  const canDrag = !l.sistema && total > 1;
+
   const rows = l.musicas.map((id, idx) => {
     const so = songById(id);
     if (!so) return '';
-    const last = idx === l.musicas.length - 1;
-    return `<div class="listsong-row">
-      <div class="updown">
-        <button data-a="moveUp" data-id="${idx}" title="Subir" ${idx === 0 ? 'disabled' : ''}>${I.chevU()}</button>
-        <button data-a="moveDown" data-id="${idx}" title="Descer" ${last ? 'disabled' : ''}>${I.chevDn()}</button>
-      </div>
+    const handle = canDrag
+      ? `<button class="drag-handle" data-idx="${idx}" title="Arraste para reordenar"
+          aria-label="Reordenar: ${esc(so.title)}, posição ${idx + 1} de ${total}">${I.grip()}</button>`
+      : '';
+    return `<div class="listsong-row" data-idx="${idx}">
+      ${handle}
       <div class="pos-num">${idx + 1}</div>
       <button class="btn-icon sm play-tint" data-a="openSong" data-id="${so.id}" data-from="list" title="Tocar">${I.play()}</button>
       <div style="flex:1;min-width:0;cursor:pointer" data-a="openSong" data-id="${so.id}" data-from="list">

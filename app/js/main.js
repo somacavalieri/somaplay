@@ -91,6 +91,11 @@ function afterRender() {
   if (S.screen === 'settings') { fillStorageInfo(); wireBackupInput(); }
   if (S.screen === 'addedit') wireAddEditFiles();
 
+  if (pendingHandleIdx != null) {
+    document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
+    pendingHandleIdx = null;
+  }
+
   const search = document.getElementById('search-input');
   if (search) {
     search.addEventListener('input', () => {
@@ -269,8 +274,6 @@ const actions = {
     DB.deleteList(l.id);
     actions.backToLists();
   },
-  moveUp(d) { moveList(+d.id, -1); },
-  moveDown(d) { moveList(+d.id, +1); },
   removeFromList(d) {
     if (S.openListId === '__fav') { toggleFav(d.id); }
     else {
@@ -584,9 +587,14 @@ const actions = {
   },
 };
 
-function moveList(idx, dir) {
+// Índice da alça que deve receber o foco depois do próximo render.
+let pendingHandleIdx = null;
+function focusHandle(idx) { pendingHandleIdx = idx; }
+
+// Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
+function applyReorder(from, to) {
   if (S.openListId === '__fav') return; // Favoritas: ordem automática
-  reorderInList(S.openListId, idx, idx + dir);
+  reorderInList(S.openListId, from, to);
   update();
 }
 
@@ -734,6 +742,20 @@ document.addEventListener('keydown', (e) => {
     else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
       S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
       update();
+    }
+  }
+  // ↑/↓ com foco na alça movem a música uma posição (substitui as setas antigas)
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    const h = document.activeElement?.closest?.('.drag-handle');
+    if (h) {
+      const from = +h.dataset.idx;
+      const to = from + (e.key === 'ArrowUp' ? -1 : 1);
+      const l = listById(S.openListId);
+      if (l && to >= 0 && to < l.musicas.length) {
+        e.preventDefault();
+        focusHandle(to);
+        applyReorder(from, to);
+      }
     }
   }
   if (e.key === 'Enter') {

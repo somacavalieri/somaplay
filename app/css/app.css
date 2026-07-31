@@ -164,11 +164,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .badge-system{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;white-space:nowrap}
 .pin-ind{color:var(--accent);display:flex}
 
-.listsong-row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;min-height:66px}
-.updown{display:flex;flex-direction:column;gap:2px}
-.updown button{width:34px;height:26px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer}
-.updown button:disabled{color:var(--knob);cursor:default}
+.listsong-row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;min-height:66px;touch-action:pan-y}
 .pos-num{width:30px;text-align:center;font-family:var(--f-mono);color:var(--muted);font-size:15px}
+
+/* --- Arraste para reordenar --- */
+.drag-handle{width:34px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:var(--knob);cursor:grab;touch-action:none}
+.drag-handle:hover,.drag-handle:focus-visible{color:var(--text);background:var(--surface2)}
+.drag-handle:active{cursor:grabbing}
+.listsong-row.shifting{transition:transform 160ms ease}
+.listsong-row.settling{transition:transform 180ms ease}
+.listsong-row.dragging{position:relative;z-index:5;border-color:var(--accent);box-shadow:var(--shadow);opacity:.97;cursor:grabbing}
+.rows.dragging-active{user-select:none}
+.rows.dragging-active .listsong-row{cursor:grabbing}
 
 /* --- Menus / popovers / modais --- */
 .menu-pop{position:absolute;right:0;top:54px;width:248px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:40;box-shadow:var(--shadow)}
