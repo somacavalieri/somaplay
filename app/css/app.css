@@ -170,6 +170,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 /* --- Arraste para reordenar --- */
 .drag-handle{width:34px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:var(--knob);cursor:grab;touch-action:none}
 .drag-handle:hover,.drag-handle:focus-visible{color:var(--text);background:var(--surface2)}
+.drag-handle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .drag-handle:active{cursor:grabbing}
 .listsong-row.shifting{transition:transform 160ms ease}
 .listsong-row.settling{transition:transform 180ms ease}

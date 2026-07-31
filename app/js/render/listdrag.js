@@ -185,8 +185,10 @@ export function wireListDrag(root, { onReorder }) {
       if (e.pointerType !== 'mouse') { e.preventDefault(); start(row, e.clientY, e.pointerId); }
       return;
     }
-    // Long-press só na área "morta" da linha — botões continuam sendo botões.
-    if (e.target.closest('button,[data-a]')) { clearPress(); return; }
+    // Long-press vale em qualquer ponto da linha; só os botões (▶ ♥ −) seguem sendo
+    // botões. A área de título tem data-a="openSong", mas o clique pós-arraste é
+    // suprimido, então segurar nela pega a música em vez de abrir.
+    if (e.target.closest('button')) { clearPress(); return; }
     press.timer = setTimeout(() => start(press.row, press.y, press.pointerId), LONG_PRESS_MS);
   });
 
