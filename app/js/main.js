@@ -10,6 +10,7 @@ import { esc } from './icons.js';
 import { renderHome, homeResults } from './render/home.js';
 import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
+import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
 import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
@@ -94,6 +95,13 @@ function afterRender() {
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
     pendingHandleIdx = null;
+  }
+
+  if (S.screen === 'list') {
+    const rows = document.querySelector('.rows');
+    if (rows?.querySelector('.drag-handle')) {
+      wireListDrag(rows, { onReorder: (from, to) => { focusHandle(to); applyReorder(from, to); } });
+    }
   }
 
   const search = document.getElementById('search-input');
