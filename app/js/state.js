@@ -2,6 +2,7 @@
 import { DB, uid } from './db.js';
 import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
+import { setLang, detectLang } from './i18n.js';
 
 export const S = {
   // navegação
@@ -62,6 +63,9 @@ export const S = {
   settings: {
     theme: 'dark', awake: true, cifraZoom: 110, defaultSpeed: 3, masterVol: 80,
     cifraMiniaturas: false,
+    lang: null,                    // null = ainda não resolvido; boot() detecta
+    chordNotation: null,           // null = segue o idioma
+    chordNotationTouched: false,   // true depois que o usuário mexe na notação
   },
 };
 
@@ -110,6 +114,10 @@ export async function initState() {
   await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
+  if (!S.settings.lang) S.settings.lang = detectLang(navigator.language);
+  if (!S.settings.chordNotation) S.settings.chordNotation = S.settings.lang === 'pt' ? 'br' : 'intl';
+  setLang(S.settings.lang);
+  saveSettings();
   S.scrollSpeed = S.settings.defaultSpeed;
   applyTheme();
 }

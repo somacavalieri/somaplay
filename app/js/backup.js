@@ -78,7 +78,9 @@ export async function importLibrary(file, { merge = false } = {}) {
     for (const s of manifest.songs) await DB.putSong(s);
     for (const l of manifest.lists || []) await DB.putList(l);
     if (manifest.settings) {
-      S.settings = { ...S.settings, ...manifest.settings };
+      // lang/notação são preferências do aparelho: não viajam entre bibliotecas
+      const { lang, chordNotation, chordNotationTouched, ...rest } = manifest.settings;
+      S.settings = { ...S.settings, ...rest };
       await DB.saveSettings(S.settings);
     }
     await replaceChordbook(manifest.chordbook || []);

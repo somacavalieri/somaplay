@@ -21,6 +21,7 @@ import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
+import { t, setLang as applyLang } from './i18n.js';
 
 const app = document.getElementById('app');
 
@@ -532,6 +533,18 @@ const actions = {
     update();
   },
   setTheme(d) { S.settings.theme = d.id; saveSettings(); applyTheme(); update(); },
+  setLang(d) {
+    S.settings.lang = applyLang(d.id);
+    if (!S.settings.chordNotationTouched) {
+      S.settings.chordNotation = d.id === 'pt' ? 'br' : 'intl';
+    }
+    saveSettings(); update();
+  },
+  setNotation(d) {
+    S.settings.chordNotation = d.id;
+    S.settings.chordNotationTouched = true;
+    saveSettings(); update();
+  },
   async exportBackup() {
     toast('Gerando backup...');
     try { await exportLibrary(); toast('Backup exportado'); }
