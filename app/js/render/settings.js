@@ -71,7 +71,7 @@ export function renderSettings() {
 
         <button class="setting-row link" data-a="importSamples">
           <div style="width:46px;height:46px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--teal-tint2);color:var(--teal)">${I.music(20)}</div>
-          <div class="info"><div class="t title">Importar exemplos</div><div class="s">Paralelas (cifra por imagem) e Andança (cifra em texto)</div></div>
+          <div class="info"><div class="t title">Importar exemplos</div><div class="s">Groove de teste — cifra em texto com diagramas e letra</div></div>
           ${I.chevR()}
         </button>
 

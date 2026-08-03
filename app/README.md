@@ -16,8 +16,9 @@ Depois da primeira visita, funciona **sem internet**.
 
 ## Primeiro uso
 
-- **Configurações → Importar exemplos** carrega 3 músicas de demonstração
-  (Paralelas — cifra por imagem · Andança — cifra em texto com diagramas · Groove de teste — 4 stems de áudio p/ o mixer).
+- **Configurações → Importar exemplos** carrega a música de demonstração
+  (Groove de teste — cifra em texto com diagramas + letra p/ karaokê). É conteúdo autoral;
+  o app não distribui cifras, letras nem áudio de terceiros.
 - **Configurações → Adicionar música** cadastra as suas: imagens de cifra ou texto colado,
   letra pra karaokê, stems de áudio (um arquivo por canal) e/ou versão completa.
 - **Backup**: Configurações → Exportar/Importar biblioteca (arquivo `.somaplay` com tudo dentro).

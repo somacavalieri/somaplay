@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-v12';
+const VERSION = 'somaplay-v13';
 const SHELL = [
   './',
   './index.html',
@@ -37,11 +37,6 @@ const SHELL = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './samples/paralelas.png',
-  './samples/demo/baixo.mp3',
-  './samples/demo/violao.mp3',
-  './samples/demo/piano.mp3',
-  './samples/demo/bateria.mp3',
 ];
 
 self.addEventListener('install', (e) => {
