@@ -4,6 +4,7 @@
 // origin: { kind:'draft'|'song'|'book', songId?, varId? } — diz onde a forma é gravada.
 import { I, esc } from '../icons.js';
 import { chordSVG } from '../chords.js';
+import { t } from '../i18n.js';
 
 export const VAZIO = [-1, -1, -1, -1, -1, -1];
 
@@ -86,13 +87,13 @@ export function setBase(st, delta) {
 // (que já traz base pronta, a janela de 5 linhas escolhida pelo usuário — usada
 // como está, mesmo quando diverge do que os frets sozinhos indicariam).
 export function descreveForma(shape) {
-  if (shape.barre) return `pestana ${shape.barre.fret}ª`;
+  if (shape.barre) return t('chordeditor.desc.barre', { n: shape.barre.fret });
   let base = shape.base;
   if (base == null) {
     const pos = (shape.frets || []).filter((f) => f > 0);
     base = pos.length && Math.max(...pos) > 4 ? Math.min(...pos) : 1;
   }
-  return base > 1 ? `casa ${base}ª` : 'aberto';
+  return base > 1 ? t('chordeditor.desc.fret', { n: base }) : t('chordeditor.desc.open');
 }
 
 // Rótulo sugerido para uma forma nova, sem repetir os já usados no acorde.
@@ -129,24 +130,24 @@ export function chordEditorHTML(st, opts = {}) {
     const cells = st.frets.map((f, i) =>
       `<button class="fcell ${f === casa ? 'on' : ''} ${travada(i) && st.barre.fret > casa ? 'lock' : ''}" data-a="ceCell" data-id="${i}" data-fret="${casa}"></button>`).join('');
     linhas += `<div class="frow">
-      <button class="fbarre ${naCasa ? 'on' : ''}" data-a="ceBarre" data-id="${casa}" title="Pestana na ${casa}ª casa">⌐</button>
-      <span class="fnum">${casa}ª</span>
+      <button class="fbarre ${naCasa ? 'on' : ''}" data-a="ceBarre" data-id="${casa}" title="${t('chordeditor.grid.barreTitle', { n: casa })}">⌐</button>
+      <span class="fnum">${t('chordeditor.grid.fretNum', { n: casa })}</span>
       <div class="fcells">${cells}${bar}</div></div>`;
   }
 
   const meta = [];
-  if (opts.fromLabel) meta.push(`vindo de “${esc(opts.fromLabel)}”`);
-  if (opts.usage) meta.push(`usada em ${opts.usage} música${opts.usage === 1 ? '' : 's'}`);
+  if (opts.fromLabel) meta.push(t('chordeditor.meta.from', { label: esc(opts.fromLabel) }));
+  if (opts.usage) meta.push(`${t('chordeditor.meta.usedIn', { count: opts.usage })} ${opts.usage === 1 ? t('common.song') : t('common.songs')}`);
 
   const foot = st.origin.varId
-    ? `<button class="btn-ghost sm" data-a="ceSave">Atualizar variação</button><button class="btn-save sm" data-a="ceSaveNew">Salvar como nova</button>`
-    : `<button class="btn-save sm" data-a="ceSaveNew">Salvar</button>`;
+    ? `<button class="btn-ghost sm" data-a="ceSave">${t('chordeditor.foot.update')}</button><button class="btn-save sm" data-a="ceSaveNew">${t('chordeditor.foot.saveNew')}</button>`
+    : `<button class="btn-save sm" data-a="ceSaveNew">${t('common.save')}</button>`;
 
   return `<div class="chord-editor">
     <div class="ce-hd"><b>${esc(st.name)}</b>
-      <span class="ce-base">casa base
-        <button class="btn-icon xs" data-a="ceBase" data-id="-1">−</button><b>${st.base}ª</b><button class="btn-icon xs" data-a="ceBase" data-id="1">+</button></span>
-      <button class="btn-icon xs" style="margin-left:auto" data-a="ceClose" title="Fechar">${I.close()}</button></div>
+      <span class="ce-base">${t('chordeditor.hd.baseFret')}
+        <button class="btn-icon xs" data-a="ceBase" data-id="-1">−</button><b>${t('chordeditor.grid.fretNum', { n: st.base })}</b><button class="btn-icon xs" data-a="ceBase" data-id="1">+</button></span>
+      <button class="btn-icon xs" style="margin-left:auto" data-a="ceClose" title="${t('chordeditor.close')}">${I.close()}</button></div>
     <div class="fgrid">
       <div class="frow"><span class="fbarre-pad"></span><span class="fnum"></span>
         <div class="fcells">${CORDAS.map((n) => `<span class="fstr">${n}</span>`).join('')}</div></div>
@@ -156,7 +157,7 @@ export function chordEditorHTML(st, opts = {}) {
     </div>
     ${meta.length ? `<div class="ce-meta">${meta.join(' · ')}</div>` : ''}
     <div class="ce-foot">
-      <input type="text" class="input" id="ce-label" placeholder="rótulo (ex.: pestana 3ª)" value="${esc(st.label)}">
+      <input type="text" class="input" id="ce-label" placeholder="${t('chordeditor.label.placeholder')}" value="${esc(st.label)}">
       ${foot}</div>
   </div>`;
 }

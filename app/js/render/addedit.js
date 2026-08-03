@@ -6,6 +6,7 @@ import { offlineBadge } from './home.js';
 import { parseCifraText, extractChords, chordSVG } from '../chords.js';
 import { shapesOf, defaultShape } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
+import { t } from '../i18n.js';
 
 export function newDraft(song) {
   if (song) {
@@ -40,15 +41,18 @@ function artistDropdown(d) {
   const exact = S.artists.some((a) => a.name.toLowerCase() === q);
   return `<div style="position:fixed;inset:0;z-index:39" data-a="closeArtistDD"></div>
     <div class="dropdown">
-      <div class="search"><div class="searchin">${I.search(17)}<input type="text" id="artist-query" placeholder="Buscar artista..." value="${esc(d.artistQuery)}"></div></div>
+      <div class="search"><div class="searchin">${I.search(17)}<input type="text" id="artist-query" placeholder="${t('addedit.artistDropdown.searchPlaceholder')}" value="${esc(d.artistQuery)}"></div></div>
       <div class="opts">
-        ${list.map((a) => `<div class="dd-row ${a.name === d.artistName ? 'sel' : ''}" data-a="pickArtist" data-id="${esc(a.name)}">
+        ${list.map((a) => {
+          const n = songsOfArtist(a.id).length;
+          return `<div class="dd-row ${a.name === d.artistName ? 'sel' : ''}" data-a="pickArtist" data-id="${esc(a.name)}">
           <div class="avatar sm ${a.av}">${esc(a.name[0])}</div>
-          <div style="flex:1;min-width:0"><div class="nm">${esc(a.name)}</div><div class="ct">${songsOfArtist(a.id).length} músicas</div></div>
+          <div style="flex:1;min-width:0"><div class="nm">${esc(a.name)}</div><div class="ct">${n} ${n === 1 ? t('common.song') : t('common.songs')}</div></div>
           ${a.name === d.artistName ? `<span style="color:var(--accent)">${I.check(18, 2.4)}</span>` : ''}
-        </div>`).join('') || '<div style="padding:14px 12px;color:var(--muted);font-size:13px;text-align:center">Nenhum artista encontrado</div>'}
+        </div>`;
+        }).join('') || `<div style="padding:14px 12px;color:var(--muted);font-size:13px;text-align:center">${t('addedit.artistDropdown.notFound')}</div>`}
       </div>
-      ${q && !exact ? `<div class="dd-create" data-a="createArtistFromQuery">${I.plus()}<span>Criar novo artista: "${esc(d.artistQuery.trim())}"</span></div>` : ''}
+      ${q && !exact ? `<div class="dd-create" data-a="createArtistFromQuery">${I.plus()}<span>${t('addedit.artistDropdown.createNew', { name: esc(d.artistQuery.trim()) })}</span></div>` : ''}
     </div>`;
 }
 
@@ -71,10 +75,10 @@ function chordDigHTML(d) {
     : '';
   return `<div class="card-section">
     <div class="hd"><span style="color:var(--accent);display:flex">${I.cifraLines(19)}</span>
-      <div class="t">Digitações dos acordes</div>
-      <div class="s">toque um acorde para ajustar as casas</div>
-      <button class="btn-ghost sm" style="margin-left:auto" data-a="refreshChords">Detectar acordes</button></div>
-    <div class="digchips">${chips || '<div style="color:var(--muted);font-size:13px">Cole a cifra e toque em “Detectar acordes”.</div>'}</div>
+      <div class="t">${t('addedit.chordDig.title')}</div>
+      <div class="s">${t('addedit.chordDig.hint')}</div>
+      <button class="btn-ghost sm" style="margin-left:auto" data-a="refreshChords">${t('addedit.chordDig.detectBtn')}</button></div>
+    <div class="digchips">${chips || `<div style="color:var(--muted);font-size:13px">${t('addedit.chordDig.emptyHint', { action: t('addedit.chordDig.detectBtn') })}</div>`}</div>
     ${editor}
   </div>`;
 }
@@ -88,8 +92,8 @@ export function renderAddEdit() {
       ${im._thumbURL ? `<img class="thumb" src="${im._thumbURL}" alt="">` : `<span style="color:var(--muted);display:flex">${I.img()}</span>`}
       <span class="file-name">${esc(im.name || im.blobId || 'imagem')}</span>
       <div class="seg-mini">
-        <button class="${im.tipo === 'aberta' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="aberta">Aberta</button>
-        <button class="${im.tipo === 'fechada' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="fechada">Fechada</button>
+        <button class="${im.tipo === 'aberta' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="aberta">${t('play.menu.open')}</button>
+        <button class="${im.tipo === 'fechada' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="fechada">${t('play.menu.closed')}</button>
       </div>
       <button class="btn-del" data-a="removeImg" data-id="${i}">${I.trash(16)}</button>
     </div>`).join('');
@@ -98,37 +102,37 @@ export function renderAddEdit() {
     ? `${imgRows}
        <div class="dropzone" data-a="pickImages">
          ${I.upload()}
-         <div class="l1">Arraste imagens ou <em>selecione arquivos</em></div>
-         <div class="l2">PNG, JPG · aberta (com diagramas) e fechada</div>
+         <div class="l1">${t('addedit.dropzone.line1', { em: `<em>${t('addedit.dropzone.selectFiles')}</em>` })}</div>
+         <div class="l2">${t('addedit.dropzone.line2')}</div>
        </div>
        <div class="field" style="margin-top:14px">
-         <label>Acordes da música (opcional, separados por espaço — mostra os diagramas no fim da cifra)</label>
-         <input type="text" class="input lg" id="f-acordes" placeholder="Ex.: D D7/C G Gm G7M E" value="${esc(d.acordes)}">
+         <label>${t('addedit.chordsField.label')}</label>
+         <input type="text" class="input lg" id="f-acordes" placeholder="${t('addedit.chordsField.placeholder')}" value="${esc(d.acordes)}">
        </div>`
-    : `<textarea class="textarea mono" id="f-cifratexto" placeholder="Cole a cifra aqui (linhas de acordes sobre as linhas de letra, seções entre [colchetes])...">${esc(d.cifraTexto)}</textarea>`;
+    : `<textarea class="textarea mono" id="f-cifratexto" placeholder="${t('addedit.cifraText.placeholder')}">${esc(d.cifraTexto)}</textarea>`;
 
   const stemRows = d.stems.map((st, i) => `
     <div class="stem-row">
       <span style="color:var(--teal);display:flex">${I.music(18)}</span>
-      <input type="text" value="${esc(st.name)}" data-in="stemName" data-id="${i}" placeholder="Nome do canal">
-      <span class="file-name">${esc(st.fileName || (st.blobId ? 'arquivo salvo' : 'sem arquivo'))}</span>
-      ${st.blobId || st._file ? '' : `<button class="btn-ghost" style="height:38px" data-a="pickStemFile" data-id="${i}">Escolher arquivo</button>`}
+      <input type="text" value="${esc(st.name)}" data-in="stemName" data-id="${i}" placeholder="${t('addedit.stem.namePlaceholder')}">
+      <span class="file-name">${esc(st.fileName || (st.blobId ? t('addedit.file.saved') : t('addedit.file.none')))}</span>
+      ${st.blobId || st._file ? '' : `<button class="btn-ghost" style="height:38px" data-a="pickStemFile" data-id="${i}">${t('addedit.file.choose')}</button>`}
       <button class="btn-del" data-a="removeStem" data-id="${i}">${I.trash(16)}</button>
     </div>`).join('');
 
   const fullRows = d.full.map((f, i) => `
     <div class="stem-row">
       ${I.disc(18, true)}
-      <input type="text" value="${esc(f.nome)}" data-in="fullName" data-id="${i}" placeholder="Nome da versão (ex.: Original — estúdio)">
-      <span class="file-name">${esc(f.fileName || (f.blobId ? 'arquivo salvo' : 'sem arquivo'))}</span>
-      ${f.blobId || f._file ? '' : `<button class="btn-ghost" style="height:38px" data-a="pickFullFile" data-id="${i}">Escolher arquivo</button>`}
+      <input type="text" value="${esc(f.nome)}" data-in="fullName" data-id="${i}" placeholder="${t('addedit.full.namePlaceholder')}">
+      <span class="file-name">${esc(f.fileName || (f.blobId ? t('addedit.file.saved') : t('addedit.file.none')))}</span>
+      ${f.blobId || f._file ? '' : `<button class="btn-ghost" style="height:38px" data-a="pickFullFile" data-id="${i}">${t('addedit.file.choose')}</button>`}
       <button class="btn-del" data-a="removeFull" data-id="${i}">${I.trash(16)}</button>
     </div>`).join('');
 
   return `<div class="screen">
     <div class="topbar">
-      <button class="btn-icon" data-a="cancelAddEdit" title="Voltar">${I.back()}</button>
-      <div class="page-title">${editing ? 'Editar música' : 'Adicionar música'}</div>
+      <button class="btn-icon" data-a="cancelAddEdit" title="${t('common.back')}">${I.back()}</button>
+      <div class="page-title">${editing ? t('addedit.title.edit') : t('settings.addSong.title')}</div>
       <span style="margin-left:auto"></span>
       ${offlineBadge}
     </div>
@@ -136,83 +140,83 @@ export function renderAddEdit() {
       <div class="form-wrap">
         <div class="form-grid">
           <div class="field">
-            <label>Artista</label>
+            <label>${t('addedit.field.artist')}</label>
             <div style="position:relative">
               <div class="select-like ${d.artistOpen ? 'open' : ''}" data-a="toggleArtistDD">
-                <span class="val ${d.artistName ? '' : 'placeholder'}">${esc(d.artistName || 'Selecionar artista')}</span>
+                <span class="val ${d.artistName ? '' : 'placeholder'}">${esc(d.artistName || t('addedit.field.selectArtist'))}</span>
                 ${I.chevD(18)}
               </div>
               ${artistDropdown(d)}
             </div>
           </div>
           <div class="field">
-            <label>Nome da música</label>
-            <input type="text" class="input lg" id="f-title" placeholder="Título" value="${esc(d.title)}">
+            <label>${t('addedit.field.songName')}</label>
+            <input type="text" class="input lg" id="f-title" placeholder="${t('addedit.field.titlePlaceholder')}" value="${esc(d.title)}">
           </div>
         </div>
         <div class="form-grid">
           <div class="field">
-            <label>Tom (opcional)</label>
-            <input type="text" class="input lg" id="f-tom" placeholder="Ex.: G" value="${esc(d.tom)}">
+            <label>${t('addedit.field.key')}</label>
+            <input type="text" class="input lg" id="f-tom" placeholder="${t('addedit.field.keyPlaceholder')}" value="${esc(d.tom)}">
           </div>
           <div class="field">
-            <label>Fonte da cifra</label>
+            <label>${t('addedit.field.chartSource')}</label>
             <div class="seg-mini" style="height:52px;align-items:center;padding:6px">
-              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">Imagem</button>
-              <button style="height:40px" class="${d.cifraFonte === 'texto' ? 'on' : ''}" data-a="setCifraFonte" data-id="texto">Texto</button>
+              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">${t('addedit.chartSource.image')}</button>
+              <button style="height:40px" class="${d.cifraFonte === 'texto' ? 'on' : ''}" data-a="setCifraFonte" data-id="texto">${t('addedit.chartSource.text')}</button>
             </div>
           </div>
         </div>
 
         <div class="field">
-          <label>Fonte (de onde veio a cifra)</label>
+          <label>${t('addedit.field.source')}</label>
           <div class="fonte-row">
-            <input type="text" class="input lg" id="f-fonte" placeholder="Preenche sozinho pelo tipo da cifra" value="${esc(d.fonte)}">
-            <button type="button" class="btn-ghost sm ${d.fonte === 'CifraClub' ? 'on' : ''}" data-a="setFonte" data-id="CifraClub">CifraClub</button>
-            <button type="button" class="btn-ghost sm ${d.fonte === 'Songbook' ? 'on' : ''}" data-a="setFonte" data-id="Songbook">Songbook</button>
+            <input type="text" class="input lg" id="f-fonte" placeholder="${t('addedit.field.sourcePlaceholder')}" value="${esc(d.fonte)}">
+            <button type="button" class="btn-ghost sm ${d.fonte === 'CifraClub' ? 'on' : ''}" data-a="setFonte" data-id="CifraClub">${t('addedit.source.cifraclub')}</button>
+            <button type="button" class="btn-ghost sm ${d.fonte === 'Songbook' ? 'on' : ''}" data-a="setFonte" data-id="Songbook">${t('addedit.source.songbook')}</button>
           </div>
         </div>
 
         <div class="field">
-          <label>Estilo musical</label>
+          <label>${t('addedit.field.style')}</label>
           <div class="chip-row">
-            <input type="text" class="input lg" id="f-estilo" placeholder="Ex.: Samba" value="${esc(d.estilo)}">
+            <input type="text" class="input lg" id="f-estilo" placeholder="${t('addedit.field.stylePlaceholder')}" value="${esc(d.estilo)}">
             ${['MPB', 'Samba', 'Bossa Nova', 'Choro', 'Forró', 'Carimbó', 'Rock', 'Pop', 'Alternativo', 'Jazz', 'Soul'].map((genero) => `<button type="button" class="btn-ghost sm ${d.estilo === genero ? 'on' : ''}" data-a="setEstilo" data-id="${genero}">${genero}</button>`).join('')}
           </div>
         </div>
 
         <div class="card-section">
           <div class="hd"><span style="color:var(--accent);display:flex">${d.cifraFonte === 'imagem' ? I.img() : I.cifraLines(19)}</span>
-            <div class="t">${d.cifraFonte === 'imagem' ? 'Imagens de cifra' : 'Cifra em texto'}</div></div>
+            <div class="t">${d.cifraFonte === 'imagem' ? t('addedit.chartSection.imageTitle') : t('addedit.chartSection.textTitle')}</div></div>
           ${cifraBody}
         </div>
 
         ${chordDigHTML(d)}
 
         <div class="card-section">
-          <div class="hd"><span style="color:var(--accent);display:flex">${I.textLines()}</span><div class="t">Letra (karaokê)</div>
-            <div class="s">separe estrofes com linha em branco</div></div>
-          <textarea class="textarea" id="f-letra" placeholder="Cole a letra da música aqui...">${esc(d.letra)}</textarea>
+          <div class="hd"><span style="color:var(--accent);display:flex">${I.textLines()}</span><div class="t">${t('addedit.lyrics.title')}</div>
+            <div class="s">${t('addedit.lyrics.hint')}</div></div>
+          <textarea class="textarea" id="f-letra" placeholder="${t('addedit.lyrics.placeholder')}">${esc(d.letra)}</textarea>
         </div>
 
         <div class="card-section">
-          <div class="hd"><span style="color:var(--teal);display:flex">${I.mixer(19)}</span><div class="t">Canais de áudio (stems)</div>
-            <div class="s">${d.stems.length} adicionado${d.stems.length === 1 ? '' : 's'}</div></div>
+          <div class="hd"><span style="color:var(--teal);display:flex">${I.mixer(19)}</span><div class="t">${t('addedit.stems.title')}</div>
+            <div class="s">${d.stems.length} ${d.stems.length === 1 ? t('addedit.stems.added') : t('addedit.stems.addedPlural')}</div></div>
           ${stemRows}
-          <button class="add-slot" data-a="addStems">${I.plus(18)}Adicionar canais de áudio</button>
+          <button class="add-slot" data-a="addStems">${I.plus(18)}${t('addedit.stems.addBtn')}</button>
         </div>
 
         <div class="card-section">
-          <div class="hd">${I.disc(19, true)}<div class="t">Versão completa (música inteira)</div>
-            <div class="s">opcional · gravação sem separar canais</div></div>
+          <div class="hd">${I.disc(19, true)}<div class="t">${t('addedit.full.title')}</div>
+            <div class="s">${t('addedit.full.hint')}</div></div>
           ${fullRows}
-          <button class="add-slot amber" data-a="addFull">${I.plus(18)}Adicionar versão completa</button>
+          <button class="add-slot amber" data-a="addFull">${I.plus(18)}${t('addedit.full.addBtn')}</button>
         </div>
       </div>
     </div>
     <div class="foot-actions">
-      <button class="btn-ghost lg" data-a="cancelAddEdit">Cancelar</button>
-      <button class="btn-save" data-a="saveDraft">${I.save()}Salvar na biblioteca (offline)</button>
+      <button class="btn-ghost lg" data-a="cancelAddEdit">${t('common.cancel')}</button>
+      <button class="btn-save" data-a="saveDraft">${I.save()}${t('addedit.saveBtn')}</button>
     </div>
     <input type="file" id="file-images" accept="image/*" multiple hidden>
     <input type="file" id="file-audio" accept="audio/*" multiple hidden>
@@ -238,8 +242,8 @@ export function syncDraftFromDOM() {
 export async function commitDraft() {
   const d = S.draft;
   syncDraftFromDOM();
-  if (!d.artistName.trim()) throw new Error('Escolha ou crie um artista');
-  if (!d.title.trim()) throw new Error('Dê um nome à música');
+  if (!d.artistName.trim()) throw new Error(t('addedit.error.needArtist'));
+  if (!d.title.trim()) throw new Error(t('addedit.error.needTitle'));
 
   const artist = await upsertArtist(d.artistName.trim());
 
