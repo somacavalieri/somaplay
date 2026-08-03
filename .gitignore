@@ -1,6 +1,15 @@
 # Biblioteca de assets (PDFs de songbooks + imagens de cifras) — ~1.8 GB, fica só local
 chords/
 
+# Backups da biblioteca. São dados do usuário, podem passar de 30 MB, e podem conter
+# cifras e letras de terceiros — nada disso entra num repositório público.
+*.somaplay
+bkp/
+
+# Sessões de gravação (Audition) e sobras de trabalho
+recordings/
+untitled folder/
+
 # Arquivos de sistema do macOS
 .DS_Store
 **/.DS_Store

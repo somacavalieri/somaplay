@@ -1,44 +1,130 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repository.
 
-## What this project is (and is not)
+## What this project is
 
-This folder is **soma_play**: a *personal* project, currently at the **design/PRD stage — there is no application code yet** (no `package.json`, build, lint, or tests). Do not invent build/run/test commands; there is no toolchain until implementation begins.
+**soma_play** — an offline, installable PWA for reading guitar chord charts ("cifras"),
+playing along with multitrack audio, and karaoke. Built for a tablet on a music stand:
+at home, at rehearsal, and on stage. Android tablet (Chrome) is the primary target,
+desktop secondary.
 
-The product is an **offline, installable PWA** for reading guitar/voice chord charts ("cifras"), playing along with multitrack audio, and karaoke — for a single user (the author), used at home, in rehearsal, and on stage (Android tablet primary, desktop secondary).
+It started as a personal project and is now **open source and in production**:
 
-**Disambiguation:** the parent `My Drive/CLAUDE.md` (auto-loaded) describes a *different* project (3D boxes for smokers). That context does **not** apply here — this subfolder is the cifras app. Everything in this project is written and discussed in **Brazilian Portuguese**; keep that language for specs, UI copy, and discussion.
+- Live at **https://somacavalieri.github.io/somaplay/** — every push to `main` deploys
+  via `.github/workflows/pages.yml`
+- Public repo under **MIT** (`LICENSE`), with `README.md` / `README.pt-BR.md` and
+  `CONTRIBUTING.md`
+- The app in `app/` is real, working software — roughly 4,000 lines across 27 ES modules
 
-## Source of truth
+**Disambiguation:** the parent `My Drive/CLAUDE.md` is auto-loaded and describes a
+different project (3D boxes). It does not apply here.
 
-- **`docs/superpowers/specs/2026-06-25-soma-play-design.md`** is the authoritative spec (PRD). **Read it before any design or implementation work.** Section numbers (§5 content model, §6 navigation, §7 Listas, §8 templates, §11 out-of-MVP, etc.) are referenced throughout discussions.
-- This project follows the **superpowers brainstorming → writing-plans** workflow. New/changed features go through the design spec first; specs live in `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`. The next step after a settled design is the `writing-plans` skill — do not jump to implementation skills before a plan exists.
+## Running and testing
 
-## Architecture (the big picture, from the PRD)
+No dependencies, no build step, no package manager. Plain ES modules served as-is.
 
-- **Single PWA codebase** for Android tablet (Chrome) and desktop. No backend; the whole library lives on-device.
-- **Mode is a global lens.** The top of the app selects one of three modes — **T1 Cifra** (default), **T2 Acompanhamento**, **T3 Karaokê** — and the *entire* library is filtered to content available in the active mode. Playing a song is meant to be a single tap (no intermediate mode picker); inside a song a T1/T2/T3 switch doubles as a feature indicator (disabled modes = the song lacks that content).
-- **Three views** within a mode: **Artistas**, **Músicas**, and **Listas**. Listas (§7) are an exception — they are **global, ignoring the mode lens**; entering Listas dims the mode selector, and opening a song from a list plays it in its *best available* mode.
-- **Content model (§5):** `Artista → Música`. A Música's chart ("Cifra") is **image OR text, chosen per song** — mostly single-column CifraClub-style images, text when the source makes it more practical. Images are tagged `aberta | fechada` (with/without chord diagrams); the T1 **Aberta/Fechada toggle** swaps the two images (or, for text, shows/hides diagrams — diagram generation from text is post-MVP). Música also has audio `stems` (name/volume/mute), a karaoke `Letra`, and a `favorita` flag.
-- **Audio:** Web Audio API. Each stem is a gain node; all share **one transport clock** so global play/pause/seek stay in sync.
-- **Offline & storage:** Service Worker for offline operation; **large files (audio/images) in OPFS**, metadata in IndexedDB. Backups export/import the whole library including lists and favorites.
+```bash
+cd app && python3 -m http.server 8137   # → http://localhost:8137
+cd app && node --test                   # test suite, Node >= 20, installs nothing
+cd app && node --check js/main.js       # syntax check one module
+```
+
+A static HTTP server is required — `file://` breaks the Service Worker, OPFS and ES
+modules.
+
+Verification works in three layers, and the third counts: `node --test` for pure logic,
+`node --check` for syntax, and **manual verification in the browser** for anything
+touching the UI. There is no DOM test harness, on purpose.
+
+## Language
+
+- **English:** `README.md`, public docs, code comments in new code, commit messages
+- **Portuguese:** `docs/superpowers/` specs and plans — the honest design history
+- **Both:** the app's interface, via a PT/EN selector
+
+## Architecture
+
+- **No backend.** The whole library lives on the device.
+- **Mode is a global lens.** The top of the app selects **T1 Cifra**, **T2
+  Acompanhamento** or **T3 Karaokê**, and the entire library filters to what exists in
+  that mode. Playing a song is one tap; inside a song the T1/T2/T3 switch doubles as a
+  feature indicator.
+- **Views:** Artistas, Músicas, Estilos, Listas. Listas are global — they ignore the
+  mode lens, and opening a song from a list plays it in its best available mode.
+- **Content model:** `Artista → Música`. A song's chart is **image or text**, chosen per
+  song. Images are tagged `aberta | fechada` (with/without chord diagrams). A song also
+  has audio `stems`, a karaoke `letra`, an `estilo` and a `favorita` flag.
+- **Audio:** Web Audio API. One gain node per stem, all sharing a single transport clock
+  so global play/pause/seek stay in sync.
+- **Storage:** large files (audio, images) in OPFS; metadata in IndexedDB. Backup
+  exports and imports the whole library as one `.somaplay` file, with a merge mode that
+  upserts by id.
+- **i18n:** `js/i18n.js` exports `t(key, params)`, `setLang`, `getLang`, `detectLang`.
+  Tables are `js/i18n/pt.js` and `js/i18n/en.js`, flat key→string, namespaced by screen.
+- **Chord notation:** `js/chord-notation.js` converts chord names between Brazilian
+  (`C7M`) and international (`Cmaj7`) spelling. Pure, no state.
+
+## Things that will bite you
+
+Hard-won. None of these are obvious from reading the code.
+
+**Never rename `DB_NAME` in `app/js/db.js`.** It is the IndexedDB database name. Changing
+it makes the app open an empty database — every user's library disappears. The name is
+invisible to users; there is no reason to touch it.
+
+**Changing the `SHELL` array in `app/sw.js` requires bumping `VERSION` on line 2.** The
+install step calls `cache.addAll(SHELL)`, which fails entirely if any path is missing,
+and without a version bump installed clients keep the old list. **Every new module under
+`app/js/` must be added to `SHELL`**, or the app breaks offline.
+
+**Never translate or renotate the user's chart.** A text chart aligns chords over lyrics
+by character column — `A7M` is 3 characters, `Amaj7` is 5. Any substitution inside chart
+text shifts every chord on the line and destroys the alignment. The notation preference
+applies to what the app generates (the chord dictionary, its search), never to the user's
+content. Same for the "Acordes desta música" grid and the chord popover: they show the
+name as it appears in the chart.
+
+**Never put a `data-*` attribute value behind `t()`.** Values like `data-id="CifraClub"`
+and `data-tipo="aberta"` are persisted into the song record. Translating one makes a
+library saved in English diverge from one saved in Portuguese. Translate the visible
+label only.
+
+**Translation keys go in BOTH tables.** A parity test in `app/test/i18n.test.js` fails
+otherwise. And translated strings must be produced at render time — a module-level
+constant holding translated text is frozen at import and will not update when the
+language changes.
+
+**No third-party musical content in the repo** — no chord charts, lyrics, tablature or
+recordings you do not own. This applies to source code too: the demo songs once embedded
+full lyrics as string constants, and removing them was its own cleanup. The example song
+that ships with the app was written for the project.
+
+## How changes get made
+
+**spec → plan → implementation.** A design decision is written to
+`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` before code is touched; that spec
+becomes a plan in `docs/superpowers/plans/`; only then does implementation start. Use the
+superpowers brainstorming → writing-plans workflow, and do not jump to implementation
+skills before a plan exists.
+
+Treat the specs as living: when a decision changes, update the relevant section rather
+than leaving it only in chat. `docs/superpowers/specs/2026-06-25-soma-play-design.md` is
+the original PRD and is still referenced by section number (§5 content model, §6
+navigation, §7 Listas, §11 out-of-MVP).
 
 ## The `chords/` asset library
 
-`chords/` is the imported source material (PDF songbooks + loose cifra images), **organized by artist** with a fixed convention — preserve it when adding files:
+`chords/` is the author's local source material (songbook PDFs and loose cifra images),
+~1.8 GB. It is **gitignored and stays that way** — it is third-party content. Structure,
+if you are adding to it locally:
 
 ```
-chords/<Artista>/chords/      ← loose single songs (images: .png/.jpg/.psd)
-chords/<Artista>/songbook/    ← complete-book songbook PDFs
-chords/Coletaneas/songbook/   ← multi-artist songbooks (Bossa Nova, Choro, MPB, Rock, Beatles, etc.)
-chords/_a-identificar/        ← loose songs whose artist isn't yet identified
+chords/<Artista>/chords/      ← loose single songs (.png/.jpg/.psd)
+chords/<Artista>/songbook/    ← complete songbook PDFs
+chords/Coletaneas/songbook/   ← multi-artist songbooks
+chords/_a-identificar/        ← songs whose artist isn't identified yet
 ```
 
-- "Favoritas" and any system list aside, **artist folders always carry both `chords/` and `songbook/` subfolders.**
-- When importing many cifra images, note they are often low-resolution (e.g. a typical capture is ~595px wide) and blur when filling a tablet screen — prefer ~2× resolution sources.
-
-## Working conventions
-
-- Discuss and write in Portuguese.
-- Treat the PRD as living: when a design decision is made, update the relevant spec section (and renumber/cross-reference consistently) rather than letting decisions live only in chat.
+Captured cifra images are often low-resolution (~595px wide) and blur on a tablet —
+prefer ~2× sources.
