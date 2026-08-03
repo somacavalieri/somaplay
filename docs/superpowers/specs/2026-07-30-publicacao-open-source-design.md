@@ -1,8 +1,22 @@
 # Publicação open source — checklist
 
 **Data:** 2026-07-30
-**Status:** aprovado para execução (nada executado ainda)
-**Repo:** `github.com/somacavalieri/somaplay` — já público desde 2026-07-05
+**Atualizado:** 2026-08-03 — auditoria do estado real; Fase 1 concluída, Fase 2 parcial,
+Fase 3 intocada. A i18n (T-31) foi antecipada e **entregue**.
+**Status:** em execução — 8 de 31 tarefas feitas
+**Repo:** `github.com/somacavalieri/somaplay` — público desde 2026-07-05, no ar em
+[somacavalieri.github.io/somaplay](https://somacavalieri.github.io/somaplay/)
+
+## Placar
+
+| Fase | Feito | Situação |
+|---|---|---|
+| 0 — Higiene | 1 / 5 | **Quatro itens abertos, dois deles agora mais urgentes que na origem** |
+| 1 — Jurídico | 4 / 6 | Bloqueio removido; falta licença de fonte e o áudio demo |
+| 2 — Vitrine | 2 / 5 | README existe; faltam screenshots, metadados e `CLAUDE.md` |
+| 3 — Contribuição | 1 / 7 | **Nada que permita aceitar PR com segurança** |
+| 4 — Rename | 0 / 7 | Não começou, por decisão |
+| Extra | 1 / 1 | i18n PT/EN entregue e no ar |
 
 ---
 
@@ -30,17 +44,28 @@ a contribuição.
 
 ## 3. Achados da auditoria
 
-### 3.1 Conteúdo de terceiros — o bloqueio
+### 3.1 Conteúdo de terceiros — o bloqueio ✅ RESOLVIDO
 
-`app/js/samples.js` (499 linhas) cadastra 4 músicas demo. Três embutem obra protegida
-**no próprio código-fonte**, não só em arquivo de mídia:
+> **Correção de 2026-08-03:** esta seção dizia "4 músicas demo". Eram **8** — a auditoria
+> original leu só até a linha 440 de um arquivo de 499. Sete continham obra de terceiros,
+> quatro delas marcadas explicitamente `fonte: 'CifraClub'`. Registrado porque o erro é
+> instrutivo: uma leitura parcial produziu um número que parecia verificado.
 
-| Demo | O que está versionado | Situação |
+| Demo | O que estava versionado | Situação |
 |---|---|---|
 | Paralelas (Fagner) | `app/samples/paralelas.png` — imagem de cifra | Protegida |
-| Andança (Beth Carvalho) | `ANDANCA_CIFRA` + **`ANDANCA_LETRA` (letra integral)** em `samples.js:83` | Protegida — letra completa hardcoded |
-| Groove de teste | 4 × `app/samples/demo/*.mp3` (áudio sintético) | Provavelmente autoral, mas sai junto |
-| As Pastorinhas (Noel Rosa) | Texto + 15 digitações, `samples.js:441` | **Não é domínio público** — co-autoria com João de Barro (Braguinha, †2006), protegida até 2077 |
+| Andança (Beth Carvalho) | `ANDANCA_CIFRA` + **`ANDANCA_LETRA` (letra integral)** | Protegida — letra completa hardcoded |
+| Groove de teste | 4 × `app/samples/demo/*.mp3` | Autoral (texto e letra ficaram) |
+| As Pastorinhas (Noel Rosa) | Texto + 15 digitações | **Não é domínio público** — co-autoria com João de Barro (Braguinha, †2006), protegida até 2077 |
+| Oxum (Serena Assumpção) | Texto + digitações, `fonte: 'CifraClub'` | Protegida |
+| Queremos Saber (Cássia Eller) | Texto, `fonte: 'CifraClub'` | Protegida |
+| Disfarça e Chora (Cartola) | Texto, `fonte: 'CifraClub'` | Protegida |
+| Me Dê Motivo (Tim Maia) | Texto, `fonte: 'CifraClub'` | Protegida |
+
+**Resolvido em `622350b`:** `samples.js` foi de 499 para 45 linhas, de 8 músicas para 1.
+Sobrou "Groove de teste", cuja cifra e letra foram escritas para o projeto — autoral, entra
+sob MIT. Os 5 arquivos de mídia (1,1 MB) saíram, o `SHELL` do Service Worker foi ajustado e
+o `VERSION` subiu no mesmo commit.
 
 **Nota sobre o plano B:** disponibilizar um `.somaplay` para download público é
 publicação igual. Se o arquivo contiver cifras e letras de terceiros, o problema muda de
@@ -76,85 +101,72 @@ Marcador de esforço: 🟢 minutos · 🟡 ~1h · 🔴 meio dia ou mais
 
 ### Fase 0 — Higiene (não depende de nada)
 
-- [ ] **T-01** 🟢 Finalizar ou guardar a branch `feat/editor-acordes-e-dicionario`
-      (4 arquivos modificados + `app/js/render/chordbookscreen.js` novo, não versionado).
-      Merge em `main` ou `git stash` — nada abaixo deve começar com a árvore suja.
-- [ ] **T-02** 🟢 `git gc --prune=now --aggressive` — recupera ~850 MB de objetos órfãos.
+- [x] **T-01** ✅ A branch `feat/editor-acordes-e-dicionario` não existe mais — o trabalho
+      do editor de acordes foi fechado antes desta execução.
+- [ ] **T-02** 🟢 `git gc --prune=now --aggressive`. **Verificado em 2026-08-03: nunca foi
+      rodado — o `.git` está em 852 MB**, com blobs órfãos de 187/173/80 MB. O Google Drive
+      sincroniza isso continuamente.
 - [ ] **T-03** 🟢 Ampliar `.gitignore`: `bkp/`, `recordings/`, `*.somaplay`,
-      `untitled folder/`. Impede que um `git add .` distraído versione o arquivo de 37 MB.
-- [ ] **T-04** 🟢 Remover `untitled folder/` e mover `recordings/` (sessões do Audition)
-      para fora do repositório.
+      `untitled folder/`. **Agora mais urgente do que na origem:** o repo tem público, e
+      quatro `.somaplay` (um de 37 MB) seguem soltos na raiz sem ignore. Um `git add .`
+      distraído os grava no histórico permanentemente.
+- [ ] **T-04** 🟢 Remover `untitled folder/` e mover `recordings/` para fora do repositório.
+      Ambos continuam lá.
 - [ ] **T-05** 🟢 Decidir o destino de `-DESIGN/` (`Soma Play.html`, `top-bar-chord.psd`
-      1,6 MB): mover para `docs/design/`, manter, ou remover do versionamento.
+      1,6 MB). Continua versionado.
 
 ### Fase 1 — Limpeza jurídica (bloqueia divulgação)
 
-- [ ] **T-06** 🟡 **Remover as 4 músicas demo de terceiros:**
-  - `app/js/samples.js` — apagar `ANDANCA_CIFRA`, `ANDANCA_LETRA`, `ANDANCA_DIGITACOES`,
-    o bloco de Paralelas, o de Groove de teste e o de As Pastorinhas (`samples.js:441`)
-  - `git rm app/samples/paralelas.png app/samples/demo/*.mp3`
-  - `app/sw.js` — remover as 5 entradas correspondentes do array `SHELL` (linhas 40-44)
-    e **subir o `VERSION`** (`somaplay-v12` → `v13`), senão o SW velho tenta cachear
-    arquivos que não existem mais e a instalação falha
-- [ ] **T-07** 🔴 **Compor o conteúdo demo autoral** que substitui o removido.
-      Meta: uma música com cifra em texto + letra + digitações, e uma com 3-4 stems de
-      áudio para exercitar o mixer. Tudo composto/gravado por você → entra sob MIT junto
-      com o código. Sem isso, o primeiro acesso é uma tela vazia.
-- [ ] **T-08** 🟡 Reescrever `importSamples()` em `samples.js` com o conteúdo de T-07 e
-      atualizar o `SHELL` do `sw.js` com os novos arquivos de áudio.
-- [ ] **T-09** 🟢 Adicionar `LICENSE` (MIT) na raiz — nome completo e ano.
-      *Hoje o repo é público sem licença, o que juridicamente significa "todos os direitos
-      reservados": ninguém pode legalmente usar nem contribuir.*
-- [ ] **T-10** 🟢 Incluir as licenças das fontes em `app/fonts/LICENSES/`
-      (Inter e Sora = SIL OFL 1.1; JetBrains Mono = SIL OFL 1.1) — a redistribuição exige.
-- [ ] **T-11** 🟢 Seção no README: **o app não distribui conteúdo.** É um leitor; cifras,
-      áudio e letras são trazidos pelo usuário e ficam no dispositivo dele. Separa a
-      licença do código da natureza do conteúdo.
+- [x] **T-06** ✅ **Removidas as 7 músicas de terceiros** (eram 7, não 3 — ver §3.1).
+      `samples.js` 499 → 45 linhas; 5 arquivos de mídia apagados; `SHELL` e `VERSION`
+      ajustados no mesmo commit. Commit `622350b`.
+- [x] **T-07** ⚠️ **Parcial.** A cifra e a letra de "Groove de teste" já eram autorais e
+      ficaram — o primeiro acesso mostra uma música de verdade, não tela vazia.
+      **O que falta é só o áudio:** sem stems, o modo T2 Acompanhamento não tem demo.
+- [ ] **T-08** 🟡 Gravar 3-4 stems próprios e religá-los em `importSamples()`, mais as
+      entradas no `SHELL` e o bump de `VERSION`. Depende de T-07 (a parte de áudio).
+- [x] **T-09** ✅ `LICENSE` MIT na raiz, em nome de Flavio Soma Cavalieri, 2026.
+- [ ] **T-10** 🟢 Licenças das fontes em `app/fonts/LICENSES/` (Inter, Sora e JetBrains
+      Mono são todas SIL OFL 1.1). **Verificado: continua sem nenhum arquivo de licença** —
+      e a redistribuição de fonte exige. É o último item jurídico aberto.
+- [x] **T-11** ✅ Seção "Bring your own content" / "Traga o seu conteúdo" nos dois README.
 
 ### Fase 2 — Vitrine
 
-- [ ] **T-12** 🔴 **`README.md` na raiz, em inglês.** Hoje não existe — `app/README.md` é o
-      README de fato, em português e escrito para você mesmo. Estrutura:
-  - Uma frase + link da demo (GitHub Pages) + screenshots
-  - **Why this exists** — a justificativa: cifra impressa não toca junto; apps de cifra
-    exigem conta e internet; no palco é preciso algo que funcione offline num tablet.
-    Os três modos (Cifra / Acompanhamento / Karaokê) nascem daí
-  - How it works — PWA offline, sem backend, IndexedDB + OPFS, Web Audio com clock único
-  - Getting started — rodar local, instalar como PWA, cadastrar músicas
-  - Status, roadmap, contributing, license
-- [ ] **T-13** 🟢 Mover `app/README.md` → `docs/pt-BR/manual.md` (o guia de uso em
-      português, que é bom), linkado a partir do README principal.
-- [ ] **T-14** 🟡 Screenshots. Existe só `screens/karaoke.png`. Faltam Cifra,
-      Acompanhamento (mixer), biblioteca e editor de acordes — de preferência um GIF curto
-      de uso real no tablet.
-- [ ] **T-15** 🟢 Preencher os metadados do repo (hoje `description`, `homepageUrl` e
-      topics estão **vazios**). Topics sugeridos: `pwa`, `offline-first`, `guitar`,
-      `chords`, `music`, `web-audio`, `karaoke`, `vanilla-js`.
-- [ ] **T-16** 🟡 Reescrever `CLAUDE.md` — refletir que o app existe e está no ar, que o
-      projeto é público, e as decisões D4/D5/D6 sobre idioma.
+- [x] **T-12** ✅ **README bilíngue.** `README.md` (inglês, padrão) e `README.pt-BR.md`,
+      com troca de idioma no topo de cada um. Cobrem o resumo, *Why this exists*, os três
+      modos, funcionalidades, como rodar, arquitetura, contribuição, roadmap e status.
+- [ ] **T-13** 🟢 Mover `app/README.md` → `docs/pt-BR/manual.md`. **Não feito** — o
+      `app/README.md` continua onde estava e agora duplica parte do `README.pt-BR.md`.
+- [ ] **T-14** 🟡 Screenshots. **Continua só `screens/karaoke.png`.** Faltam Cifra,
+      Acompanhamento (mixer), biblioteca e editor de acordes. Para um app visual, é o
+      maior fator de conversão de quem abre a página.
+- [ ] **T-15** 🟢 Metadados do repo. **Verificado em 2026-08-03: `description`,
+      `homepageUrl` e topics seguem todos vazios.** Dois minutos de trabalho para o item de
+      melhor razão valor/esforço que restou.
+- [ ] **T-16** 🟡 Reescrever `CLAUDE.md`. **Não feito, e agora é um risco ativo:** o
+      arquivo ainda afirma *"design/PRD stage — there is no application code yet"* e manda
+      discutir em português, contra D4. Qualquer agente de IA que entrar no projeto lê isso
+      primeiro e parte de uma premissa falsa.
 
 ### Fase 3 — Abrir para contribuição
 
-- [ ] **T-17** 🟡 `CONTRIBUTING.md`. O essencial já é um ponto forte do projeto:
-      zero dependências · `cd app && python3 -m http.server 8137` para rodar ·
-      `cd app && node --test` para testar (Node ≥ 20, sem instalar nada).
-      Incluir o fluxo superpowers (spec → plan → implementação) e convenção de commit.
-- [ ] **T-18** 🟡 `.github/workflows/test.yml` — `node --test` + `node --check` nos módulos,
-      rodando em PR. É o que permite aceitar PR de desconhecido com segurança.
-- [ ] **T-19** 🟢 Proteger a branch `main`: exigir PR e CI verde.
-      *Hoje qualquer merge vai direto para o Pages em produção.*
-- [ ] **T-20** 🟢 `CODE_OF_CONDUCT.md` — Contributor Covenant, texto padrão.
-- [ ] **T-21** 🟢 `.github/ISSUE_TEMPLATE/` (bug + feature) e `PULL_REQUEST_TEMPLATE.md`.
-- [ ] **T-22** 🟡 **Abrir o roadmap como issues.** A §11 do PRD ("Fora do MVP") já é uma
-      lista pronta de trabalho futuro — vira ~10 issues, algumas marcadas
-      `good first issue`. É isto que transforma "repo público" em "projeto onde dá para
-      entrar".
-- [ ] **T-31** 🔴 **Interface em dois idiomas (PT/EN)** — spec pronta em
-      [`2026-08-01-i18n-pt-en-design.md`](2026-08-01-i18n-pt-en-design.md), 7 fases.
-      Não bloqueia publicar, mas é o maior item aberto do roadmap.
-- [ ] **T-23** 🟢 `docs/README.md` — índice explicando que `docs/superpowers/` é o
-      histórico de design em português. Material raro e honesto; só não pode ser a
-      primeira coisa que a pessoa encontra.
+- [x] **T-17** ✅ `CONTRIBUTING.md` escrito. Além do setup, documenta três armadilhas
+      não óbvias: bumpar `VERSION` ao mexer no `SHELL`, nunca renomear `DB_NAME`, e não
+      commitar conteúdo musical de terceiros. Issue e PR em português são bem-vindos.
+- [ ] **T-18** 🟡 `.github/workflows/test.yml`. **Verificado: só existe `pages.yml`.**
+      Nenhum teste roda em PR. Com o app no ar, um merge ruim vai direto para produção.
+- [ ] **T-19** 🟢 Proteger a `main`. **Verificado: sem proteção nenhuma** (`Branch not
+      protected`). Qualquer push na `main` dispara deploy imediato.
+- [ ] **T-20** 🟢 `CODE_OF_CONDUCT.md` — Contributor Covenant. Não existe.
+- [ ] **T-21** 🟢 `.github/ISSUE_TEMPLATE/` e `PULL_REQUEST_TEMPLATE.md`. Não existem.
+- [ ] **T-22** 🟡 **Abrir o roadmap como issues.** **Verificado: zero issues abertas.**
+      A §11 do PRD já é a lista pronta; vira ~10 issues, algumas `good first issue`.
+- [x] **T-31** ✅ **Interface PT/EN entregue e no ar.** 8 tasks, 16 commits, 272 chaves,
+      seletor com detecção pelo navegador e ajuste independente de notação de acordes
+      (brasileira ↔ internacional). Ver [`2026-08-01-i18n-pt-en-design.md`](2026-08-01-i18n-pt-en-design.md)
+      e o plano [`2026-08-03-i18n-pt-en.md`](../plans/2026-08-03-i18n-pt-en.md).
+- [ ] **T-23** 🟢 `docs/README.md` — índice do histórico de design. Não existe.
 
 ### Fase 4 — Rename (adiado, executar quando o nome fechar)
 
@@ -191,22 +203,63 @@ Marcador de esforço: 🟢 minutos · 🟡 ~1h · 🔴 meio dia ou mais
 
 ---
 
-## 5. Ordem de execução
+## 5. Prioridade do que resta (revisado em 2026-08-03)
 
-```
-Fase 0  →  Fase 1  →  Fase 2  →  Fase 3  →  (nome fecha)  →  Fase 4
-higiene    jurídico   vitrine    contrib.                    rename
-```
+A ordem original por fases perdeu sentido: a Fase 1 caiu, a Fase 3 nem começou, e a i18n
+passou na frente de tudo. O que segue está ordenado por **risco e por razão valor/esforço**,
+não por fase.
 
-- **Fase 1 bloqueia divulgar** para qualquer pessoa fora do círculo próximo.
-- **Fase 3 bloqueia aceitar contribuição**, não bloqueia divulgar.
-- **Fase 4 é independente** e não tem prazo.
+### Nível 1 — Agora (~20 min no total, e destrava tudo)
+
+| # | Por quê |
+|---|---|
+| **T-03** `.gitignore` | Quatro `.somaplay` soltos na raiz, um de 37 MB, sem ignore, num repo com público. Um `git add .` grava no histórico para sempre. É irreversível na prática |
+| **T-02** `git gc` | 852 MB de lixo local que o Google Drive sincroniza sem parar |
+| **T-15** metadados do repo | Dois minutos. Hoje quem acha o repo vê descrição vazia e nenhum topic — não há como saber o que é sem clicar |
+| **T-16** `CLAUDE.md` | Afirma que não existe código no projeto. Todo agente de IA que entrar parte de uma premissa falsa |
+
+### Nível 2 — Antes de chamar os amigos para contribuir
+
+| # | Por quê |
+|---|---|
+| **T-18** CI em PR | É o que permite aceitar código de terceiro sem quebrar o app no palco |
+| **T-19** proteger a `main` | Hoje um push na `main` vira deploy em produção, sem revisão nem teste |
+| **T-14** screenshots | App visual com uma única imagem no README. É o maior fator de conversão de quem abre a página |
+| **T-22** roadmap como issues | Transforma "repo público" em "projeto onde dá para entrar" |
+
+### Nível 3 — Acabamento
+
+**T-10** licenças de fonte (último item jurídico) · **T-20** código de conduta ·
+**T-21** templates de issue/PR · **T-23** índice de `docs/` · **T-13** mover o
+`app/README.md`
+
+### Nível 4 — Quando houver vontade
+
+**T-08** gravar os stems do demo (destrava o modo T2 para quem chega) · **Fase 4**
+o rename, quando o nome fechar
+
+## 5.1 Débito técnico registrado na execução da i18n
+
+Levantado pelas revisões, julgado aceitável, nenhum quebra nada. Rende issues:
+
+- Um mesmo conceito com três nomes em inglês: a lente de modo aparece como *mode*,
+  *category* e *lens*. Dois tooltips vizinhos se contradizem
+- *stem* vs *channel* usados de forma intercambiável; o README diz *stem*
+- Nomes dos modos espalhados por três famílias de chave (`home.mode.*`,
+  `play.modeSwitch.*`, `list.modeChart*`) — renomear um modo exige editar três lugares
+- `bestLabel()` em `state.js` e a chave `common.delete`: código e chave mortos
+- Contagem + substantivo montada por concatenação em sete arquivos de render. Correto
+  para PT/EN, quebra no primeiro idioma que flexiona
+- `i18n.test.js` faz `delete` na tabela `EN` sem `try/finally`
+- **A verificação manual no navegador nunca foi feita.** A feature foi para produção com
+  cobertura automatizada completa e nenhuma tela conferida por olho humano
 
 ## 6. Riscos
 
-| Risco | Mitigação |
+| Risco | Situação em 2026-08-03 |
 |---|---|
-| T-06 quebra o Service Worker em produção para quem já instalou | Subir `VERSION` no mesmo commit; testar em aba anônima antes do merge |
-| T-07 vira gargalo (é a única tarefa criativa da lista) | Se travar, publicar sem demo e deixar T-07/T-08 como issue — o README explica como cadastrar |
-| Rename depois de divulgar quebra links que os amigos salvaram | GitHub redireciona o repo; a URL do Pages não. Fechar o nome antes de divulgar amplo |
-| Aceitar PR sem CI verde derruba o app no palco | T-18 + T-19 antes de T-22 |
+| ~~T-06 quebra o Service Worker de quem já instalou~~ | **Não ocorreu.** `VERSION` subiu no mesmo commit e o `SHELL` foi validado contra o disco a cada mudança |
+| ~~T-07 vira gargalo~~ | **Contornado.** A cifra e a letra do demo já eram autorais; só o áudio ficou pendente, e sem bloquear nada |
+| Rename depois de divulgar quebra links salvos | Aberto. GitHub redireciona o repo; a URL do Pages não |
+| **Aceitar PR sem CI verde derruba o app no palco** | **Aberto e agora concreto** — o app está no ar e a `main` não tem proteção nem CI. T-18 + T-19 antes de T-22 |
+| **Arquivo grande entra no histórico por acidente** | **Aberto** — quatro `.somaplay` na raiz sem ignore, um de 37 MB. T-03 resolve em 2 minutos |
