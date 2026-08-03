@@ -221,4 +221,11 @@ export const PT = {
   'chordbook.row.delete': 'apagar',
   'chordbook.row.noneRegistered': 'sem formas registradas',
   'chordbook.empty.noneFound': 'Nenhum acorde encontrado.',
+  'addedit.image.fallbackName': 'imagem',
+  'chordeditor.string.1': 'Mi',
+  'chordeditor.string.2': 'Lá',
+  'chordeditor.string.3': 'Ré',
+  'chordeditor.string.4': 'Sol',
+  'chordeditor.string.5': 'Si',
+  'chordeditor.string.6': 'Mi',
 };

@@ -112,7 +112,12 @@ export function editorShape(st) {
 
 // ---------- HTML ----------
 const CW = 34, GAP = 8; // precisam bater com .fcell{width} e .fcells{gap} no CSS
-const CORDAS = ['Mi', 'Lá', 'Ré', 'Sol', 'Si', 'Mi'];
+// Nomes das cordas soltas (Mi/Lá/Ré/Sol/Si/Mi ↔ E/A/D/G/B/E) — chaves apenas;
+// resolvidas via t() a cada render (nunca strings congeladas no módulo).
+const CORDAS_KEYS = [
+  'chordeditor.string.1', 'chordeditor.string.2', 'chordeditor.string.3',
+  'chordeditor.string.4', 'chordeditor.string.5', 'chordeditor.string.6',
+];
 
 export function chordEditorHTML(st, opts = {}) {
   const travada = (i) => !!st.barre && i > st.barre.from && i < st.barre.to;
@@ -150,7 +155,7 @@ export function chordEditorHTML(st, opts = {}) {
       <button class="btn-icon xs" style="margin-left:auto" data-a="ceClose" title="${t('chordeditor.close')}">${I.close()}</button></div>
     <div class="fgrid">
       <div class="frow"><span class="fbarre-pad"></span><span class="fnum"></span>
-        <div class="fcells">${CORDAS.map((n) => `<span class="fstr">${n}</span>`).join('')}</div></div>
+        <div class="fcells">${CORDAS_KEYS.map((k) => `<span class="fstr">${t(k)}</span>`).join('')}</div></div>
       <div class="frow"><span class="fbarre-pad"></span><span class="fnum"></span>
         <div class="fcells">${heads}</div></div>
       ${linhas}

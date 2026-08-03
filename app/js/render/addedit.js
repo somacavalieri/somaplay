@@ -90,7 +90,7 @@ export function renderAddEdit() {
   const imgRows = d.imagens.map((im, i) => `
     <div class="imgitem-row">
       ${im._thumbURL ? `<img class="thumb" src="${im._thumbURL}" alt="">` : `<span style="color:var(--muted);display:flex">${I.img()}</span>`}
-      <span class="file-name">${esc(im.name || im.blobId || 'imagem')}</span>
+      <span class="file-name">${esc(im.name || im.blobId || t('addedit.image.fallbackName'))}</span>
       <div class="seg-mini">
         <button class="${im.tipo === 'aberta' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="aberta">${t('play.menu.open')}</button>
         <button class="${im.tipo === 'fechada' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="fechada">${t('play.menu.closed')}</button>

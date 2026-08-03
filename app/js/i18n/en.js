@@ -221,4 +221,11 @@ export const EN = {
   'chordbook.row.delete': 'delete',
   'chordbook.row.noneRegistered': 'no shapes registered',
   'chordbook.empty.noneFound': 'No chords found.',
+  'addedit.image.fallbackName': 'image',
+  'chordeditor.string.1': 'E',
+  'chordeditor.string.2': 'A',
+  'chordeditor.string.3': 'D',
+  'chordeditor.string.4': 'G',
+  'chordeditor.string.5': 'B',
+  'chordeditor.string.6': 'E',
 };
