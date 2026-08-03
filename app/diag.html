@@ -1,0 +1,182 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Soma Play — diagnóstico de áudio</title>
+<style>
+  body{background:#11151a;color:#e8eef5;font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:16px}
+  h1{font-size:16px;color:#f0b23c;margin:0 0 12px}
+  button{background:#f0b23c;color:#11151a;border:0;border-radius:8px;padding:12px 18px;font:600 15px system-ui;margin:0 8px 12px 0}
+  pre{white-space:pre-wrap;word-break:break-all;background:#0b0e12;border:1px solid #223;border-radius:8px;padding:12px}
+  .ok{color:#4ade80}.bad{color:#f87171}.warn{color:#fbbf24}
+</style>
+<h1>Soma Play — diagnóstico de áudio</h1>
+<button id="run">1 · Rodar diagnóstico</button>
+<button id="play">2 · Testar 1 canal</button>
+<button id="multi">3 · Testar todos os canais (como o app)</button>
+<pre id="out">Toque em "Rodar diagnóstico".</pre>
+<script type="module">
+const out = document.getElementById('out');
+const L = [];
+const log = (s, cls) => { L.push(cls ? `<span class="${cls}">${s}</span>` : s); out.innerHTML = L.join('\n'); };
+
+const DB_NAME = 'somaplay';
+let lastTest = null;
+let stemSet = [];   // canais da 1ª música com áudio, pro teste multi-canal
+
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME);              // sem versão: não dispara upgrade
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+    r.onblocked = () => rej(new Error('blocked'));
+  });
+}
+function getAll(d, store) {
+  return new Promise((res) => {
+    if (!d.objectStoreNames.contains(store)) return res([]);
+    const r = d.transaction(store, 'readonly').objectStore(store).getAll();
+    r.onsuccess = () => res(r.result || []);
+    r.onerror = () => res([]);
+  });
+}
+async function opfsDir() {
+  try {
+    if (!navigator.storage?.getDirectory) return null;
+    const root = await navigator.storage.getDirectory();
+    return await root.getDirectoryHandle('library', { create: false });
+  } catch (e) { return null; }
+}
+
+async function run() {
+  L.length = 0;
+  log(`UA: ${navigator.userAgent}`);
+  log(`origem: ${location.origin}`);
+  log(`AudioContext: ${!!(window.AudioContext || window.webkitAudioContext)}  ·  OPFS API: ${!!navigator.storage?.getDirectory}`);
+  try {
+    const est = await navigator.storage.estimate();
+    log(`storage: ${(est.usage/1e6).toFixed(1)} MB usados de ${(est.quota/1e6).toFixed(0)} MB  ·  persistido: ${await navigator.storage.persisted?.()}`);
+  } catch (e) { log(`storage.estimate falhou: ${e}`, 'warn'); }
+
+  const d = await idb();
+  log(`\nIndexedDB "${DB_NAME}" v${d.version} · stores: ${[...d.objectStoreNames].join(', ')}`);
+
+  const songs = await getAll(d, 'songs');
+  const idbBlobs = await getAll(d, 'blobs');
+  const idbIds = new Map(idbBlobs.map((r) => [r.id, r.blob]));
+  const dir = await opfsDir();
+  const opfsIds = new Map();
+  if (dir) { for await (const [name, h] of dir.entries()) opfsIds.set(name, h); }
+  log(`músicas: ${songs.length} · blobs no OPFS: ${dir ? opfsIds.size : 'OPFS/library AUSENTE'} · blobs no IndexedDB: ${idbIds.size}`);
+
+  const refs = [];
+  for (const s of songs) {
+    const audios = [...(s.stems || []).map((x) => ({ ...x, kind: 'stem' })), ...(s.full || []).map((x) => ({ ...x, kind: 'full' }))];
+    if (!audios.length) continue;
+    log(`\n▸ ${s.title}  (id ${s.id})`);
+    for (const a of audios) {
+      if (!a.blobId) { log(`   ${a.kind} "${a.name || a.nome}" — SEM blobId`, 'bad'); continue; }
+      let blob = null, where = '';
+      if (opfsIds.has(a.blobId)) { try { blob = await opfsIds.get(a.blobId).getFile(); where = 'OPFS'; } catch (e) { where = 'OPFS(erro ' + e.name + ')'; } }
+      if (!blob && idbIds.has(a.blobId)) { blob = idbIds.get(a.blobId); where = 'IDB'; }
+      if (!blob) { log(`   ${a.kind} "${a.name || a.nome}" [${a.blobId.slice(0,8)}] — ARQUIVO NÃO ENCONTRADO`, 'bad'); continue; }
+      const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+      const magic = String.fromCharCode(...head.slice(0,3));
+      const okMagic = magic === 'ID3' || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0);
+      log(`   ${a.kind} "${a.name || a.nome}" [${a.blobId.slice(0,8)}] — ${where} · ${(blob.size/1e6).toFixed(2)} MB · type="${blob.type}" · magic=${okMagic ? 'MP3 ok' : '?? ' + [...head].map(b=>b.toString(16)).join(' ')}`, okMagic ? 'ok' : 'bad');
+      refs.push({ song: s.title, label: a.name || a.nome, blob, kind: a.kind });
+    }
+    if (!stemSet.length) stemSet = refs.filter((r) => r.song === s.title && r.kind === 'stem');
+  }
+
+  if (!refs.length) { log('\nNenhum áudio para testar.', 'bad'); return; }
+
+  log('\n— decodificação (<audio> puro) —');
+  for (const r of refs) {
+    const url = URL.createObjectURL(r.blob);
+    const el = new Audio(); el.preload = 'metadata'; el.src = url;
+    const res = await new Promise((resolve) => {
+      const t = setTimeout(() => resolve('TIMEOUT 8s (não carregou metadados)'), 8000);
+      el.addEventListener('loadedmetadata', () => { clearTimeout(t); resolve(`ok · duração ${el.duration.toFixed(1)}s`); }, { once: true });
+      el.addEventListener('error', () => { clearTimeout(t); const e = el.error; resolve(`ERRO code=${e?.code} ${e?.message || ''}`); }, { once: true });
+    });
+    log(`   ${r.label}: ${res}`, res.startsWith('ok') ? 'ok' : 'bad');
+    el.src = ''; URL.revokeObjectURL(url);
+  }
+
+  lastTest = refs[0];
+  log(`\nAgora toque em "Testar tocar" para checar o Web Audio com "${lastTest.label}".`, 'warn');
+}
+
+async function testPlay() {
+  if (!lastTest) { log('\nRode o diagnóstico primeiro.', 'warn'); return; }
+  log('\n— Web Audio (mesmo grafo do app) —');
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    log(`   AudioContext criado, state=${ctx.state}`);
+    await ctx.resume();
+    log(`   após resume(), state=${ctx.state}`, ctx.state === 'running' ? 'ok' : 'bad');
+    const url = URL.createObjectURL(lastTest.blob);
+    const el = new Audio(); el.preload = 'auto'; el.src = url;
+    const src = ctx.createMediaElementSource(el);
+    const g = ctx.createGain(); g.gain.value = 0.8;
+    src.connect(g); g.connect(ctx.destination);
+    el.volume = 1;
+    await el.play();
+    log('   el.play() resolveu — deve estar tocando agora', 'ok');
+    await new Promise((r) => setTimeout(r, 2500));
+    log(`   após 2,5s: currentTime=${el.currentTime.toFixed(2)}s · paused=${el.paused} · readyState=${el.readyState} · duration=${el.duration}`,
+        el.currentTime > 0.3 ? 'ok' : 'bad');
+    if (el.currentTime <= 0.3) log('   >>> o áudio NÃO avançou: travou no readyState/rede', 'bad');
+    el.pause(); el.src = ''; URL.revokeObjectURL(url); ctx.close();
+  } catch (e) {
+    log(`   FALHOU: ${e.name}: ${e.message}`, 'bad');
+  }
+}
+
+// Replica o motor do app: N canais no mesmo AudioContext + correção de drift
+// a cada 250 ms com tolerância de 80 ms (audio.js _startClock).
+async function testMulti() {
+  if (!stemSet.length) { log('\nRode o diagnóstico primeiro (ou a música não tem canais).', 'warn'); return; }
+  log(`\n— multi-canal: ${stemSet.length} canais, correção de drift 250ms/80ms (igual ao app) —`);
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  const master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+  const tracks = stemSet.map((r) => {
+    const url = URL.createObjectURL(r.blob);
+    const el = new Audio(); el.preload = 'auto'; el.src = url;
+    const src = ctx.createMediaElementSource(el);
+    const g = ctx.createGain(); g.gain.value = 0.8;
+    src.connect(g); g.connect(master); el.volume = 1;
+    return { label: r.label, el, url };
+  });
+  const results = await Promise.all(tracks.map((t) => t.el.play().then(() => 'ok').catch((e) => `${e.name}: ${e.message}`)));
+  results.forEach((r, i) => log(`   play() ${tracks[i].label}: ${r}`, r === 'ok' ? 'ok' : 'bad'));
+
+  let seeks = 0;
+  const clock = setInterval(() => {
+    const pos = tracks[0].el.currentTime || 0;
+    for (let i = 1; i < tracks.length; i++) {
+      const el = tracks[i].el;
+      if (Math.abs((el.currentTime || 0) - pos) > 0.08) { try { el.currentTime = pos; seeks++; } catch (e) {} }
+    }
+  }, 250);
+
+  for (const s of [1, 3, 6]) {
+    await new Promise((r) => setTimeout(r, s === 1 ? 1000 : 2000));
+    log(`   t=${s}s · correções de drift acumuladas: ${seeks} · ` +
+        tracks.map((t) => `${t.label.slice(0,12)}=${t.el.currentTime.toFixed(2)}s(rs${t.el.readyState}${t.el.paused ? ',PAUSADO' : ''})`).join(' · '),
+        seeks > s * 3 ? 'bad' : 'ok');
+  }
+  clearInterval(clock);
+  const lead = tracks[0].el.currentTime;
+  if (lead < 3) log(`   >>> o canal líder só avançou ${lead.toFixed(2)}s em 6s: playback travado`, 'bad');
+  else if (seeks > 18) log(`   >>> ${seeks} correções de drift em 6s = thrash de seek; é o motor, não o arquivo`, 'bad');
+  else log('   >>> multi-canal tocou normalmente', 'ok');
+  tracks.forEach((t) => { t.el.pause(); t.el.src = ''; URL.revokeObjectURL(t.url); });
+  ctx.close();
+}
+
+document.getElementById('run').onclick = () => run().catch((e) => log(`\nFALHA: ${e.name}: ${e.message}`, 'bad'));
+document.getElementById('play').onclick = () => testPlay().catch((e) => log(`\nFALHA: ${e.name}: ${e.message}`, 'bad'));
+document.getElementById('multi').onclick = () => testMulti().catch((e) => log(`\nFALHA: ${e.name}: ${e.message}`, 'bad'));
+</script>

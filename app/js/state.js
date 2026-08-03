@@ -193,12 +193,20 @@ export function toggleSongInList(listId, songId) {
   l.musicas = l.musicas.includes(songId) ? l.musicas.filter((x) => x !== songId) : [...l.musicas, songId];
   DB.putList(l);
 }
-export function moveInList(listId, idx, dir) {
+// Move um item de posição devolvendo uma cópia — não muta a entrada.
+export function moveItem(arr, from, to) {
+  const out = arr.slice();
+  const [x] = out.splice(from, 1);
+  out.splice(to, 0, x);
+  return out;
+}
+
+export function reorderInList(listId, from, to) {
   const l = listById(listId);
   if (!l) return;
-  const j = idx + dir;
-  if (j < 0 || j >= l.musicas.length) return;
-  [l.musicas[idx], l.musicas[j]] = [l.musicas[j], l.musicas[idx]];
+  const n = l.musicas.length;
+  if (from === to || from < 0 || to < 0 || from >= n || to >= n) return;
+  l.musicas = moveItem(l.musicas, from, to);
   DB.putList(l);
 }
 

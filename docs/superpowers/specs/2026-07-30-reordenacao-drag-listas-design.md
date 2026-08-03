@@ -120,7 +120,7 @@ Unidade isolada, ~180 linhas.
 
 | Arquivo | Mudança |
 |---|---|
-| `app/js/state.js` | Nova `reorderInList(listId, from, to)` — `splice` de remoção + `splice` de inserção + `DB.putList`. A `moveInList` atual (linhas 188-195) vira wrapper de uma linha sobre ela, para que teclado e arraste compartilhem o mesmo código de persistência |
+| `app/js/state.js` | Nova `reorderInList(listId, from, to)` — `splice` de remoção + `splice` de inserção + `DB.putList`. `moveInList` é removida: teclado e arraste chamam `reorderInList` direto, então o wrapper seria código morto |
 | `app/js/render/listscreen.js` | O bloco `.updown` sai; entra a alça com `data-idx`. A linha ganha `data-idx` |
 | `app/js/main.js` | `moveList` segue servindo o teclado; nova ação de reorder por arraste chama `reorderInList` + `update()`; restaura o foco na alça da música movida quando a origem foi o teclado |
 | `app/css/app.css` | `.drag-handle`, `.listsong-row.dragging`, `.listsong-row.shifting`, `touch-action`. Usa apenas variáveis existentes (`--accent`, `--surface2`, `--shadow`) |
@@ -135,8 +135,9 @@ Unidade isolada, ~180 linhas.
 
 ## 6. Verificação
 
-Não há suíte de testes no projeto; a validação é manual, via Chrome DevTools MCP sobre o
-`serve.command`:
+O projeto tem suíte de testes (`node --test test/*.test.js`, 117 testes na linha de base).
+As funções puras de geometria e de reordenação entram nela; a parte de ponteiro/DOM é
+validada manualmente via Chrome DevTools MCP sobre o `serve.command`:
 
 1. **Mouse:** arrastar a 11ª música para a 1ª posição num único gesto, com autoscroll.
 2. **Toque emulado:** long-press pega a música; swipe rápido na linha rola a lista em vez
