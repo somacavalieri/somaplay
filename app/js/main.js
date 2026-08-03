@@ -229,7 +229,7 @@ const actions = {
     if (!name) return;
     await createList(name, S.popoverSongId);
     update();
-    toast(`Lista "${name}" criada com a música dentro`);
+    toast(t('msg.list.created', { name }));
   },
 
   // listas
@@ -265,7 +265,7 @@ const actions = {
   deleteList() {
     const l = listById(S.openListId);
     if (!l) return;
-    if (!confirm(`Excluir a lista "${l.nome}"? As músicas continuam na biblioteca.`)) return;
+    if (!confirm(t('msg.list.confirmDelete', { name: l.nome }))) return;
     S.lists = S.lists.filter((x) => x.id !== l.id);
     DB.deleteList(l.id);
     actions.backToLists();
@@ -317,12 +317,12 @@ const actions = {
   async deleteSongAsk() {
     const song = currentSong();
     if (!song) return;
-    if (!confirm(`Excluir "${song.title}" da biblioteca? Sai de todas as listas também.`)) return;
+    if (!confirm(t('msg.song.confirmDelete', { title: song.title }))) return;
     leavePlay();
     await deleteSong(song.id);
     S.screen = 'home';
     update();
-    toast('Música excluída');
+    toast(t('msg.song.deleted'));
   },
   toggleChordFav(d) {
     const id = S.currentSongId;
@@ -488,7 +488,9 @@ const actions = {
     await gravarNoDestino(st, shape, st.origin.varId);
     S.chordEd = null;
     update();
-    toast(n ? `Variação atualizada · ${n} música${n === 1 ? '' : 's'} atualizada${n === 1 ? '' : 's'}` : 'Variação atualizada');
+    toast(n
+      ? t(n === 1 ? 'msg.chordbook.variantUpdatedOne' : 'msg.chordbook.variantUpdatedMany', { count: n })
+      : t('msg.chordbook.variantUpdated'));
   },
   async ceSaveNew() {   // salvar como variação nova (reaproveitando forma idêntica)
     syncCE();
@@ -499,7 +501,7 @@ const actions = {
     await gravarNoDestino(st, shape, varId);
     S.chordEd = null;
     update();
-    toast(igual ? 'Forma já existia no dicionário' : 'Variação salva no dicionário');
+    toast(igual ? t('msg.chordbook.shapeExists') : t('msg.chordbook.variantSaved'));
   },
   pickImages() { document.getElementById('file-images').click(); },
   setImgTipo(d, ev, el) { syncDraftFromDOM(); S.draft.imagens[+d.id].tipo = el.dataset.tipo; update(); },
@@ -519,9 +521,9 @@ const actions = {
       S.chordEd = null;
       S.screen = 'home';
       update();
-      toast(`"${song.title}" salva na biblioteca`);
+      toast(t('msg.song.saved', { title: song.title }));
     } catch (e) {
-      toast(e.message || 'Não foi possível salvar');
+      toast(e.message || t('msg.song.saveFailed'));
     }
   },
 
@@ -546,9 +548,9 @@ const actions = {
     saveSettings(); update();
   },
   async exportBackup() {
-    toast('Gerando backup...');
-    try { await exportLibrary(); toast('Backup exportado'); }
-    catch (e) { toast('Falha ao exportar: ' + e.message); }
+    toast(t('msg.backup.exporting'));
+    try { await exportLibrary(); toast(t('msg.backup.exported')); }
+    catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
   importBackupMerge() { S.importMode = 'merge'; document.getElementById('file-backup').click(); },
@@ -556,8 +558,8 @@ const actions = {
     try {
       const done = await importSamples();
       update();
-      toast(done.length ? `Importado: ${done.join(' · ')}` : 'Exemplos já estavam na biblioteca');
-    } catch (e) { toast('Falha ao importar exemplos: ' + e.message); }
+      toast(done.length ? t('msg.samples.imported', { items: done.join(' · ') }) : t('msg.samples.alreadyImported'));
+    } catch (e) { toast(t('msg.samples.importFailed', { error: e.message })); }
   },
 
   // dicionário de acordes
@@ -571,24 +573,24 @@ const actions = {
     update();
   },
   cbNewVar(d) { S.chordEd = openEditor(d.id, null, { kind: 'book', varId: null }); S.cbAdding = false; update(); },
-  cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast('Padrão do acorde atualizado'); },
+  cbSetDefault(d, ev, el) { setDefault(d.id, el.dataset.var); update(); toast(t('msg.chordbook.defaultUpdated')); },
   cbDeleteVar(d, ev, el) {
     const id = el.dataset.var;
     const s = shapeById(d.id, id);
     if (!s) return;
-    if (!confirm(`Apagar a variação “${s.label || 'variação'}” de ${d.id}? As músicas que já a usam mantêm a forma delas.`)) return;
+    if (!confirm(t('msg.chordbook.confirmDeleteVariant', { label: s.label || t('msg.chordbook.variantFallbackLabel'), chord: d.id }))) return;
     removeVar(d.id, id);
     S.chordEd = null;
     update();
   },
-  cbRestore(d) { restoreBuiltins(d.id); update(); toast('Formas embutidas restauradas'); },
+  cbRestore(d) { restoreBuiltins(d.id); update(); toast(t('msg.chordbook.builtinsRestored')); },
   cbStartAdd() { S.cbAdding = true; S.chordEd = null; update(); },
   cbCancelAdd() { S.cbAdding = false; update(); },
   cbConfirmAdd() {
     const inp = document.getElementById('cb-new-name');
     const nome = inp ? inp.value.trim() : '';
     if (!nome) return;
-    if (!isChordTok(nome)) { toast('Nome de acorde inválido'); return; }
+    if (!isChordTok(nome)) { toast(t('msg.chordbook.invalidChordName')); return; }
     S.cbAdding = false;
     S.cbQuery = nome;
     S.cbFilter = null;   // senão o chip de tônica pode esconder o acorde recém-criado
@@ -663,19 +665,24 @@ function wireBackupInput() {
     const merge = S.importMode === 'merge';
     const total = S.songs.length;
     if (merge) {
-      if (!confirm(`Adicionar/atualizar do backup "${f.name}"? As músicas atuais NÃO serão apagadas — as com o mesmo id são atualizadas.`)) return;
-    } else if (total > 0 && !confirm(`Importar "${f.name}" vai SUBSTITUIR a biblioteca deste aparelho (${total} música${total === 1 ? '' : 's'}) pela do backup. As músicas atuais deste aparelho serão apagadas. Continuar?`)) {
+      if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
+    } else if (total > 0 && !confirm(t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') }))) {
       return;
     }
-    toast(merge ? 'Mesclando do backup...' : 'Importando biblioteca...');
+    toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
       const res = await importLibrary(f, { merge });
       applyTheme();
       update();
       toast(merge
-        ? `Backup mesclado: +${res.added} nova${res.added === 1 ? '' : 's'}, ${res.updated} atualizada${res.updated === 1 ? '' : 's'}`
-        : `Biblioteca importada: ${res.artists} artistas, ${res.songs} músicas`);
-    } catch (e) { toast('Falha na importação: ' + e.message); }
+        ? t('msg.backup.mergedDone', {
+            added: res.added,
+            newWord: t(res.added === 1 ? 'msg.backup.mergedNew' : 'msg.backup.mergedNewPlural'),
+            updated: res.updated,
+            updatedWord: t(res.updated === 1 ? 'msg.backup.mergedUpdated' : 'msg.backup.mergedUpdatedPlural'),
+          })
+        : t('msg.backup.importedDone', { artists: res.artists, songs: res.songs }));
+    } catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); }
   };
 }
 
@@ -802,8 +809,8 @@ document.addEventListener('visibilitychange', () => {
     // desenhada, e neste ponto #app ainda está vazio — um toast sozinho ficaria
     // solto. Um bloco de texto simples dentro do próprio #app é mais honesto.
     app.innerHTML = `<div style="padding:60px 24px;max-width:440px;margin:0 auto;text-align:center">
-      <div style="font-family:var(--f-title);font-weight:700;font-size:19px;margin-bottom:10px">Não foi possível abrir o Soma Play</div>
-      <div style="color:var(--muted);font-size:14px;line-height:1.5">${esc((e && e.message) || 'Falha ao iniciar o banco de dados local.')}</div>
+      <div style="font-family:var(--f-title);font-weight:700;font-size:19px;margin-bottom:10px">${esc(t('msg.boot.failedTitle'))}</div>
+      <div style="color:var(--muted);font-size:14px;line-height:1.5">${esc((e && e.message) || t('msg.boot.dbFailed'))}</div>
     </div>`;
     return;
   }

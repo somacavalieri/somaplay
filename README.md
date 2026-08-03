@@ -10,9 +10,6 @@ to install. Everything lives on your device.
 
 ![Karaoke mode](screens/karaoke.png)
 
-> **Heads up:** the app's interface is currently in **Brazilian Portuguese** only.
-> The code and documentation are in English. See [Roadmap](#roadmap).
-
 ---
 
 ## Why this exists
@@ -69,6 +66,7 @@ content for it.
 - Setlists with drag-to-reorder, plus favorites
 - Lists are global — they ignore the mode lens, and opening a song from a list plays it
   in its best available mode
+- Interface in **English or Portuguese**, with chord notation in Brazilian or international convention
 
 **Offline & data**
 - Service Worker for full offline operation; installable as a PWA
@@ -138,8 +136,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 Tracked as [issues](https://github.com/somacavalieri/somaplay/issues). The larger open
 items:
 
-- **Interface in English** — all UI strings are currently hardcoded in Portuguese;
-  extracting them for translation is the next significant piece of work
 - Chord diagram generation from text charts
 - Scroll synchronized to audio playback, and time-synced karaoke lyrics
 - Transpose and tempo change

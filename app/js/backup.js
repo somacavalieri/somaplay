@@ -5,6 +5,7 @@ import { DB } from './db.js';
 import { S } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
+import { t } from './i18n.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -47,12 +48,12 @@ export async function exportLibrary() {
 
 export async function importLibrary(file, { merge = false } = {}) {
   const headProbe = await file.slice(0, MAGIC.length + 11).text();
-  if (!headProbe.startsWith(MAGIC)) throw new Error('Arquivo não é um backup do Soma_play');
+  if (!headProbe.startsWith(MAGIC)) throw new Error(t('msg.backup.notASomaplayFile'));
   const jsonLen = parseInt(headProbe.slice(MAGIC.length, MAGIC.length + 10), 10);
   const jsonStart = MAGIC.length + 11;
   const json = await file.slice(jsonStart, jsonStart + jsonLen).text();
   const manifest = JSON.parse(json);
-  if (!manifest.songs || !manifest.artists) throw new Error('Backup inválido');
+  if (!manifest.songs || !manifest.artists) throw new Error(t('msg.backup.invalidBackup'));
 
   // Substituir apaga tudo antes; merge preserva a biblioteca (upsert por id).
   if (!merge) await DB.wipe();

@@ -3,6 +3,8 @@
 //   createdAt, cifra{fonte,imagens[],texto,acordes[],digitacoes{}}, letra, stems[], full[] }
 //   lists { id, nome, fixada, musicas[] } · settings { key:'main', ... }
 
+import { t } from './i18n.js';
+
 const DB_NAME = 'somaplay';
 const DB_VERSION = 2;
 
@@ -24,7 +26,7 @@ function idb() {
     };
     // Outra aba/janela do Soma Play com uma conexão v1 aberta impede o upgrade —
     // sem isto, open() nunca resolve nem rejeita e o boot fica travado em silêncio.
-    req.onblocked = () => reject(new Error('Feche as outras abas ou janelas do Soma Play abertas neste navegador e tente de novo.'));
+    req.onblocked = () => reject(new Error(t('msg.db.blockedByOtherTab')));
     req.onsuccess = () => {
       _db = req.result;
       // Se outra aba abrir uma versão mais nova do banco, solta esta conexão pra

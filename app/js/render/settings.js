@@ -42,8 +42,8 @@ export function renderSettings() {
         <div class="setting-row">
           <div class="info"><div class="t">${t('settings.lang.title')}</div><div class="s">${t('settings.lang.sub')}</div></div>
           <div class="seg-mini">
-            <button class="${st.lang === 'pt' ? 'on' : ''}" data-a="setLang" data-id="pt">Português</button>
-            <button class="${st.lang === 'en' ? 'on' : ''}" data-a="setLang" data-id="en">English</button>
+            <button class="${st.lang === 'pt' ? 'on' : ''}" data-a="setLang" data-id="pt">${t('settings.lang.pt')}</button>
+            <button class="${st.lang === 'en' ? 'on' : ''}" data-a="setLang" data-id="en">${t('settings.lang.en')}</button>
           </div>
         </div>
 

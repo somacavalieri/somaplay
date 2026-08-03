@@ -67,6 +67,7 @@ significa que aquela música não tem conteúdo para ele.
 - Setlists com reordenação por arrastar, mais favoritas
 - Listas são globais — ignoram a lente de modo, e abrir uma música pela lista toca ela no
   melhor modo disponível
+- Interface em **português ou inglês**, com notação de acordes brasileira ou internacional
 
 **Offline e dados**
 - Service Worker para operação offline completa; instalável como PWA
@@ -136,8 +137,6 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md) para os detalhes.
 Acompanhado nas [issues](https://github.com/somacavalieri/somaplay/issues). Os itens
 abertos maiores:
 
-- **Interface em inglês** — hoje todas as strings de UI estão hardcoded em português;
-  extrair para tradução é o próximo trabalho relevante
 - Geração de diagramas a partir da cifra em texto
 - Rolagem sincronizada ao áudio e letra de karaokê sincronizada no tempo
 - Mudança de tom e de andamento
