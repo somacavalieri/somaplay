@@ -92,8 +92,8 @@ export function renderAddEdit() {
       ${im._thumbURL ? `<img class="thumb" src="${im._thumbURL}" alt="">` : `<span style="color:var(--muted);display:flex">${I.img()}</span>`}
       <span class="file-name">${esc(im.name || im.blobId || t('addedit.image.fallbackName'))}</span>
       <div class="seg-mini">
-        <button class="${im.tipo === 'aberta' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="aberta">${t('play.menu.open')}</button>
-        <button class="${im.tipo === 'fechada' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="fechada">${t('play.menu.closed')}</button>
+        <button class="${im.tipo === 'aberta' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="aberta">${t('addedit.imgType.withDiagrams')}</button>
+        <button class="${im.tipo === 'fechada' ? 'on' : ''}" data-a="setImgTipo" data-id="${i}" data-tipo="fechada">${t('addedit.imgType.noDiagrams')}</button>
       </div>
       <button class="btn-del" data-a="removeImg" data-id="${i}">${I.trash(16)}</button>
     </div>`).join('');
@@ -272,7 +272,7 @@ export async function commitDraft() {
       blobId = uid();
       await DB.saveBlob(blobId, f._file);
     }
-    if (blobId) full.push({ id: f.id || uid(), nome: f.nome || 'Versão completa', meta: f.meta || '', blobId, fileName: f.fileName || '' });
+    if (blobId) full.push({ id: f.id || uid(), nome: f.nome || '', meta: f.meta || '', blobId, fileName: f.fileName || '' });
   }
 
   const usados = draftChordNames(d);

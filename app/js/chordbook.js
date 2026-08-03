@@ -5,6 +5,7 @@
 import { CATALOG } from './chords-catalog.js';
 import { DB, uid } from './db.js';
 import { toIntl, toBr } from './chord-notation.js';
+import { t } from './i18n.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
 // Copia frets e barre para isolar da semente só-leitura do catálogo.
@@ -129,7 +130,7 @@ export function pickerShapes(name, cur) {
     if (achou) selId = achou.id;
     else {
       selId = '__song';
-      shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: 'desta música' });
+      shapes.push({ id: '__song', frets: cur.frets, ...(cur.barre ? { barre: cur.barre } : {}), label: t('chordbook.songShape') });
     }
   } else {
     const def = defaultShape(name);

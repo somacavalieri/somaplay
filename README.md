@@ -36,9 +36,9 @@ library filters itself to whatever is available in the active mode.
 
 | Mode | What it gives you |
 |---|---|
-| **T1 · Cifra** | The chord chart, with auto-scroll at adjustable speed |
-| **T2 · Acompanhamento** | A multitrack mixer — volume and mute per stem, one shared transport |
-| **T3 · Karaokê** | Backing track playing, lyrics on screen |
+| **T1 · Chart** | The chord chart, with auto-scroll at adjustable speed |
+| **T2 · Accompaniment** | A multitrack mixer — volume and mute per channel, one shared transport |
+| **T3 · Karaoke** | Backing track playing, lyrics on screen |
 
 Playing a song is a single tap — there's no intermediate mode picker. Inside a song, the
 T1/T2/T3 switch doubles as a feature indicator: a disabled mode means that song has no
@@ -48,11 +48,11 @@ content for it.
 
 **Chord charts**
 - Chart per song as **image or text**, whichever the source makes practical
-- **Aberta/Fechada toggle** — show or hide chord diagrams
+- **Diagrams: On/Off** — show or hide chord diagrams
 - Auto-scroll with adjustable speed
 - Inline diagram thumbnails above the chord line
-- **Tap any chord** in the text to open an anchored diagram popover; *Variar* cycles
-  through alternate shapes and *Aplicar* swaps that fingering across the whole song
+- **Tap any chord** in the text to open an anchored diagram popover; *Vary* cycles
+  through alternate shapes and *Apply* swaps that fingering across the whole song
 - A **chord editor** with real barre support, and a **chord dictionary** to browse and
   store your own variations
 
@@ -96,8 +96,8 @@ python3 -m http.server 8137
 In Chrome (desktop or Android tablet), use **menu → Install** to add it as an app. After
 the first visit it works with no internet at all.
 
-To see it working: **Configurações → Importar exemplos** loads the demo song. Then
-**Configurações → Adicionar música** is where you add your own — chart images or pasted
+To see it working: **Settings → Load example** loads the demo song. Then
+**Settings → Add song** is where you add your own — chart images or pasted
 text, karaoke lyrics, and one audio file per channel.
 
 ## How it works
