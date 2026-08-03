@@ -71,3 +71,19 @@ test('display() escolhe a convenção pedida', () => {
   assert.equal(display('C7M', 'br'), 'C7M');
   assert.equal(display('Cmaj7', 'br'), 'C7M');
 });
+
+test('cobre sufixos raros que o catálogo não exercita: (b13), (11), (9), (b9)', () => {
+  // Nenhuma entrada do CATALOG usa estas grafias, então os loops sobre
+  // Object.keys(CATALOG) não as cobrem — precisam de asserção direta.
+  assert.equal(toIntl('E7(b13)'), 'E7b13');
+  assert.equal(toBr('E7b13'), 'E7(b13)');
+
+  assert.equal(toIntl('Am7(11)'), 'Am711');
+  assert.equal(toBr('Am711'), 'Am7(11)');
+
+  assert.equal(toIntl('E7(9)'), 'E79');
+  assert.equal(toBr('E79'), 'E7(9)');
+
+  assert.equal(toIntl('C7(b9)'), 'C7b9');
+  assert.equal(toBr('C7b9'), 'C7(b9)');
+});
