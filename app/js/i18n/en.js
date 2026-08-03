@@ -147,7 +147,7 @@ export const EN = {
   'play.scrollCtl.speed': 'Speed',
   'chordpop.resetTooltip': 'Back to saved shape',
   'chordpop.apply': 'Apply',
-  'chordpop.vary': 'Vary',
+  'chordpop.vary': 'Variations',
   'chordpop.noShapes': 'No shapes yet — create one in “{grid}”',
   'popover.inFavorites': 'In {name}',
   'popover.tapHeartHint': 'Tap the heart to favorite',

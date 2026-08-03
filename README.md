@@ -51,7 +51,7 @@ content for it.
 - **Diagrams: On/Off** — show or hide chord diagrams
 - Auto-scroll with adjustable speed
 - Inline diagram thumbnails above the chord line
-- **Tap any chord** in the text to open an anchored diagram popover; *Vary* cycles
+- **Tap any chord** in the text to open an anchored diagram popover; *Variations* cycles
   through alternate shapes and *Apply* swaps that fingering across the whole song
 - A **chord editor** with real barre support, and a **chord dictionary** to browse and
   store your own variations
