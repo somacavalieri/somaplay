@@ -6,6 +6,7 @@ import { I, esc } from '../icons.js';
 import { chordSVG } from '../chords.js';
 import { pickerShapes } from '../chordbook.js';
 import { shapeStripHTML } from './chordeditor.js';
+import { t } from '../i18n.js';
 
 // Posição do card (coordenadas do viewport; o card é position:fixed): centrado
 // no acorde, acima quando cabe, abaixo senão, clampado nas bordas. Pura para
@@ -38,8 +39,8 @@ export function chordPopHTML(song) {
       <div class="nm">${esc(name)}</div>
       <div class="strip-wrap">${shapeStripHTML(name, shapes, cp.selId, 'chordPopSelect', false)}</div>
       <div class="foot">
-        <button class="btn-icon xs" data-a="chordPopReset" title="Voltar à forma salva">${I.undo(16)}</button>
-        <button class="btn-primary small" data-a="chordPopApply">Aplicar</button>
+        <button class="btn-icon xs" data-a="chordPopReset" title="${t('chordpop.resetTooltip')}">${I.undo(16)}</button>
+        <button class="btn-primary small" data-a="chordPopApply">${t('chordpop.apply')}</button>
       </div>
     </div>`;
   }
@@ -52,7 +53,7 @@ export function chordPopHTML(song) {
     <div class="diag">${chordSVG(name, false, dict)}</div>
     ${dots}
     ${shapes.length
-      ? `<button class="btn-ghost sm variar" data-a="chordPopVariar" ${shapes.length > 1 ? '' : 'disabled'}>Variar</button>`
-      : '<div class="hint">Sem formas — crie em “Acordes desta música”</div>'}
+      ? `<button class="btn-ghost sm variar" data-a="chordPopVariar" ${shapes.length > 1 ? '' : 'disabled'}>${t('chordpop.vary')}</button>`
+      : `<div class="hint">${t('chordpop.noShapes', { grid: t('play.chordsGrid.title') })}</div>`}
   </div>`;
 }

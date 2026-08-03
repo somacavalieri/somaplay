@@ -9,6 +9,7 @@ import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
 import { offlineBadge } from './home.js';
+import { t } from '../i18n.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -60,7 +61,7 @@ function parsedCifra(song) {
 // Cabeçalho de identidade da música (no topo do conteúdo, rola junto).
 function songHeaderHTML(song) {
   const meta = [];
-  if (song.tom) meta.push(`<span class="tag-tom">Tom ${esc(song.tom)}</span>`);
+  if (song.tom) meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(song.tom)}</span>`);
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
   return `<div class="song-id">
     <div class="ttl">${esc(song.title)}</div>
@@ -76,15 +77,15 @@ function chordsGridHTML(song, chordNames) {
   const cards = chordNames.map((n) => {
     const f = favs.includes(n);
     return `<div class="chord-card ${f ? 'pinned' : ''}">
-      <div class="nm"><span>${esc(n)}</span><button class="star-btn ${f ? 'on' : ''}" data-a="toggleChordFav" data-id="${esc(n)}" title="Fixar acorde no topo">${I.star(f)}</button></div>
-      <button class="chord-diag" data-a="openChordPicker" data-id="${esc(n)}" title="Trocar variação">${chordSVG(n, false, dict)}</button>
+      <div class="nm"><span>${esc(n)}</span><button class="star-btn ${f ? 'on' : ''}" data-a="toggleChordFav" data-id="${esc(n)}" title="${t('play.chordsGrid.pinTooltip')}">${I.star(f)}</button></div>
+      <button class="chord-diag" data-a="openChordPicker" data-id="${esc(n)}" title="${t('play.chordsGrid.changeVariant')}">${chordSVG(n, false, dict)}</button>
     </div>`;
   }).join('');
   return `<div class="chords-block" data-nopan="1">
     <div class="hd"><span style="color:var(--accent);display:flex">${I.gridChord()}</span>
-      <div class="t">Acordes desta música</div><div class="n">${chordNames.length}</div></div>
+      <div class="t">${t('play.chordsGrid.title')}</div><div class="n">${chordNames.length}</div></div>
     <div class="chords-grid">${cards}</div>
-    <div class="chords-hint"><span style="display:flex;color:var(--muted3)">${I.star(false, 13)}</span>Toque a estrela para fixar o acorde na barra do topo</div>
+    <div class="chords-hint"><span style="display:flex;color:var(--muted3)">${I.star(false, 13)}</span>${t('play.chordsGrid.hint')}</div>
   </div>`;
 }
 
@@ -93,13 +94,13 @@ function pinnedBarHTML(song, chordNames) {
   if (!favs.length || S.viewMode === 'karaoke') return '';
   const dict = song.cifra?.digitacoes || null;
   const strip = S.pinnedOpen ? `<div class="strip">` + favs.map((n) =>
-    `<div class="chord-mini"><div class="nm"><span>${esc(n)}</span><button class="star-btn on" data-a="toggleChordFav" data-id="${esc(n)}" title="Desafixar">${I.star(true)}</button></div>
+    `<div class="chord-mini"><div class="nm"><span>${esc(n)}</span><button class="star-btn on" data-a="toggleChordFav" data-id="${esc(n)}" title="${t('list.unpin')}">${I.star(true)}</button></div>
      <div>${chordSVG(n, true, dict)}</div></div>`).join('') + `</div>` : '';
   return `<div class="pinnedbar" data-nopan="1">
     <div class="bar">
       <span style="color:var(--accent);display:flex">${I.starSmall()}</span>
-      <div class="lbl">Acordes fixados</div><div class="cnt">${favs.length}</div>
-      <button class="toggle" data-a="togglePinnedBar">${S.pinnedOpen ? 'Esconder ' + I.chevU() : 'Mostrar ' + I.chevD()}</button>
+      <div class="lbl">${t('play.pinnedBar.title')}</div><div class="cnt">${favs.length}</div>
+      <button class="toggle" data-a="togglePinnedBar">${S.pinnedOpen ? t('play.pinnedBar.hide') + ' ' + I.chevU() : t('play.pinnedBar.show') + ' ' + I.chevD()}</button>
     </div>${strip}
   </div>`;
 }
@@ -130,7 +131,7 @@ function chordDiagRowHTML(chordLine, dict, meas) {
   const items = layoutChordRow(chordLine, meas.chPx, (tok, isChord) =>
     (isChord ? Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok)) : meas.tok(tok)));
   const inner = items.map((it) => (it.isChord
-    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="Ver acorde"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.name, true, dict)}</button>`
+    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="${t('play.chordDiagRow.viewChord')}"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.name, true, dict)}</button>`
     : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
   return `<div class="ch-diag-row">${inner}</div>`;
 }
@@ -164,7 +165,7 @@ function cifraTextHTML(song) {
   const chordNames = song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsed);
   return `<div class="cifra-scroll" data-autoscroll="1">
     ${songHeaderHTML(song)}
-    <div class="cifra-text" style="font-size:${fontPx}px">${lines || '<div class="ly" style="color:var(--muted)">Sem cifra em texto.</div>'}</div>
+    <div class="cifra-text" style="font-size:${fontPx}px">${lines || `<div class="ly" style="color:var(--muted)">${t('play.cifraText.empty')}</div>`}</div>
     ${chordsGridHTML(song, chordNames)}
   </div>`;
 }
@@ -179,7 +180,7 @@ function cifraImageHTML(song) {
   return `<div class="cifra-imgwrap" data-autoscroll="1" data-imgscroll="1">
     <div class="inner">
       ${songHeaderHTML(song)}
-      ${url ? `<img src="${url}" alt="Cifra" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : '<div style="padding:60px;color:var(--muted)">Imagem não encontrada</div>'}
+      ${url ? `<img src="${url}" alt="${t('play.cifraImage.alt')}" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : `<div style="padding:60px;color:var(--muted)">${t('play.cifraImage.notFound')}</div>`}
       ${chordNames.length ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}</div>` : ''}
     </div>
   </div>`;
@@ -191,7 +192,7 @@ function karaokeHTML(song) {
     ${songHeaderHTML(song)}
     <div class="karaoke">
       ${verses.map((v, i) => `<div class="verse ${i === 0 ? 'cur' : ''}">${v.map((l) => `<div>${esc(l)}</div>`).join('')}</div>`).join('')
-        || '<div style="color:var(--muted)">Sem letra cadastrada.</div>'}
+        || `<div style="color:var(--muted)">${t('play.karaoke.empty')}</div>`}
     </div>
   </div>`;
 }
@@ -205,9 +206,9 @@ function mixerHTML(song) {
 
   const channels = hasStems ? (`
     <div class="stems-hd">
-      <div class="lbl ${stemsActive ? 'on' : ''}">CANAIS SEPARADOS</div>
-      ${stemsActive && S.transportPlaying ? `<span style="display:flex;align-items:center;gap:5px"><span class="live-dot"></span><span class="live-lbl">Tocando</span></span>` : ''}
-      ${hasStems && fullActive ? `<button class="use-stems" data-a="selectSource" data-id="stems">Usar canais</button>` : ''}
+      <div class="lbl ${stemsActive ? 'on' : ''}">${t('play.mixer.stemsLabel')}</div>
+      ${stemsActive && S.transportPlaying ? `<span style="display:flex;align-items:center;gap:5px"><span class="live-dot"></span><span class="live-lbl">${t('play.mixer.playing')}</span></span>` : ''}
+      ${hasStems && fullActive ? `<button class="use-stems" data-a="selectSource" data-id="stems">${t('play.mixer.useChannels')}</button>` : ''}
     </div>
     <div class="stems-list ${stemsActive ? '' : 'dim'}">
       ${song.stems.map((c) => `
@@ -216,8 +217,8 @@ function mixerHTML(song) {
             <button class="mute-btn ${c.muted ? 'muted' : ''}" data-a="toggleMute" data-id="${c.id}">${c.muted ? I.volOff() : I.volOn()}</button>
             <div style="flex:1">
               <div class="nm ${c.muted ? 'dim' : ''}">${esc(c.name)}</div>
-              ${c.muted ? '<div class="st-mute">Mutado</div>'
-                : (stemsActive && S.transportPlaying ? '<div class="st-on"><span class="live-dot"></span><span class="live-lbl">Ativo</span></div>' : '')}
+              ${c.muted ? `<div class="st-mute">${t('play.mixer.muted')}</div>`
+                : (stemsActive && S.transportPlaying ? `<div class="st-on"><span class="live-dot"></span><span class="live-lbl">${t('play.mixer.active')}</span></div>` : '')}
             </div>
             <div class="val ${c.muted ? 'muted' : ''}" id="vol-val-${c.id}">${c.vol}%</div>
           </div>
@@ -227,13 +228,13 @@ function mixerHTML(song) {
 
   const fullBlock = hasFull ? `
     <div class="fullver ${hasStems ? 'after-stems' : ''}">
-      <div class="hd2">${I.disc(18, fullActive)}<div class="t">Versão completa</div><div class="s">música inteira</div></div>
+      <div class="hd2">${I.disc(18, fullActive)}<div class="t">${t('play.mixer.fullVersion')}</div><div class="s">${t('play.mixer.wholeSong')}</div></div>
       ${fulls.map((v) => {
         const on = S.t2Source === v.id;
         return `<div class="ver-row ${on ? 'on' : ''}" data-a="selectSource" data-id="${v.id}">
           <div class="ic">${on && S.transportPlaying ? I.pause(18) : I.play(18)}</div>
           <div class="meta"><div class="n">${esc(v.nome)}</div><div class="m">${esc(v.meta || '')}</div></div>
-          ${on && S.transportPlaying ? '<span class="amber-live" style="display:flex;align-items:center;gap:5px"><span class="live-dot"></span><span class="live-lbl">Tocando</span></span>' : ''}
+          ${on && S.transportPlaying ? `<span class="amber-live" style="display:flex;align-items:center;gap:5px"><span class="live-dot"></span><span class="live-lbl">${t('play.mixer.playing')}</span></span>` : ''}
         </div>`;
       }).join('')}
     </div>` : '';
@@ -244,9 +245,9 @@ function mixerHTML(song) {
       <div class="sheet-handle"><div></div></div>
       <div class="hd">
         <span style="color:var(--teal);display:flex">${I.mixer(20)}</span>
-        <div class="t">Mixer</div>
-        <div class="sub">${stemsActive ? `${song.stems.length} canais` : 'versão completa'}</div>
-        <button class="collapse" data-a="toggleMixer" title="Recolher mixer">${I.chevR(18)}</button>
+        <div class="t">${t('play.mixer.title')}</div>
+        <div class="sub">${stemsActive ? `${song.stems.length} ${song.stems.length === 1 ? t('play.mixer.channel') : t('play.mixer.channels')}` : t('play.mixer.subFull')}</div>
+        <button class="collapse" data-a="toggleMixer" title="${t('play.mixer.collapse')}">${I.chevR(18)}</button>
       </div>
       <div class="body">${channels}${fullBlock}</div>
     </div>`;
@@ -271,15 +272,15 @@ function chordPickerHTML(song) {
   const corpo = ed
     ? chordEditorHTML(ed, { fromLabel: (shapeById(name, ed.origin.varId) || {}).label })
     : (shapeStripHTML(name, shapes, selId, 'pickChordShape', false)
-       || '<div style="padding:14px;color:var(--muted);font-size:13px">Nenhuma forma registrada — toque em “Nova variação”.</div>');
+       || `<div style="padding:14px;color:var(--muted);font-size:13px">${t('play.chordPicker.noShapes', { action: t('play.chordPicker.newVariation') })}</div>`);
   return `<div class="scrim" data-a="closeChordPicker">
     <div class="popover" data-stop="1">
-      <div class="head"><div class="head-row"><div class="title">Variações de ${esc(name)}</div>
+      <div class="head"><div class="head-row"><div class="title">${t('play.chordPicker.variationsOf', { name: esc(name) })}</div>
         <button class="btn-icon xs" data-a="closeChordPicker">${I.close()}</button></div></div>
       <div class="body">${corpo}</div>
       ${ed ? '' : `<div class="foot">
-        <button class="btn-ghost sm" data-a="pickNewVar" data-id="${esc(name)}">${I.plus(16)}Nova variação</button>
-        ${selId ? `<button class="btn-ghost sm" data-a="pickEditVar" data-id="${esc(name)}" data-var="${esc(selId)}">${I.pencil(16)}Editar</button>` : ''}
+        <button class="btn-ghost sm" data-a="pickNewVar" data-id="${esc(name)}">${I.plus(16)}${t('play.chordPicker.newVariation')}</button>
+        ${selId ? `<button class="btn-ghost sm" data-a="pickEditVar" data-id="${esc(name)}" data-var="${esc(selId)}">${I.pencil(16)}${t('play.chordPicker.edit')}</button>` : ''}
       </div>`}
     </div>
   </div>`;
@@ -301,29 +302,29 @@ export function renderPlay() {
     : (song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsedCifra(song)));
 
   const modeSwitch = hasKaraoke ? `<div class="mode-switch">
-      <button class="${!isKar ? 'on' : ''}" data-a="setViewMode" data-id="cifra">${I.cifraLines()}Cifra</button>
-      <button class="${isKar ? 'on' : ''}" data-a="setViewMode" data-id="karaoke">${I.mic(16)}Karaokê</button>
+      <button class="${!isKar ? 'on' : ''}" data-a="setViewMode" data-id="cifra">${I.cifraLines()}${t('play.modeSwitch.chart')}</button>
+      <button class="${isKar ? 'on' : ''}" data-a="setViewMode" data-id="karaoke">${I.mic(16)}${t('play.modeSwitch.karaoke')}</button>
     </div>` : '';
 
   const zoomCtl = isImg ? `<div class="zoom-ctl">
-      <button data-a="imgZoomOut" title="Diminuir zoom">−</button>
+      <button data-a="imgZoomOut" title="${t('play.zoomCtl.zoomOut')}">−</button>
       <div class="pct" id="zoom-pct">${Math.round(S.imgZoom * 100)}%</div>
-      <button data-a="imgZoomIn" title="Aumentar zoom">+</button>
+      <button data-a="imgZoomIn" title="${t('play.zoomCtl.zoomIn')}">+</button>
     </div>` : '';
 
   const menu = S.imgMenuOpen ? `<div class="menu-pop">
-      <button data-a="menuFav"><span style="display:flex;color:${song.favorita ? 'var(--accent)' : 'var(--muted)'}">${I.heart(song.favorita, 18)}</span><span style="flex:1;text-align:left">Favoritar</span><span class="state ${song.favorita ? 'on' : ''}">${song.favorita ? 'Favoritada' : ''}</span></button>
-      <button data-a="menuAddList">${I.addList(18)}<span style="flex:1;text-align:left">Adicionar à lista</span></button>
+      <button data-a="menuFav"><span style="display:flex;color:${song.favorita ? 'var(--accent)' : 'var(--muted)'}">${I.heart(song.favorita, 18)}</span><span style="flex:1;text-align:left">${t('common.favorite')}</span><span class="state ${song.favorita ? 'on' : ''}">${song.favorita ? t('play.menu.favorited') : ''}</span></button>
+      <button data-a="menuAddList">${I.addList(18)}<span style="flex:1;text-align:left">${t('home.song.addToList')}</span></button>
       <div class="sep"></div>
       ${isTextCifra ? `
-        <button data-a="toggleMiniaturas">${I.gridChord(18)}<span style="flex:1;text-align:left">Miniaturas na música</span><span class="state ${S.settings.cifraMiniaturas ? 'on' : ''}">${S.settings.cifraMiniaturas ? 'Ligado' : 'Desligado'}</span></button>
+        <button data-a="toggleMiniaturas">${I.gridChord(18)}<span style="flex:1;text-align:left">${t('play.menu.thumbnails')}</span><span class="state ${S.settings.cifraMiniaturas ? 'on' : ''}">${S.settings.cifraMiniaturas ? t('common.on') : t('common.off')}</span></button>
         <div class="sep"></div>` : ''}
       ${isImg ? `
-        <button data-a="toggleInvert">${I.invert()}<span style="flex:1;text-align:left">Inverter cores</span><span class="state ${S.imgInvert ? 'on' : ''}">${S.imgInvert ? 'Ligado' : 'Desligado'}</span></button>
-        <button data-a="toggleVariant" ${variantEnabled ? '' : 'disabled'}>${I.swap()}<span style="flex:1;text-align:left">Formato da cifra</span><span class="state">${S.imgVariant === 'fechada' ? 'Fechada' : 'Aberta'}</span></button>
+        <button data-a="toggleInvert">${I.invert()}<span style="flex:1;text-align:left">${t('play.menu.invertColors')}</span><span class="state ${S.imgInvert ? 'on' : ''}">${S.imgInvert ? t('common.on') : t('common.off')}</span></button>
+        <button data-a="toggleVariant" ${variantEnabled ? '' : 'disabled'}>${I.swap()}<span style="flex:1;text-align:left">${t('play.menu.chartFormat')}</span><span class="state">${S.imgVariant === 'fechada' ? t('play.menu.closed') : t('play.menu.open')}</span></button>
         <div class="sep"></div>` : ''}
-      <button data-a="editSong">${I.pencil()}<span style="flex:1;text-align:left">Editar música</span></button>
-      <button class="danger" data-a="deleteSongAsk">${I.trash()}<span style="flex:1;text-align:left">Excluir música</span></button>
+      <button data-a="editSong">${I.pencil()}<span style="flex:1;text-align:left">${t('play.menu.editSong')}</span></button>
+      <button class="danger" data-a="deleteSongAsk">${I.trash()}<span style="flex:1;text-align:left">${t('play.menu.deleteSong')}</span></button>
     </div>` : '';
 
   const body = isKar ? karaokeHTML(song) : (isImg ? cifraImageHTML(song) : cifraTextHTML(song));
@@ -332,21 +333,21 @@ export function renderPlay() {
       <button class="pp" data-a="toggleScroll">${S.scrollPlaying ? I.pause(22) : I.play(22)}</button>
       <div class="div"></div>
       <button class="pm" data-a="decSpeed">−</button>
-      <div class="mid"><div class="l1">Rolagem automática</div><div class="l2">Velocidade <span id="speed-val">${S.scrollSpeed}</span></div></div>
+      <div class="mid"><div class="l1">${t('play.scrollCtl.label')}</div><div class="l2">${t('play.scrollCtl.speed')} <span id="speed-val">${S.scrollSpeed}</span></div></div>
       <button class="pm" data-a="incSpeed">+</button>
     </div>`;
 
   return `<div class="screen">
     <div class="play-head">
-      <button class="btn-icon" data-a="goBack" title="Voltar">${I.back()}</button>
+      <button class="btn-icon" data-a="goBack" title="${t('common.back')}">${I.back()}</button>
       ${modeSwitch}
       <span style="flex:1"></span>
       ${zoomCtl}
       <div class="menu-wrap">
-        <button class="btn-icon ${S.imgMenuOpen ? 'accent-on' : ''}" data-a="toggleImgMenu" title="Opções">${I.dots()}</button>
+        <button class="btn-icon ${S.imgMenuOpen ? 'accent-on' : ''}" data-a="toggleImgMenu" title="${t('play.menu.options')}">${I.dots()}</button>
         ${menu}
       </div>
-      ${hasMixer ? `<button class="btn-icon ${S.mixerCollapsed ? '' : 'teal-on'}" data-a="toggleMixer" title="${S.mixerCollapsed ? 'Mostrar mixer' : 'Recolher mixer'}">${I.mixer()}</button>` : ''}
+      ${hasMixer ? `<button class="btn-icon ${S.mixerCollapsed ? '' : 'teal-on'}" data-a="toggleMixer" title="${S.mixerCollapsed ? t('play.mixer.show') : t('play.mixer.collapse')}">${I.mixer()}</button>` : ''}
       ${offlineBadge}
     </div>
     <div class="play-body">
