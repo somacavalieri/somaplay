@@ -121,7 +121,7 @@ function listsTab() {
       <div class="list-icon ${icon}">${iconSvg}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(l.nome)}</div>
+          <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${l.sistema ? esc(t('list.favoritesName')) : esc(l.nome)}</div>
           ${l.sistema ? `<span class="badge-system">${t('common.system')}</span>` : ''}
           ${l.fixada && !l.sistema ? `<span class="pin-ind" title="${t('common.pinned')}">${I.pin()}</span>` : ''}
         </div>
@@ -132,7 +132,7 @@ function listsTab() {
   }).join('');
 
   return `<div class="lists-head">
-      <div><div class="t">${t('home.lists.title')}</div><div class="s">${t('home.lists.sub', { count: S.lists.length })}</div></div>
+      <div><div class="t">${t('home.lists.title')}</div><div class="s">${t('home.lists.sub', { count: S.lists.length, fav: t('list.favoritesName') })}</div></div>
       <button class="btn-primary" data-a="startCreateList">${I.plus(20, 2.4)}${t('home.lists.new')}</button>
     </div>
     ${creating}

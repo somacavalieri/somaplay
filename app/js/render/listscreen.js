@@ -15,12 +15,12 @@ export function renderListScreen() {
 
   const titleArea = S.renamingList
     ? `<div style="display:flex;align-items:center;gap:8px">
-        <input type="text" id="rename-input" class="input" style="height:44px;font-family:var(--f-title);font-weight:600;font-size:18px;min-width:280px;border-color:var(--accent)" value="${esc(l.nome)}">
+        <input type="text" id="rename-input" class="input" style="height:44px;font-family:var(--f-title);font-weight:600;font-size:18px;min-width:280px;border-color:var(--accent)" value="${l.sistema ? esc(t('list.favoritesName')) : esc(l.nome)}">
         <button class="btn-primary small" data-a="confirmRename">${t('common.save')}</button>
         <button class="btn-ghost" data-a="cancelRename">${t('common.cancel')}</button>
       </div>`
     : `<div style="display:flex;align-items:center;gap:10px">
-        <div style="font-family:var(--f-title);font-weight:700;font-size:22px;line-height:1.1">${esc(l.nome)}</div>
+        <div style="font-family:var(--f-title);font-weight:700;font-size:22px;line-height:1.1">${l.sistema ? esc(t('list.favoritesName')) : esc(l.nome)}</div>
         ${l.fixada && !l.sistema ? `<span class="pin-ind" title="${t('common.pinned')}">${I.pin(16)}</span>` : ''}
         ${l.sistema ? `<span class="badge-system">${t('common.system')}</span>` : ''}
       </div>
