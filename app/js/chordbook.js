@@ -4,6 +4,7 @@
 // registro do usuário: { name, vars:[{id,frets,barre?,label}], hidden:[id], defaultId }
 import { CATALOG } from './chords-catalog.js';
 import { DB, uid } from './db.js';
+import { toIntl, toBr } from './chord-notation.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
 // Copia frets e barre para isolar da semente só-leitura do catálogo.
@@ -147,6 +148,16 @@ export function findShape(name, frets, barre) {
 
 export function allNames() {
   return [...new Set([...Object.keys(CATALOG), ...BOOK.keys()])].sort((a, b) => a.localeCompare(b, 'pt'));
+}
+
+// Casa o termo buscado com o nome do acorde aceitando as duas convenções —
+// quem digita 'Cmaj7' acha 'C7M' e vice-versa, independente da notação ativa.
+// Substring (não prefixo), igual à busca que já existia antes desta função.
+export function matchesName(chordName, term) {
+  const q = String(term).trim().toLowerCase();
+  if (!q) return true;
+  const forms = [chordName, toIntl(chordName), toBr(chordName)];
+  return forms.some((f) => f.toLowerCase().includes(q));
 }
 
 // Grava/atualiza uma variação; sem id, cria uma nova. Devolve o id.

@@ -2,10 +2,11 @@
 // Tela única agrupada por tônica: cada acorde traz todas as suas variações.
 import { S } from '../state.js';
 import { I, esc } from '../icons.js';
-import { allNames, shapesOf, hasHidden, songsUsingVar } from '../chordbook.js';
+import { allNames, shapesOf, hasHidden, songsUsingVar, matchesName } from '../chordbook.js';
 import { chordSVG } from '../chords.js';
 import { chordEditorHTML, descreveForma } from './chordeditor.js';
 import { t } from '../i18n.js';
+import { display } from '../chord-notation.js';
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const tonica = (n) => n[0].toUpperCase();
@@ -28,7 +29,7 @@ function linhaHTML(name, ed) {
   const editando = ed && ed.name === name;
   const sel = editando && ed.origin.varId ? shapes.find((s) => s.id === ed.origin.varId) : null;
   return `<div class="cb-row ${editando ? 'on' : ''}">
-    <div class="cb-name">${esc(name)}</div>
+    <div class="cb-name">${esc(display(name, S.settings.chordNotation))}</div>
     <div class="cb-body">
       <div class="cb-vars">${vars}
         <button class="cb-plus" data-a="cbNewVar" data-id="${esc(name)}" title="${t('chordbook.row.newVariation')}">${I.plus(18)}</button>
@@ -44,7 +45,6 @@ function linhaHTML(name, ed) {
 }
 
 export function renderChordbook() {
-  const q = S.cbQuery.trim().toLowerCase();
   const ed = S.chordEd && S.chordEd.origin.kind === 'book' ? S.chordEd : null;
   // Um acorde recém-criado (cbConfirmAdd) só entra em allNames() ao salvar a 1ª
   // variação — mas precisa da linha (com o editor embutido) pra o usuário
@@ -55,7 +55,7 @@ export function renderChordbook() {
     ? [...catalogo, ed.name].sort((a, b) => a.localeCompare(b, 'pt'))
     : catalogo;
   const nomes = universo
-    .filter((n) => (!q || n.toLowerCase().includes(q)) && (!S.cbFilter || tonica(n) === S.cbFilter));
+    .filter((n) => matchesName(n, S.cbQuery) && (!S.cbFilter || tonica(n) === S.cbFilter));
 
   const grupos = [];
   let atual = null;

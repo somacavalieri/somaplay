@@ -4,6 +4,7 @@ import {
   builtinShapes, mergeShapes, shapeKey, mergeRecords, songsUsingVar,
   shapesOf, defaultShape, shapeById, findShape, labelsOf,
   upsertVar, removeVar, setDefault, restoreBuiltins, hasHidden, allNames,
+  matchesName,
 } from '../js/chordbook.js';
 
 test('builtinShapes: ids sintéticos pela posição no catálogo', () => {
@@ -206,6 +207,34 @@ test('allNames inclui nome que só existe no dicionário do usuário', () => {
 
 test('defaultShape: nome desconhecido → null', () => {
   assert.equal(defaultShape('Qq0'), null);
+});
+
+test('matchesName: termo vazio casa com qualquer nome', () => {
+  assert.equal(matchesName('C7M', ''), true);
+  assert.equal(matchesName('C7M', '   '), true);
+});
+
+test('matchesName: substring (não só prefixo) e case-insensitive no próprio nome', () => {
+  assert.equal(matchesName('A7M', '7m'), true);   // substring no meio/fim, não no início
+  assert.equal(matchesName('A7M', 'A7M'.toLowerCase()), true);
+});
+
+test('matchesName: termo em notação internacional acha nome em notação brasileira', () => {
+  assert.equal(matchesName('C7M', 'maj7'), true);  // toIntl('C7M') = 'Cmaj7'
+  assert.equal(matchesName('C7M', 'Cmaj7'), true);
+});
+
+test('matchesName: termo em notação brasileira acha nome em notação internacional', () => {
+  assert.equal(matchesName('Cmaj7', '7m'), true);  // toBr('Cmaj7') = 'C7M'
+  assert.equal(matchesName('Cmaj7', 'C7M'), true);
+});
+
+test('matchesName: baixo depois da barra participa da conversão buscada', () => {
+  assert.equal(matchesName('G7M/B', 'maj7'), true); // toIntl('G7M/B') = 'Gmaj7/B'
+});
+
+test('matchesName: nenhuma forma bate → false', () => {
+  assert.equal(matchesName('C7M', 'xyz'), false);
 });
 
 test('mergeRecords sobre uma lista: nomes novos entram, existentes se fundem', () => {
