@@ -1,0 +1,44 @@
+name: Tests
+
+# Runs on every pull request and on pushes to main.
+#
+# Deliberately no `paths:` filter here, unlike pages.yml. If this check is ever
+# made required by branch protection, a paths filter would let it be skipped —
+# and a required check that never reports blocks the pull request forever.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20 is the project's documented floor; 22 is what most contributors have.
+        node: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          # No cache: the project has zero dependencies and nothing to install.
+
+      - name: Syntax check every module
+        working-directory: app
+        run: |
+          for f in js/*.js js/i18n/*.js js/render/*.js sw.js; do
+            node --check "$f" || exit 1
+          done
+
+      - name: Test suite
+        working-directory: app
+        run: node --test
