@@ -1,9 +1,8 @@
 # Publicação open source — checklist
 
 **Data:** 2026-07-30
-**Atualizado:** 2026-08-03 — auditoria do estado real; Fase 1 concluída, Fase 2 parcial,
-Fase 3 intocada. A i18n (T-31) foi antecipada e **entregue**.
-**Status:** em execução — 8 de 31 tarefas feitas
+**Atualizado:** 2026-08-04 — Nível 1 executado, mais CI e proteção da `main`.
+**Status:** em execução — **14 de 31 tarefas feitas**
 **Repo:** `github.com/somacavalieri/somaplay` — público desde 2026-07-05, no ar em
 [somacavalieri.github.io/somaplay](https://somacavalieri.github.io/somaplay/)
 
@@ -11,10 +10,10 @@ Fase 3 intocada. A i18n (T-31) foi antecipada e **entregue**.
 
 | Fase | Feito | Situação |
 |---|---|---|
-| 0 — Higiene | 1 / 5 | **Quatro itens abertos, dois deles agora mais urgentes que na origem** |
-| 1 — Jurídico | 4 / 6 | Bloqueio removido; falta licença de fonte e o áudio demo |
-| 2 — Vitrine | 2 / 5 | README existe; faltam screenshots, metadados e `CLAUDE.md` |
-| 3 — Contribuição | 1 / 7 | **Nada que permita aceitar PR com segurança** |
+| 0 — Higiene | 3 / 5 | Riscos fechados. Os dois restantes viraram arrumação, não proteção |
+| 1 — Jurídico | 4 / 6 | **Falta só a licença das fontes** (T-10) e o áudio demo |
+| 2 — Vitrine | 4 / 5 | Falta screenshots (T-14) |
+| 3 — Contribuição | 3 / 7 | CI verde e `main` protegida. Falta o que convida alguém a entrar |
 | 4 — Rename | 0 / 7 | Não começou, por decisão |
 | Extra | 1 / 1 | i18n PT/EN entregue e no ar |
 
@@ -103,17 +102,18 @@ Marcador de esforço: 🟢 minutos · 🟡 ~1h · 🔴 meio dia ou mais
 
 - [x] **T-01** ✅ A branch `feat/editor-acordes-e-dicionario` não existe mais — o trabalho
       do editor de acordes foi fechado antes desta execução.
-- [ ] **T-02** 🟢 `git gc --prune=now --aggressive`. **Verificado em 2026-08-03: nunca foi
-      rodado — o `.git` está em 852 MB**, com blobs órfãos de 187/173/80 MB. O Google Drive
-      sincroniza isso continuamente.
-- [ ] **T-03** 🟢 Ampliar `.gitignore`: `bkp/`, `recordings/`, `*.somaplay`,
-      `untitled folder/`. **Agora mais urgente do que na origem:** o repo tem público, e
-      quatro `.somaplay` (um de 37 MB) seguem soltos na raiz sem ignore. Um `git add .`
-      distraído os grava no histórico permanentemente.
+- [x] **T-02** ✅ `git gc --prune=now --aggressive` rodado em 2026-08-04: **852 MB → 5,8 MB**.
+      Antes: confirmado que as 5 branches eram alcançáveis, sem stash e com uma só worktree.
+      Depois: `git fsck` limpo, histórico e branches intactos.
+- [x] **T-03** ✅ `.gitignore` cobre `*.somaplay`, `bkp/`, `recordings/` e
+      `untitled folder/`. Confirmado antes que nenhum `.somaplay` estava versionado — se
+      estivesse, o ignore não bastaria e exigiria `git rm --cached`.
 - [ ] **T-04** 🟢 Remover `untitled folder/` e mover `recordings/` para fora do repositório.
-      Ambos continuam lá.
+      **Despriorizado:** o `.gitignore` (T-03) neutralizou o risco real. O que sobra é
+      arrumação de disco, não proteção.
 - [ ] **T-05** 🟢 Decidir o destino de `-DESIGN/` (`Soma Play.html`, `top-bar-chord.psd`
-      1,6 MB). Continua versionado.
+      1,6 MB). Continua versionado. Sem urgência — é material de design próprio, não pesa
+      no clone e não tem problema jurídico.
 
 ### Fase 1 — Limpeza jurídica (bloqueia divulgação)
 
@@ -141,23 +141,33 @@ Marcador de esforço: 🟢 minutos · 🟡 ~1h · 🔴 meio dia ou mais
 - [ ] **T-14** 🟡 Screenshots. **Continua só `screens/karaoke.png`.** Faltam Cifra,
       Acompanhamento (mixer), biblioteca e editor de acordes. Para um app visual, é o
       maior fator de conversão de quem abre a página.
-- [ ] **T-15** 🟢 Metadados do repo. **Verificado em 2026-08-03: `description`,
-      `homepageUrl` e topics seguem todos vazios.** Dois minutos de trabalho para o item de
-      melhor razão valor/esforço que restou.
-- [ ] **T-16** 🟡 Reescrever `CLAUDE.md`. **Não feito, e agora é um risco ativo:** o
-      arquivo ainda afirma *"design/PRD stage — there is no application code yet"* e manda
-      discutir em português, contra D4. Qualquer agente de IA que entrar no projeto lê isso
-      primeiro e parte de uma premissa falsa.
+- [x] **T-15** ✅ Descrição, homepage (apontando para o app no ar) e **10 topics**:
+      `pwa`, `offline-first`, `guitar`, `chords`, `music`, `web-audio`, `karaoke`,
+      `vanilla-js`, mais `indexeddb` e `service-worker` — por onde chega quem procura
+      "PWA offline de verdade".
+- [x] **T-16** ✅ `CLAUDE.md` reescrito. Descreve o projeto que existe (em produção, 27
+      módulos, ~4.200 linhas), a divisão de idiomas e o fluxo spec → plano → implementação.
+      Ganhou uma seção **"Things that will bite you"** com as quatro armadilhas que este
+      ciclo revelou: `DB_NAME`, `SHELL`/`VERSION`, `data-*` atrás de `t()`, e renotar a
+      cifra. Nenhuma é dedutível lendo o código.
 
 ### Fase 3 — Abrir para contribuição
 
 - [x] **T-17** ✅ `CONTRIBUTING.md` escrito. Além do setup, documenta três armadilhas
       não óbvias: bumpar `VERSION` ao mexer no `SHELL`, nunca renomear `DB_NAME`, e não
       commitar conteúdo musical de terceiros. Issue e PR em português são bem-vindos.
-- [ ] **T-18** 🟡 `.github/workflows/test.yml`. **Verificado: só existe `pages.yml`.**
-      Nenhum teste roda em PR. Com o app no ar, um merge ruim vai direto para produção.
-- [ ] **T-19** 🟢 Proteger a `main`. **Verificado: sem proteção nenhuma** (`Branch not
-      protected`). Qualquer push na `main` dispara deploy imediato.
+- [x] **T-18** ✅ `.github/workflows/test.yml` — sintaxe + suíte em todo PR e push na
+      `main`, no Node 20 e 22. Passou verde na primeira execução. **Sem filtro de `paths`,
+      de propósito:** um check obrigatório que é *pulado* em vez de reportado trava o PR
+      para sempre.
+      Junto veio `app/test/shell.test.js`, que vira asserção a armadilha do Service
+      Worker — todo caminho do `SHELL` existe, todo módulo está registrado. Verificado que
+      morde: remover um módulo do `SHELL` faz a suíte falhar.
+- [x] **T-19** ✅ `main` protegida: PR obrigatório, 0 aprovações exigidas, `test (20)` e
+      `test (22)` como checks obrigatórios, force-push e deleção bloqueados.
+      **`enforce_admins` desligado** — o dono continua com push direto, então o fluxo do dia
+      a dia não muda; a regra vale para quem chegar por PR. Apertar depois é uma caixa de
+      seleção.
 - [ ] **T-20** 🟢 `CODE_OF_CONDUCT.md` — Contributor Covenant. Não existe.
 - [ ] **T-21** 🟢 `.github/ISSUE_TEMPLATE/` e `PULL_REQUEST_TEMPLATE.md`. Não existem.
 - [ ] **T-22** 🟡 **Abrir o roadmap como issues.** **Verificado: zero issues abertas.**
@@ -209,34 +219,33 @@ A ordem original por fases perdeu sentido: a Fase 1 caiu, a Fase 3 nem começou,
 passou na frente de tudo. O que segue está ordenado por **risco e por razão valor/esforço**,
 não por fase.
 
-### Nível 1 — Agora (~20 min no total, e destrava tudo)
+### ✅ Feito em 2026-08-03/04
+
+**T-03** `.gitignore` · **T-02** `git gc` (852 MB → 5,8 MB) · **T-15** metadados do repo ·
+**T-16** `CLAUDE.md` · **T-18** CI em PR · **T-19** proteção da `main`
+
+### Nível 1 — Agora
 
 | # | Por quê |
 |---|---|
-| **T-03** `.gitignore` | Quatro `.somaplay` soltos na raiz, um de 37 MB, sem ignore, num repo com público. Um `git add .` grava no histórico para sempre. É irreversível na prática |
-| **T-02** `git gc` | 852 MB de lixo local que o Google Drive sincroniza sem parar |
-| **T-15** metadados do repo | Dois minutos. Hoje quem acha o repo vê descrição vazia e nenhum topic — não há como saber o que é sem clicar |
-| **T-16** `CLAUDE.md` | Afirma que não existe código no projeto. Todo agente de IA que entrar parte de uma premissa falsa |
+| **T-10** licenças das fontes | **Último item jurídico aberto.** Inter, Sora e JetBrains Mono são redistribuídas sem o texto da OFL, que a própria licença exige. Dez minutos, e pendência jurídica em repo público não envelhece bem |
+| **T-14** screenshots | Um app visual com uma única imagem no README. É o que decide se quem abre a página entende o que é em cinco segundos |
+| **T-22** roadmap como issues | Zero issues hoje. Sem elas, um amigo interessado abre o repo e não tem por onde começar. A §11 do PRD já é a lista pronta |
 
-### Nível 2 — Antes de chamar os amigos para contribuir
+T-14 e T-22 formam um par: são o que transforma "repositório público" em "projeto onde
+alguém entra". Agora que o CI está verde e a `main` protegida, receber esse alguém é
+seguro — o que faltava era o convite.
 
-| # | Por quê |
-|---|---|
-| **T-18** CI em PR | É o que permite aceitar código de terceiro sem quebrar o app no palco |
-| **T-19** proteger a `main` | Hoje um push na `main` vira deploy em produção, sem revisão nem teste |
-| **T-14** screenshots | App visual com uma única imagem no README. É o maior fator de conversão de quem abre a página |
-| **T-22** roadmap como issues | Transforma "repo público" em "projeto onde dá para entrar" |
+### Nível 2 — Acabamento
 
-### Nível 3 — Acabamento
+**T-20** código de conduta · **T-21** templates de issue/PR · **T-23** índice de `docs/` ·
+**T-13** mover o `app/README.md`
 
-**T-10** licenças de fonte (último item jurídico) · **T-20** código de conduta ·
-**T-21** templates de issue/PR · **T-23** índice de `docs/` · **T-13** mover o
-`app/README.md`
+### Nível 3 — Quando houver vontade
 
-### Nível 4 — Quando houver vontade
-
-**T-08** gravar os stems do demo (destrava o modo T2 para quem chega) · **Fase 4**
-o rename, quando o nome fechar
+**T-08** gravar os stems do demo (destrava o modo T2 para quem chega) ·
+**T-04** / **T-05** arrumação de disco (o risco já foi fechado pelo `.gitignore`) ·
+**Fase 4** o rename, quando o nome fechar
 
 ## 5.1 Débito técnico registrado na execução da i18n
 
@@ -261,5 +270,6 @@ Levantado pelas revisões, julgado aceitável, nenhum quebra nada. Rende issues:
 | ~~T-06 quebra o Service Worker de quem já instalou~~ | **Não ocorreu.** `VERSION` subiu no mesmo commit e o `SHELL` foi validado contra o disco a cada mudança |
 | ~~T-07 vira gargalo~~ | **Contornado.** A cifra e a letra do demo já eram autorais; só o áudio ficou pendente, e sem bloquear nada |
 | Rename depois de divulgar quebra links salvos | Aberto. GitHub redireciona o repo; a URL do Pages não |
-| **Aceitar PR sem CI verde derruba o app no palco** | **Aberto e agora concreto** — o app está no ar e a `main` não tem proteção nem CI. T-18 + T-19 antes de T-22 |
-| **Arquivo grande entra no histórico por acidente** | **Aberto** — quatro `.somaplay` na raiz sem ignore, um de 37 MB. T-03 resolve em 2 minutos |
+| ~~Aceitar PR sem CI verde derruba o app no palco~~ | **Fechado.** CI obrigatório em PR (Node 20 e 22) e `main` protegida. O `shell.test.js` cobre a falha que só apareceria offline |
+| ~~Arquivo grande entra no histórico por acidente~~ | **Fechado.** `.gitignore` cobre `*.somaplay`, `bkp/` e `recordings/` |
+| Fontes redistribuídas sem o texto da licença | **Aberto** — única pendência jurídica. T-10 |
