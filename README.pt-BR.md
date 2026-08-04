@@ -153,3 +153,6 @@ amigos pediram. Espere as arestas de um software escrito para um público de uma
 ## Licença
 
 [MIT](LICENSE) — o código. O conteúdo que você carrega nele continua seu.
+
+As três fontes embutidas — Sora, Inter e JetBrains Mono — estão sob a
+[SIL Open Font License 1.1](app/fonts/LICENSES/); veja [app/fonts/](app/fonts/README.md).

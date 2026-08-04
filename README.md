@@ -153,3 +153,6 @@ of one.
 ## License
 
 [MIT](LICENSE) — the code. The content you load into it stays yours.
+
+The three bundled typefaces — Sora, Inter and JetBrains Mono — are under the
+[SIL Open Font License 1.1](app/fonts/LICENSES/); see [app/fonts/](app/fonts/README.md).

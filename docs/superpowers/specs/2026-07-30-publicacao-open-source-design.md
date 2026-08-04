@@ -2,7 +2,7 @@
 
 **Data:** 2026-07-30
 **Atualizado:** 2026-08-04 — Nível 1 executado, mais CI e proteção da `main`.
-**Status:** em execução — **14 de 31 tarefas feitas**
+**Status:** em execução — **15 de 31 tarefas feitas**
 **Repo:** `github.com/somacavalieri/somaplay` — público desde 2026-07-05, no ar em
 [somacavalieri.github.io/somaplay](https://somacavalieri.github.io/somaplay/)
 
@@ -11,7 +11,7 @@
 | Fase | Feito | Situação |
 |---|---|---|
 | 0 — Higiene | 3 / 5 | Riscos fechados. Os dois restantes viraram arrumação, não proteção |
-| 1 — Jurídico | 4 / 6 | **Falta só a licença das fontes** (T-10) e o áudio demo |
+| 1 — Jurídico | 5 / 6 | **Sem pendência jurídica.** Falta só o áudio demo (T-08), que é conteúdo |
 | 2 — Vitrine | 4 / 5 | Falta screenshots (T-14) |
 | 3 — Contribuição | 3 / 7 | CI verde e `main` protegida. Falta o que convida alguém a entrar |
 | 4 — Rename | 0 / 7 | Não começou, por decisão |
@@ -126,9 +126,11 @@ Marcador de esforço: 🟢 minutos · 🟡 ~1h · 🔴 meio dia ou mais
 - [ ] **T-08** 🟡 Gravar 3-4 stems próprios e religá-los em `importSamples()`, mais as
       entradas no `SHELL` e o bump de `VERSION`. Depende de T-07 (a parte de áudio).
 - [x] **T-09** ✅ `LICENSE` MIT na raiz, em nome de Flavio Soma Cavalieri, 2026.
-- [ ] **T-10** 🟢 Licenças das fontes em `app/fonts/LICENSES/` (Inter, Sora e JetBrains
-      Mono são todas SIL OFL 1.1). **Verificado: continua sem nenhum arquivo de licença** —
-      e a redistribuição de fonte exige. É o último item jurídico aberto.
+- [x] **T-10** ✅ Licenças em `app/fonts/LICENSES/`, baixadas de `google/fonts` em vez de
+      escritas de memória, e conferidas uma a uma (cabeçalho OFL 1.1, seção de condições,
+      linha de copyright). Mais um `app/fonts/README.md` mapeando fonte → uso → licença, e
+      um ponteiro na seção de licença dos dois README.
+      **Com isso a Fase 1 fecha: não há mais pendência jurídica.**
 - [x] **T-11** ✅ Seção "Bring your own content" / "Traga o seu conteúdo" nos dois README.
 
 ### Fase 2 — Vitrine
@@ -222,13 +224,12 @@ não por fase.
 ### ✅ Feito em 2026-08-03/04
 
 **T-03** `.gitignore` · **T-02** `git gc` (852 MB → 5,8 MB) · **T-15** metadados do repo ·
-**T-16** `CLAUDE.md` · **T-18** CI em PR · **T-19** proteção da `main`
+**T-16** `CLAUDE.md` · **T-18** CI em PR · **T-19** proteção da `main` · **T-10** licenças das fontes
 
 ### Nível 1 — Agora
 
 | # | Por quê |
 |---|---|
-| **T-10** licenças das fontes | **Último item jurídico aberto.** Inter, Sora e JetBrains Mono são redistribuídas sem o texto da OFL, que a própria licença exige. Dez minutos, e pendência jurídica em repo público não envelhece bem |
 | **T-14** screenshots | Um app visual com uma única imagem no README. É o que decide se quem abre a página entende o que é em cinco segundos |
 | **T-22** roadmap como issues | Zero issues hoje. Sem elas, um amigo interessado abre o repo e não tem por onde começar. A §11 do PRD já é a lista pronta |
 
@@ -272,4 +273,4 @@ Levantado pelas revisões, julgado aceitável, nenhum quebra nada. Rende issues:
 | Rename depois de divulgar quebra links salvos | Aberto. GitHub redireciona o repo; a URL do Pages não |
 | ~~Aceitar PR sem CI verde derruba o app no palco~~ | **Fechado.** CI obrigatório em PR (Node 20 e 22) e `main` protegida. O `shell.test.js` cobre a falha que só apareceria offline |
 | ~~Arquivo grande entra no histórico por acidente~~ | **Fechado.** `.gitignore` cobre `*.somaplay`, `bkp/` e `recordings/` |
-| Fontes redistribuídas sem o texto da licença | **Aberto** — única pendência jurídica. T-10 |
+| ~~Fontes redistribuídas sem o texto da licença~~ | **Fechado.** OFL 1.1 das três em `app/fonts/LICENSES/` |
