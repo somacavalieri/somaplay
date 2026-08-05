@@ -155,10 +155,25 @@ limpa dos de um dígito — sem corte na borda, sem invadir a grade, sem encosta
 miniatura vizinha. Vale tanto no dicionário quanto no picker do popover. `diagLm`
 não precisa de ajuste.
 
-**O picker mostra 3 das 5 formas por vez.** No tablet (1280×800) o popover
-inteiro cabe na tela, mas a tira interna de miniaturas exibe três cartões e exige
-arrastar na horizontal para chegar em `forma E` e `forma D`. O comportamento é do
-picker genérico e é anterior a esta mudança — o que mudou é que agora ele é
-exercitado de verdade, porque até aqui quase todo acorde tinha uma forma só.
-Não bloqueia nada; fica anotado como candidato a um ajuste de layout próprio,
-fora deste spec.
+**A tira de miniaturas perde a posição de rolagem a cada re-render.** No tablet
+(1280×800) a tira mostra três cartões por vez e exige arrastar na horizontal para
+chegar em `forma E` e `forma D` — isso é intencional: `.chord-pop.car .strip-wrap`
+tem `overflow-x:auto`, `scroll-snap-type:x mandatory` e
+`-webkit-overflow-scrolling:touch`, e `.pick-opt` tem `scroll-snap-align:center`.
+É um carrossel de propósito, não um problema de tamanho. O defeito de verdade é
+que essa rolagem some a cada re-render: `chordPopSelect` chama `update()`, que em
+`main.js` troca `app.innerHTML` inteiro; `captureUI`/`restoreUI` só preservam o
+`scrollTop` de elementos `.content-scroll` ou `[data-autoscroll]`, e a tira do
+carrossel não tem nem uma coisa nem outra. Resultado: quem arrasta até `forma E` e
+toca nela vê a tira saltar de volta pro cartão mais à esquerda, com a seleção que
+acabou de fazer fora da tela. O mesmo acontece ao abrir o popover pela primeira
+vez numa música que já usa a forma 3 ou 4: o cartão certo fica marcado, mas
+invisível. Nada se perde nem aplica errado — a forma correta é gravada ao Aplicar
+— é só um momento confuso. O conserto natural é restaurar o `scrollLeft` no
+re-render, ou rolar o cartão selecionado para dentro da vista depois de renderizar;
+`afterRenderPlay`, em `render/play.js`, já reposiciona o popover com o tamanho real
+medido no DOM depois do render, então é o gancho natural para isso também. Encolher
+os cartões para caber os cinco de uma vez deixaria essa rolagem-fantasma intacta —
+não é o conserto certo. É anterior a esta mudança e pertence ao spec do próprio
+popover (`docs/superpowers/specs/2026-07-29-popover-de-acorde-na-cifra-design.md`);
+fica adiado de propósito.
