@@ -105,3 +105,14 @@ test('toda forma de C, A, G, E e D soa a tríade maior certa', () => {
     }
   }
 });
+
+test('C tem as cinco formas CAGED', () => {
+  const l = catalogShapes('C');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma A', 'forma G', 'forma E', 'forma D']);
+});
+
+test('C: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('C').frets, [-1, 3, 2, 0, 1, 0]);
+  assert.equal(catalogShapes('C').filter((s) => s.default).length, 1);
+});

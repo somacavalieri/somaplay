@@ -14,7 +14,11 @@
 
 export const CATALOG = {
   // — semente: formas antes embutidas em chords.js (cada uma vira a padrão do seu nome) —
-  'C':    [{ frets: [-1, 3, 2, 0, 1, 0], default: true }],
+  'C':    [{ frets: [-1, 3, 2, 0, 1, 0], default: true },
+           { frets: [-1, 3, 5, 5, 5, 3],     barre: { fret: 3, from: 1, to: 5 }, label: 'forma A' },
+           { frets: [8, 7, 5, 5, 5, -1],     barre: { fret: 5, from: 2, to: 4 }, label: 'forma G' },
+           { frets: [8, 10, 10, 9, 8, 8],    barre: { fret: 8, from: 0, to: 5 }, label: 'forma E' },
+           { frets: [-1, -1, 10, 12, 13, 12],                                    label: 'forma D' }],
   'C#m':  [{ frets: [-1, 4, 6, 6, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
   'C#m7': [{ frets: [-1, 4, 6, 4, 5, 4], barre: { fret: 4, from: 1, to: 5 }, default: true }],
   'D':    [{ frets: [-1, -1, 0, 2, 3, 2], default: true }],
