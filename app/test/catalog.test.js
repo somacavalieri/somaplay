@@ -160,3 +160,14 @@ test('D: a forma aberta continua a padrão', () => {
   assert.deepEqual(catalogDefault('D').frets, [-1, -1, 0, 2, 3, 2]);
   assert.equal(catalogShapes('D').filter((s) => s.default).length, 1);
 });
+
+test('nenhuma forma CAGED estoura a janela de 4 casas do diagrama', () => {
+  for (const nome of CAGED) {
+    for (const f of catalogShapes(nome)) {
+      const pos = f.frets.filter((x) => x > 0);
+      if (!pos.length) continue;
+      const casas = Math.max(...pos) - Math.min(...pos) + 1;
+      assert.ok(casas <= 4, `${nome} / ${f.label || 'aberta'}: ${casas} casas em [${f.frets.join(', ')}]`);
+    }
+  }
+});
