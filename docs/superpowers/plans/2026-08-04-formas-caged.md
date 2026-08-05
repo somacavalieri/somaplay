@@ -461,7 +461,9 @@ Duas coisas que só fazem sentido com as 20 formas no lugar: o teste de que nenh
 - Consumes: `CAGED` da Task 1; `catalogShapes`.
 - Produces: nada.
 
-- [ ] **Step 1: Escrever o teste que falha**
+- [ ] **Step 1: Escrever o teste de invariante**
+
+Este teste não tem fase vermelha: ele descreve uma propriedade que as formas das Tasks 2–6 já devem cumprir. Se ele falhar, é bug nelas, não neste passo.
 
 `chordSVG` desenha `FR = 4` linhas de casa. Quando a forma passa da 4ª casa, ele ancora a janela na casa mais baixa (`base = minPos`) e desenha a casa `f` na linha `f - base + 1`. Uma forma cujas casas se espalham por mais de quatro tem dedos que caem fora do desenho, sem aviso nenhum. Acrescentar no fim de `app/test/catalog.test.js`:
 
