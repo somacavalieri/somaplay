@@ -143,3 +143,22 @@ notas, que é a razão de ele existir.
 **Cinco opções no picker** deixam a lista mais longa em cinco acordes muito
 usados. É o efeito pretendido, mas vale olhar se o popover na música ainda cabe
 bem no tablet.
+
+## Descobertas da verificação no navegador
+
+Implementado e verificado em 2026-08-05. Os dois riscos acima se resolveram, e a
+verificação levantou um item novo.
+
+**O indicador de casa de dois dígitos cabe.** Era o único desconhecido real:
+`10ª` é o rótulo mais largo que o app já desenhou, e ele sai com a mesma margem
+limpa dos de um dígito — sem corte na borda, sem invadir a grade, sem encostar na
+miniatura vizinha. Vale tanto no dicionário quanto no picker do popover. `diagLm`
+não precisa de ajuste.
+
+**O picker mostra 3 das 5 formas por vez.** No tablet (1280×800) o popover
+inteiro cabe na tela, mas a tira interna de miniaturas exibe três cartões e exige
+arrastar na horizontal para chegar em `forma E` e `forma D`. O comportamento é do
+picker genérico e é anterior a esta mudança — o que mudou é que agora ele é
+exercitado de verdade, porque até aqui quase todo acorde tinha uma forma só.
+Não bloqueia nada; fica anotado como candidato a um ajuste de layout próprio,
+fora deste spec.
