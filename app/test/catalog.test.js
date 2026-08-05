@@ -60,3 +60,114 @@ test('digitacoes da música têm prioridade sobre o catálogo', () => {
   const dict = { 'G': { frets: [3, 2, 0, 0, 3, 3] } };
   assert.ok(chordSVG('G', false, dict).includes('<circle'));
 });
+
+// ---------- formas CAGED ----------
+// Rede de segurança: uma forma é uma lista de casas, e um dígito trocado desenha
+// um diagrama perfeitamente plausível que soa errado. Estes testes leem as notas.
+
+const CAGED = ['C', 'A', 'G', 'E', 'D'];
+
+// Semitons das cordas soltas, com C = 0: Mi Lá Ré Sol Si Mi.
+const SOLTAS = [4, 9, 2, 7, 11, 4];
+const PC = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+
+// Classes de altura que a forma produz, sem repetição e ordenadas. Corda
+// abafada (-1) sai fora; corda solta (0) entra como a nota da própria corda.
+function notasDaForma(forma) {
+  const ns = forma.frets
+    .map((f, i) => (f < 0 ? null : (SOLTAS[i] + f) % 12))
+    .filter((n) => n !== null);
+  return [...new Set(ns)].sort((a, b) => a - b);
+}
+
+// Tônica, terça maior e quinta justa.
+function triadeMaior(nome) {
+  const r = PC[nome];
+  return [r, (r + 4) % 12, (r + 7) % 12].sort((a, b) => a - b);
+}
+
+test('notasDaForma lê o C aberto como dó–mi–sol', () => {
+  assert.deepEqual(notasDaForma({ frets: [-1, 3, 2, 0, 1, 0] }), [0, 4, 7]);
+});
+
+test('notasDaForma denuncia um dígito trocado', () => {
+  // C aberto com a corda Lá uma casa acima: entra dó# no lugar do dó.
+  assert.deepEqual(notasDaForma({ frets: [-1, 4, 2, 0, 1, 0] }), [0, 1, 4, 7]);
+});
+
+test('toda forma de C, A, G, E e D soa a tríade maior certa', () => {
+  for (const nome of CAGED) {
+    for (const f of catalogShapes(nome)) {
+      assert.deepEqual(
+        notasDaForma(f), triadeMaior(nome),
+        `${nome} / ${f.label || 'aberta'}: notas erradas em [${f.frets.join(', ')}]`
+      );
+    }
+  }
+});
+
+test('C tem as cinco formas CAGED', () => {
+  const l = catalogShapes('C');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma A', 'forma G', 'forma E', 'forma D']);
+});
+
+test('C: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('C').frets, [-1, 3, 2, 0, 1, 0]);
+  assert.equal(catalogShapes('C').filter((s) => s.default).length, 1);
+});
+
+test('A tem as cinco formas CAGED', () => {
+  const l = catalogShapes('A');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma G', 'forma E', 'forma D', 'forma C']);
+});
+
+test('A: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('A').frets, [-1, 0, 2, 2, 2, 0]);
+  assert.equal(catalogShapes('A').filter((s) => s.default).length, 1);
+});
+
+test('G tem as cinco formas CAGED', () => {
+  const l = catalogShapes('G');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma E', 'forma D', 'forma C', 'forma A']);
+});
+
+test('G: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('G').frets, [3, 2, 0, 0, 0, 3]);
+  assert.equal(catalogShapes('G').filter((s) => s.default).length, 1);
+});
+
+test('E tem as cinco formas CAGED', () => {
+  const l = catalogShapes('E');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma D', 'forma C', 'forma A', 'forma G']);
+});
+
+test('E: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('E').frets, [0, 2, 2, 1, 0, 0]);
+  assert.equal(catalogShapes('E').filter((s) => s.default).length, 1);
+});
+
+test('D tem as cinco formas CAGED', () => {
+  const l = catalogShapes('D');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma C', 'forma A', 'forma G', 'forma E']);
+});
+
+test('D: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('D').frets, [-1, -1, 0, 2, 3, 2]);
+  assert.equal(catalogShapes('D').filter((s) => s.default).length, 1);
+});
+
+test('nenhuma forma CAGED estoura a janela de 4 casas do diagrama', () => {
+  for (const nome of CAGED) {
+    for (const f of catalogShapes(nome)) {
+      const pos = f.frets.filter((x) => x > 0);
+      if (!pos.length) continue;
+      const casas = Math.max(...pos) - Math.min(...pos) + 1;
+      assert.ok(casas <= 4, `${nome} / ${f.label || 'aberta'}: ${casas} casas em [${f.frets.join(', ')}]`);
+    }
+  }
+});
