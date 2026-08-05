@@ -127,3 +127,14 @@ test('A: a forma aberta continua a padrão', () => {
   assert.deepEqual(catalogDefault('A').frets, [-1, 0, 2, 2, 2, 0]);
   assert.equal(catalogShapes('A').filter((s) => s.default).length, 1);
 });
+
+test('G tem as cinco formas CAGED', () => {
+  const l = catalogShapes('G');
+  assert.equal(l.length, 5);
+  assert.deepEqual(l.slice(1).map((s) => s.label), ['forma E', 'forma D', 'forma C', 'forma A']);
+});
+
+test('G: a forma aberta continua a padrão', () => {
+  assert.deepEqual(catalogDefault('G').frets, [3, 2, 0, 0, 0, 3]);
+  assert.equal(catalogShapes('G').filter((s) => s.default).length, 1);
+});
