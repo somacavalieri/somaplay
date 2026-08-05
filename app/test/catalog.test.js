@@ -60,3 +60,48 @@ test('digitacoes da música têm prioridade sobre o catálogo', () => {
   const dict = { 'G': { frets: [3, 2, 0, 0, 3, 3] } };
   assert.ok(chordSVG('G', false, dict).includes('<circle'));
 });
+
+// ---------- formas CAGED ----------
+// Rede de segurança: uma forma é uma lista de casas, e um dígito trocado desenha
+// um diagrama perfeitamente plausível que soa errado. Estes testes leem as notas.
+
+const CAGED = ['C', 'A', 'G', 'E', 'D'];
+
+// Semitons das cordas soltas, com C = 0: Mi Lá Ré Sol Si Mi.
+const SOLTAS = [4, 9, 2, 7, 11, 4];
+const PC = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+
+// Classes de altura que a forma produz, sem repetição e ordenadas. Corda
+// abafada (-1) sai fora; corda solta (0) entra como a nota da própria corda.
+function notasDaForma(forma) {
+  const ns = forma.frets
+    .map((f, i) => (f < 0 ? null : (SOLTAS[i] + f) % 12))
+    .filter((n) => n !== null);
+  return [...new Set(ns)].sort((a, b) => a - b);
+}
+
+// Tônica, terça maior e quinta justa.
+function triadeMaior(nome) {
+  const r = PC[nome];
+  return [r, (r + 4) % 12, (r + 7) % 12].sort((a, b) => a - b);
+}
+
+test('notasDaForma lê o C aberto como dó–mi–sol', () => {
+  assert.deepEqual(notasDaForma({ frets: [-1, 3, 2, 0, 1, 0] }), [0, 4, 7]);
+});
+
+test('notasDaForma denuncia um dígito trocado', () => {
+  // C aberto com a corda Lá uma casa acima: entra dó# no lugar do dó.
+  assert.deepEqual(notasDaForma({ frets: [-1, 4, 2, 0, 1, 0] }), [0, 1, 4, 7]);
+});
+
+test('toda forma de C, A, G, E e D soa a tríade maior certa', () => {
+  for (const nome of CAGED) {
+    for (const f of catalogShapes(nome)) {
+      assert.deepEqual(
+        notasDaForma(f), triadeMaior(nome),
+        `${nome} / ${f.label || 'aberta'}: notas erradas em [${f.frets.join(', ')}]`
+      );
+    }
+  }
+});
