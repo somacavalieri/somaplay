@@ -15,7 +15,9 @@ const TO_INTL = {
   '(11)': '11', '(13)': '13', '(9)': '9',
   '(4)': 'sus4',
   '7M': 'maj7',
-  '°': 'dim',
+  // '°' é o sinal de grau (U+00B0); 'º' é o ordinal masculino (U+00BA), o que o
+  // CifraClub escreve. Só '°' é canônico na volta (TO_BR).
+  '°': 'dim', 'º': 'dim',
 };
 
 // internacional → brasileiro (forma canônica de cada destino)
@@ -28,7 +30,7 @@ const TO_BR = {
 // Uma passada só, alternativas mais longas primeiro. Passada única importa: com
 // substituições sequenciais, o resultado de uma vira entrada da seguinte e o
 // nome se corrompe.
-const RE_BR = /\(b13\)|\(13-\)|\(b5\)|\(5-\)|\(b9\)|\(9-\)|\(11\)|\(13\)|\(9\)|\(4\)|7M|5-|°/g;
+const RE_BR = /\(b13\)|\(13-\)|\(b5\)|\(5-\)|\(b9\)|\(9-\)|\(11\)|\(13\)|\(9\)|\(4\)|7M|5-|°|º/g;
 
 // No sentido inverso os números soltos (9/11/13) só valem no FIM do nome. Sem a
 // âncora, o '9' de 'C7(9-)' — que já é brasileiro — viraria 'C7((9)-)'.

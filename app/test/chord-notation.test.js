@@ -12,6 +12,10 @@ test('converte os sufixos maiores para notação internacional', () => {
   assert.equal(toIntl('E7(13)'), 'E713');
 });
 
+test('o diminuto com ordinal masculino do CifraClub também converte', () => {
+  assert.equal(toIntl('A#º'), 'A#dim');
+});
+
 test('converte de volta para notação brasileira', () => {
   assert.equal(toBr('Cmaj7'), 'C7M');
   assert.equal(toBr('C#dim'), 'C#°');
