@@ -6,8 +6,11 @@ import { defaultShape } from './chordbook.js';
 // Token parece um acorde? Aceita extensões entre parênteses — 7(b5), 7(13) — e,
 // depois da barra, tanto o baixo (D/F#, Cm6/Eb) quanto a extensão no estilo
 // CifraClub (Bm5-/7, A7/13, Em7/5-, E7/4(9)).
+// O diminuto vem em dois caracteres diferentes: '°' (U+00B0, grau) e 'º' (U+00BA,
+// ordinal masculino, o que o CifraClub usa). Os dois têm de valer — senão uma
+// linha como "A  A7M  A#º" deixa de ser linha de acordes e a cifra desanda.
 export function isChordTok(t) {
-  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|\+|-|\d)*(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
+  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|º|\+|-|\d)*(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
 }
 
 // A fonte às vezes cola no acorde algo que não é acorde: asterisco ou ponto de

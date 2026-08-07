@@ -39,6 +39,14 @@ test('isChordTok reconhece notação do CifraClub (°, 5-, parênteses)', () => 
   }
 });
 
+// O CifraClub escreve o diminuto com o ordinal masculino 'º' (U+00BA), não com o
+// grau '°' (U+00B0) do catálogo. Sem os dois, uma linha com "A#º" deixa de ser
+// linha de acordes e a cifra inteira desanda (Detalhes, Roberto Carlos).
+test('isChordTok aceita o diminuto com ordinal masculino do CifraClub', () => {
+  assert.ok(isChordTok('A#º'), 'não reconheceu A#º');
+  assert.ok(isChordTok('Gºm6'), 'não reconheceu Gºm6');
+});
+
 test('catálogo cobre os acordes do lote (Queremos Saber, Disfarça e Chora, Me Dê Motivo)', () => {
   const nomes = ['Em7', 'Am7', 'Cm6', 'G', 'G/F', 'C/E', 'D7(4)', 'C', 'F7M', 'Bm7', 'C#°', 'C/D', 'Bb7M', 'G7M',
     'C#7', 'C7', 'Am/E', 'Cm/Eb', 'D7', 'Gm7', 'C7/E', 'Am7(5-)', 'Am7/E', 'G7',

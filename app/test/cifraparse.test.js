@@ -28,6 +28,13 @@ test('rótulo entre parênteses ((Frase 2)) também é ignorado na classificaç�
   assert.equal(parseCifraText('  Gb°   Fm7 (Frase 2)')[0].hasChords, true);
 });
 
+test('linha com diminuto do CifraClub (A#º) continua sendo linha de acordes', () => {
+  const p = parseCifraText('A  A7M    A     A7M  A#º\n       Me esquecer');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].lyric, '       Me esquecer');
+});
+
 test('rótulo com dois-pontos no início da linha ("Intro: Am  G  F")', () => {
   assert.equal(parseCifraText('Intro: Am  G  F  E7')[0].hasChords, true);
   assert.equal(parseCifraText('INTRO : E')[0].hasChords, true);
