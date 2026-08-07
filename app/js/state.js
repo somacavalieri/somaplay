@@ -3,6 +3,7 @@ import { DB, uid } from './db.js';
 import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
+import { clampSpeed } from './scroll-speed.js';
 
 export const S = {
   // navegação
@@ -114,11 +115,13 @@ export async function initState() {
   await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
+  // a escala da rolagem tinha 10 níveis; um valor antigo acima do topo vira o topo
+  S.settings.defaultSpeed = clampSpeed(S.settings.defaultSpeed);
   if (!S.settings.lang) S.settings.lang = detectLang(navigator.language);
   if (!S.settings.chordNotation) S.settings.chordNotation = S.settings.lang === 'pt' ? 'br' : 'intl';
   setLang(S.settings.lang);
   saveSettings();
-  S.scrollSpeed = S.settings.defaultSpeed;
+  S.scrollSpeed = clampSpeed(S.settings.defaultSpeed);
   applyTheme();
 }
 
@@ -247,7 +250,7 @@ export function openSong(songId, from) {
   S.t2Source = (s.stems && s.stems.length) ? 'stems' : (s.full && s.full[0] ? s.full[0].id : 'stems');
   S.mixerCollapsed = false;
   S.scrollPlaying = false;
-  S.scrollSpeed = S.settings.defaultSpeed;
+  S.scrollSpeed = clampSpeed(S.settings.defaultSpeed);
   S.imgZoom = 1;
   S.imgInvert = false;
   S.imgVariant = 'aberta';
