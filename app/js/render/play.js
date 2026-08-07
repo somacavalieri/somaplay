@@ -9,6 +9,7 @@ import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
 import { offlineBadge } from './home.js';
+import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
@@ -366,6 +367,7 @@ export function renderPlay() {
 
 // -------- comportamento pós-render (gestos, autoscroll, relógio) --------
 let scrollTimer = null;
+let scrollPos = null;   // posição da rolagem automática, com a fração preservada
 let ctlTimer = null;
 let mixerWasOpen = false;
 
@@ -439,13 +441,20 @@ function hideControls() {
 export function manageScroll() {
   const active = S.scrollPlaying && S.screen === 'play';
   if (active && !scrollTimer) {
+    // A posição é acumulada em ponto flutuante à parte: no nível 1 o passo é de
+    // 0,35 px, e ler scrollTop de volta a cada volta perderia a fração para o
+    // arredondamento do navegador — a cifra andaria mais devagar do que o pedido,
+    // ou nem andaria. Só ressincroniza quando o usuário arrasta a cifra na mão.
+    scrollPos = null;
     scrollTimer = setInterval(() => {
       const el = document.querySelector('[data-autoscroll]');
       if (!el) return;
       // mantém os controles visíveis durante a rolagem (para poder pausar)
       const ctl = document.querySelector('.scroll-ctl');
       if (ctl) { ctl.classList.remove('ctl-hidden'); clearTimeout(ctlTimer); }
-      el.scrollTop += S.scrollSpeed * 0.7;
+      if (scrollPos === null || Math.abs(el.scrollTop - scrollPos) > 1.5) scrollPos = el.scrollTop;
+      scrollPos += scrollStep(S.scrollSpeed);
+      el.scrollTop = scrollPos;
       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
         S.scrollPlaying = false;
         clearInterval(scrollTimer); scrollTimer = null;
@@ -453,7 +462,7 @@ export function manageScroll() {
         if (btn) btn.innerHTML = I.play(22);
         showControls();
       }
-    }, 30);
+    }, SCROLL_TICK_MS);
   } else if (!active && scrollTimer) {
     clearInterval(scrollTimer); scrollTimer = null;
   }
@@ -518,6 +527,7 @@ function setupImgGestures() {
 
 export function stopPlayTimers() {
   if (scrollTimer) { clearInterval(scrollTimer); scrollTimer = null; }
+  scrollPos = null;
   clearTimeout(ctlTimer);
   mixerWasOpen = false;
   audio.onTime = null;

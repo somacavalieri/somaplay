@@ -2,6 +2,7 @@
 import { S } from '../state.js';
 import { I } from '../icons.js';
 import { DB } from '../db.js';
+import { SCROLL_MIN, SCROLL_MAX } from '../scroll-speed.js';
 import { t, getLang } from '../i18n.js';
 
 export function renderSettings() {
@@ -62,7 +63,7 @@ export function renderSettings() {
 
         <div class="setting-block">
           <div class="hd"><div class="t">${t('settings.speed')}</div><div class="v" id="v-speed">${st.defaultSpeed}</div></div>
-          <input type="range" min="1" max="10" value="${st.defaultSpeed}" data-in="setDefSpeed">
+          <input type="range" min="${SCROLL_MIN}" max="${SCROLL_MAX}" value="${st.defaultSpeed}" data-in="setDefSpeed">
         </div>
 
         <div class="setting-block">

@@ -22,6 +22,7 @@ import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
+import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
 
 const app = document.getElementById('app');
@@ -412,8 +413,8 @@ const actions = {
     manageScroll();
     update();
   },
-  incSpeed() { S.scrollSpeed = Math.min(10, S.scrollSpeed + 1); patchSpeed(); },
-  decSpeed() { S.scrollSpeed = Math.max(1, S.scrollSpeed - 1); patchSpeed(); },
+  incSpeed() { S.scrollSpeed = clampSpeed(S.scrollSpeed + 1); patchSpeed(); },
+  decSpeed() { S.scrollSpeed = clampSpeed(S.scrollSpeed - 1); patchSpeed(); },
 
   // mixer / transporte
   toggleMixer() { S.mixerCollapsed = !S.mixerCollapsed; update(); },
@@ -746,9 +747,9 @@ document.addEventListener('input', (e) => {
     if (v) v.textContent = t.value + '%';
     saveSettingsDebounced();
   } else if (kind === 'setDefSpeed') {
-    S.settings.defaultSpeed = +t.value;
+    S.settings.defaultSpeed = clampSpeed(t.value);
     const v = document.getElementById('v-speed');
-    if (v) v.textContent = t.value;
+    if (v) v.textContent = S.settings.defaultSpeed;
     saveSettingsDebounced();
   } else if (kind === 'setMasterVol') {
     S.settings.masterVol = +t.value;
