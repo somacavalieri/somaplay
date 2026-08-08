@@ -26,11 +26,48 @@ export function chordName(tok) {
   return isChordTok(semDelim) ? semDelim : tok;
 }
 
+// Quando dois acordes caem em colunas vizinhas, a fonte às vezes os entrega sem
+// espaço entre eles: "E7(13)E7(b13)". Um token desses não é acorde e, pela regra da
+// linha (todos os tokens têm de ser acorde ou marca), derrubava a linha inteira —
+// os acordes vizinhos, que estão certos, ficavam brancos e intocáveis junto com ele.
+// Parte por busca gulosa da esquerda; só vale se o token todo virar 2+ acordes.
+// A guarda é o que torna isso seguro: só se tenta partir token que tenha um caractere
+// impossível numa palavra de letra. Sem ela, uma linha em maiúsculas feita só de notas
+// A-G ("CADE FACE") viraria linha de acordes. O preço é não partir "AmD" — colagem de
+// tríades simples, que é justamente onde a ambiguidade com palavra mora.
+const COLAGEM = /[0-9()#°º+/]/;
+export function splitChordTok(tok) {
+  const s = String(tok);
+  if (isChordTok(s) || !COLAGEM.test(s)) return null;
+  const out = [];
+  let resto = s;
+  while (resto) {
+    let corte = 0;
+    for (let n = resto.length; n > 0; n--) if (isChordTok(resto.slice(0, n))) { corte = n; break; }
+    if (!corte) return null;                    // sobra que não é acorde anula a partição
+    out.push(resto.slice(0, corte));
+    resto = resto.slice(corte);
+  }
+  return out.length > 1 ? out : null;
+}
+
+// Acordes que um token carrega: ele próprio quando é acorde, os pedaços quando é
+// colagem, nenhum quando não é. A partição roda no token cru — assim os pedaços são
+// sempre fatias exatas dele e o texto na tela não muda um byte.
+function chordsOfTok(tok) {
+  const nome = chordName(tok);
+  if (isChordTok(nome)) return [nome];
+  return splitChordTok(tok) || [];
+}
+
 // Marcas que dividem a linha com os acordes sem serem acorde: repetição/compasso,
 // ornamentos e setas da fonte ("^^^", "->", "!---->"), delimitador de trecho que
 // ficou sozinho, e digitação inline ("x2x243").
-const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
-const isChordOrMark = (t) => isChordTok(chordName(t)) || MARK.test(t);
+// A barra solta entra aqui porque parte das introduções do CifraClub separa os
+// acordes com ela — "Introdução: D / G / Em / A7 / D6/9 / % /". Só vale a barra
+// isolada: colada no acorde ela continua sendo baixo ou extensão (D6/9, Bm5-/7).
+const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]/]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
+const isChordOrMark = (t) => chordsOfTok(t).length > 0 || MARK.test(t);
 
 // Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7
 // Am7", "Fm7  Bb/D  [Frase 1]". Mas um trecho entre parênteses pode ser só
@@ -65,7 +102,7 @@ function stripLabels(line) {
 function isChordLine(line) {
   const toks = stripLabels(line).trim().split(/\s+/).filter(Boolean);
   if (!toks.length) return false;
-  if (!toks.some((t) => isChordTok(chordName(t)))) return false;
+  if (!toks.some((t) => chordsOfTok(t).length)) return false;
   return toks.every(isChordOrMark);
 }
 
@@ -107,8 +144,7 @@ export function extractChords(parsed) {
   parsed.forEach((l) => {
     if (!l.hasChords) return;
     l.chords.trim().split(/\s+/).forEach((t) => {
-      const nome = t && chordName(t);
-      if (nome && isChordTok(nome) && !out.includes(nome)) out.push(nome);
+      if (t) chordsOfTok(t).forEach((nome) => { if (!out.includes(nome)) out.push(nome); });
     });
   });
   return out;
@@ -118,11 +154,16 @@ export function extractChords(parsed) {
 // espaços (grupos capturados) — concatenar os text reproduz a linha byte a
 // byte, obrigatório para o white-space:pre não desalinhar acorde↔sílaba.
 // text = o que vai na tela; name = o acorde para diagrama/popover.
+// Token colado vira um segmento por acorde: os pedaços são fatias do token, então
+// concatenar continua devolvendo a linha.
 export function chordLineSegs(line) {
   return String(line).split(/(\s+)/).filter((t) => t !== '')
-    .map((t) => {
-      const nome = /\s/.test(t[0]) ? t : chordName(t);
-      return { text: t, name: nome, isChord: !/\s/.test(t[0]) && isChordTok(nome) };
+    .flatMap((t) => {
+      if (/\s/.test(t[0])) return [{ text: t, name: t, isChord: false }];
+      const pedacos = splitChordTok(t);
+      if (pedacos) return pedacos.map((p) => ({ text: p, name: p, isChord: true }));
+      const nome = chordName(t);
+      return [{ text: t, name: nome, isChord: isChordTok(nome) }];
     });
 }
 
@@ -138,11 +179,17 @@ export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
   let m;
   while ((m = re.exec(chordLine))) {
     const tok = m[0];
-    const name = chordName(tok);
-    const isChord = isChordTok(name);
-    const x = Math.max(m.index * chPx, cursor);
-    out.push({ tok, name, isChord, x });
-    cursor = x + blockWidth(tok, isChord) + gap;
+    const pedacos = splitChordTok(tok);
+    // Token colado rende uma miniatura por acorde, cada uma na coluna do seu 1º caractere.
+    let col = m.index;
+    const partes = pedacos
+      ? pedacos.map((p) => { const parte = { tok: p, name: p, isChord: true, col }; col += p.length; return parte; })
+      : [{ tok, name: chordName(tok), isChord: isChordTok(chordName(tok)), col }];
+    partes.forEach((p) => {
+      const x = Math.max(p.col * chPx, cursor);
+      out.push({ tok: p.tok, name: p.name, isChord: p.isChord, x });
+      cursor = x + blockWidth(p.tok, p.isChord) + gap;
+    });
   }
   return out;
 }

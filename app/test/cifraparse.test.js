@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName } from '../js/chords.js';
+import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName, splitChordTok } from '../js/chords.js';
 
 // Helper: só as linhas com acordes, na ordem
 const chordLines = (t) => parseCifraText(t).filter((l) => l.hasChords).map((l) => l.chords);
@@ -189,6 +189,70 @@ test('linha com extensão entre parênteses seguida de baixo continua linha de a
 
 test('marcas comuns seguem aceitas na linha de acordes', () => {
   assert.equal(parseCifraText('C N.C. x2 Bm7 | % (2x)')[0].hasChords, true);
+});
+
+test('barra solta separando acordes é marca, não derruba a linha', () => {
+  // Introdução do CifraClub em "É D'Oxum": os acordes vêm separados por "/".
+  assert.equal(parseCifraText('Introdução: D / G / Em / A7 / D6/9 / % /')[0].hasChords, true);
+  assert.equal(parseCifraText('D / G / Em / A7')[0].hasChords, true);
+  // a barra colada continua sendo baixo/extensão do acorde, não separador
+  assert.deepEqual(extractChords(parseCifraText('D / G / Em / A7 / D6/9 / % /')), ['D', 'G', 'Em', 'A7', 'D6/9']);
+});
+
+test('barra sozinha sem nenhum acorde não vira linha de acordes', () => {
+  assert.equal(parseCifraText('/ / /')[0].hasChords, false);
+});
+
+// --- Dois acordes colados sem espaço (spec 2026-07-30, revisto em 2026-08-08) ---
+
+test('splitChordTok parte a colagem e recusa o que não é colagem', () => {
+  assert.deepEqual(splitChordTok('E7(13)E7(b13)'), ['E7(13)', 'E7(b13)']);
+  assert.deepEqual(splitChordTok('Am7G'), ['Am7', 'G']);
+  // acorde inteiro nunca é partido, por mais que caiba mais de um pedaço dentro
+  assert.equal(splitChordTok('Am7(9)/G'), null);
+  assert.equal(splitChordTok('Bm7(b5)'), null);
+  assert.equal(splitChordTok('D6/9'), null);
+  // guarda do caractere não-palavra: letra em maiúsculas feita só de notas A–G
+  assert.equal(splitChordTok('CADE'), null);
+  assert.equal(splitChordTok('FACE'), null);
+  assert.equal(splitChordTok('AmD'), null);
+  // sobra que não é acorde derruba a partição inteira
+  assert.equal(splitChordTok('E7(13)xyz'), null);
+});
+
+test('acordes colados não derrubam mais a linha (Andança)', () => {
+  const linha = 'Bb7M        Bm7(b5) E7(13)E7(b13)';
+  assert.equal(parseCifraText(linha)[0].hasChords, true);
+  assert.equal(parseCifraText(linha)[0].chords, linha);
+});
+
+test('linha só de letra em maiúsculas com notas A–G continua sendo letra', () => {
+  assert.equal(parseCifraText('CADE FACE')[0].hasChords, false);
+});
+
+test('os dois acordes colados entram na grade separados', () => {
+  assert.deepEqual(
+    extractChords(parseCifraText('Bb7M        Bm7(b5) E7(13)E7(b13)')),
+    ['Bb7M', 'Bm7(b5)', 'E7(13)', 'E7(b13)'],
+  );
+});
+
+test('chordLineSegs dá um botão por acorde colado sem mexer no texto', () => {
+  const linha = 'Bb7M   Bm7(b5) E7(13)E7(b13)';
+  const segs = chordLineSegs(linha);
+  // alinhamento: concatenar os text reproduz a linha byte a byte
+  assert.equal(segs.map((s) => s.text).join(''), linha);
+  assert.deepEqual(segs.filter((s) => s.isChord).map((s) => s.name),
+    ['Bb7M', 'Bm7(b5)', 'E7(13)', 'E7(b13)']);
+  const colados = segs.filter((s) => s.name.startsWith('E7'));
+  assert.deepEqual(colados.map((s) => s.text), ['E7(13)', 'E7(b13)']);
+});
+
+test('layoutChordRow põe cada acorde colado na coluna do seu 1º caractere', () => {
+  // chPx = 10, miniatura de 40px e gap 0 → sem colisão, x é a coluna pura
+  const items = layoutChordRow('E7(13)E7(b13)', 10, () => 40, 0);
+  assert.deepEqual(items.map((i) => [i.tok, i.isChord, i.x]),
+    [['E7(13)', true, 0], ['E7(b13)', true, 60]]);
 });
 
 test('linha de acordes sem letra embaixo fica sozinha', () => {
