@@ -14,6 +14,8 @@ export const S = {
   sort: 'title',           // title | artist | recent
   sortMenuOpen: false,
   modeFilter: [],          // lente global: subset de ['T2','T3']
+  fonteFilter: null,       // lente por fonte: a grafia exibida | SEM_FONTE | null
+  fonteMenuOpen: false,
   artistId: null,
   estiloId: null,          // estilo aberto (o nome do estilo é a chave)
   openListId: null,        // id da lista aberta ('__fav' = Favoritas)
@@ -112,6 +114,42 @@ export function fontesSugeridas(songs, limit = 8) {
   return [...FONTES_FIXAS, ...resto].slice(0, limit);
 }
 
+// Filtro por fonte — o segundo eixo da lente global. O sentinela agrupa as
+// músicas sem fonte; ele nunca colide com uma fonte de verdade, porque nome de
+// fonte é o que o usuário digitou e passa por trim().
+export const SEM_FONTE = '__sem_fonte';
+export function fonteOf(s) { return ((s && s.fonte) || '').trim(); }
+
+// As fontes que a biblioteca realmente usa, mais usadas primeiro, desempate
+// alfabético — determinístico, e portanto testável. Sem fontes fixas, ao
+// contrário de fontesSugeridas: um filtro que não casa com nada só entrega uma
+// tela vazia. Recebe songs por parâmetro para o teste não tocar em S.
+export function fontesDaBiblioteca(songs) {
+  const chave = (nome) => nome.toLowerCase();
+  const usadas = new Map(); // chave → { nome, n }
+  let semFonte = 0;
+  for (const s of songs || []) {
+    const nome = fonteOf(s);
+    if (!nome) { semFonte++; continue; }
+    const jaVista = usadas.get(chave(nome));
+    if (jaVista) jaVista.n += 1;
+    else usadas.set(chave(nome), { nome, n: 1 });
+  }
+  const out = [...usadas.values()]
+    .sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome, 'pt'));
+  if (semFonte) out.push({ nome: SEM_FONTE, n: semFonte });
+  return out;
+}
+
+// Pura: os dois lados vêm por parâmetro. Filtro nulo = sem filtro.
+export function fonteCasa(fonteDaMusica, filtro) {
+  if (!filtro) return true;
+  const nome = (fonteDaMusica || '').trim();
+  if (filtro === SEM_FONTE) return !nome;
+  return nome.toLowerCase() === filtro.trim().toLowerCase();
+}
+export function matchesFonte(s) { return fonteCasa(fonteOf(s), S.fonteFilter); }
+
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {
   const m = ['T1'];
@@ -119,7 +157,10 @@ export function modesOf(s) {
   if (s.letra && s.letra.trim()) m.push('T3');
   return m;
 }
+// A lente global tem dois eixos: modo (T2/T3) e fonte. Toda tela que lista
+// música passa por aqui — Home, tela do artista, tela do estilo.
 export function matchesLens(s) {
+  if (!matchesFonte(s)) return false;
   if (!S.modeFilter.length) return true;
   const m = modesOf(s);
   return S.modeFilter.every((f) => m.includes(f));
