@@ -6,12 +6,25 @@ import { defaultShape } from './chordbook.js';
 // Token parece um acorde? Aceita extensões entre parênteses — 7(b5), 7(13) — e,
 // depois da barra, tanto o baixo (D/F#, Cm6/Eb) quanto a extensão no estilo
 // CifraClub (Bm5-/7, A7/13, Em7/5-, E7/4(9)).
-// O diminuto vem em dois caracteres diferentes: '°' (U+00B0, grau) e 'º' (U+00BA,
-// ordinal masculino, o que o CifraClub usa). Os dois têm de valer — senão uma
-// linha como "A  A7M  A#º" deixa de ser linha de acordes e a cifra desanda.
+// O diminuto vem em três grafias: '°' (U+00B0, grau), 'º' (U+00BA, ordinal
+// masculino, o que o CifraClub usa) e a letra 'o' minúscula — o que sai de quem
+// digita a cifra num teclado comum ("Ebo", "Fo"). As três têm de valer: senão uma
+// linha como "A  A7M  A#º" ou "C  Ebo  Dm  G" deixa de ser linha de acordes e leva
+// junto os acordes vizinhos, que o app conhece perfeitamente.
+// O 'o' fica FORA do grupo de qualidade, como sufixo terminal opcional. Dentro dele
+// valeria em qualquer posição e as palavras "Com", "Bom", "Como", "Dom" — nota
+// seguida de 'o' e mais letra — passariam a ser acorde. Ver o spec
+// 2026-08-10-diminuto-com-o-design.md; a segunda guarda mora em isChordLine.
 export function isChordTok(t) {
-  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|º|\+|-|\d)*(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
+  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|º|\+|-|\d)*o?(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
 }
+
+// Token que, sozinho, tanto pode ser diminuto quanto palavra: feito só de letras e
+// terminado em 'o'. Pega "Do", "Ao", "Amo", "Fo", "Ebo" (o bemol é a letra 'b', não
+// desambigua nada); não pega "F#o" nem "A#o", que têm '#', caractere que não existe
+// em palavra. No acervo "Do" aparece 150 vezes e "Ao" 48, quase sempre como letra —
+// contra 29 de "Ebo". Sem isso, a grafia mais comum viraria acorde por engano.
+const DIM_AMBIGUO = /^[A-G][a-z]*o$/;
 
 // A fonte às vezes cola no acorde algo que não é acorde: asterisco ou ponto de
 // nota de rodapé ("C*", "F#m7(b5)*", "E."), ou o delimitador de um trecho que
@@ -103,7 +116,16 @@ function isChordLine(line) {
   const toks = stripLabels(line).trim().split(/\s+/).filter(Boolean);
   if (!toks.length) return false;
   if (!toks.some((t) => chordsOfTok(t).length)) return false;
-  return toks.every(isChordOrMark);
+  if (!toks.every(isChordOrMark)) return false;
+  // Segunda guarda do diminuto com 'o': token ambíguo só vale acompanhado de um
+  // acorde inequívoco. Numa cifra o diminuto nunca anda sozinho — há sempre outro
+  // acorde na linha. Numa letra, "Amo" ou "Ao" vem cercado de palavras, que já
+  // reprovam a linha; o que sobra é a linha curta feita só dessas palavras, e é
+  // exatamente ela que isto barra.
+  if (toks.some((t) => DIM_AMBIGUO.test(t))) {
+    return toks.some((t) => chordsOfTok(t).length && !DIM_AMBIGUO.test(t));
+  }
+  return true;
 }
 
 // Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra.
