@@ -62,7 +62,7 @@ test('as fontes usadas vêm depois dos fixos, mais usadas primeiro', () => {
 
 test('empate na contagem desempata em ordem alfabética', () => {
   const songs = [song('YouTube'), song('Real Book'), song('Ouvido')];
-  assert.deepEqual(fontesSugeridas(songs), ['CifraClub', 'Songbook', 'Ouvido', 'Real Book']);
+  assert.deepEqual(fontesSugeridas(songs), ['CifraClub', 'Songbook', 'Ouvido', 'Real Book', 'YouTube']);
 });
 
 test('grafia diferente da mesma fonte não vira chip novo', () => {
