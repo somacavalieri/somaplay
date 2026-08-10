@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
@@ -146,6 +146,35 @@ export function homeResults() {
   return listsTab();
 }
 
+// O controle de fonte é um camaleão: ícone quando não filtra nada, pílula com o
+// nome e um × quando filtra. O rótulo e o × são botões IRMÃOS, não aninhados —
+// a delegação de clique usa closest('[data-a]'), e um <button> dentro de outro
+// entregaria o clique errado.
+function fonteControl() {
+  const ativa = S.fonteFilter;
+  const rotuloDe = (nome) => (nome === SEM_FONTE ? t('home.fonte.none') : esc(nome));
+  const itens = fontesDaBiblioteca(S.songs);
+
+  const menu = S.fonteMenuOpen ? `<div class="fonte-menu">
+      <button class="${ativa ? '' : 'on'}" data-a="clearFonte">
+        <span class="nm">${t('home.fonte.all')}</span>${ativa ? '' : I.check(16, 2.5)}</button>
+      ${itens.map(({ nome, n }) => {
+        const on = !!ativa && nome.toLowerCase() === ativa.toLowerCase();
+        return `<button class="${on ? 'on' : ''}" data-a="setFonteFilter" data-id="${esc(nome)}">
+          <span class="nm">${rotuloDe(nome)} <em>· ${n}</em></span>${on ? I.check(16, 2.5) : ''}</button>`;
+      }).join('')}
+    </div>` : '';
+
+  const gatilho = ativa
+    ? `<div class="fonte-pill">
+        <button class="lbl" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}<span>${rotuloDe(ativa)}</span></button>
+        <button class="x" data-a="clearFonte" title="${t('home.fonte.clear')}">${I.close(15)}</button>
+      </div>`
+    : `<button class="chip fonte" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}</button>`;
+
+  return `<div class="fonte-wrap">${gatilho}${menu}</div>`;
+}
+
 export function renderHome() {
   const isL = S.tab === 'lists';
   const tabsub = isL
@@ -177,7 +206,7 @@ export function renderHome() {
       </div>
       <div class="tabsub">${tabsub}</div>
       <div class="lens ${isL ? 'off' : ''}" title="${isL ? t('home.lens.disabledHint') : t('home.lens.filterHint')}">
-        ${I.funnel()}${chips}
+        ${I.funnel()}${fonteControl()}${chips}
       </div>
     </div>
     <div class="content-scroll" id="home-results">${homeResults()}</div>
