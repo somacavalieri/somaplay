@@ -1,9 +1,17 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
+
+// O que está recortando a biblioteca agora, em texto puro. Quem imprime no HTML
+// escapa: o nome da fonte é conteúdo do usuário e t() não escapa parâmetro.
+function filtroAtivoLabel() {
+  const partes = S.modeFilter.slice();
+  if (S.fonteFilter) partes.push(S.fonteFilter === SEM_FONTE ? t('home.fonte.none') : S.fonteFilter);
+  return partes.join(' · ');
+}
 
 function artistCards() {
   const q = S.query.trim().toLowerCase();
@@ -21,8 +29,8 @@ function artistCards() {
       <div class="s">${S.artists.length ? t('home.empty.noArtistsModeSub') : t('home.empty.addSongHint')}</div></div>`;
   }
   return `<div class="artist-grid">` + items.map(({ a, songs, matching }) => {
-    const label = S.modeFilter.length
-      ? `${matching.length} ${matching.length === 1 ? t('common.song') : t('common.songs')} · ${S.modeFilter.join('/')}`
+    const label = lensAtiva()
+      ? `${matching.length} ${matching.length === 1 ? t('common.song') : t('common.songs')} · ${esc(filtroAtivoLabel())}`
       : `${songs.length} ${songs.length === 1 ? t('common.song') : t('common.songs')}`;
     return `<div class="card-artist" data-a="openArtist" data-id="${a.id}">
       <div class="avatar ${a.av}">${esc(a.name[0] || '?')}</div>
@@ -86,7 +94,7 @@ function songsTab() {
     `<button class="${S.sort === k ? 'on' : ''}" data-a="setSort" data-id="${k}">${sortLabels[k]} ${S.sort === k ? I.check(16, 2.5) : ''}</button>`).join('') + `</div>` : '';
 
   const count = t('home.songs.summary', { shown: flat.length, total: all.length, sort: sortLabels[S.sort] })
-    + (S.modeFilter.length ? t('home.songs.filterSuffix', { filter: S.modeFilter.join(', ') }) : '');
+    + (lensAtiva() ? t('home.songs.filterSuffix', { filter: esc(filtroAtivoLabel()) }) : '');
 
   const rows = flat.length
     ? flat.map((s) => songRow(s)).join('')

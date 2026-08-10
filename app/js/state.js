@@ -165,6 +165,9 @@ export function matchesLens(s) {
   const m = modesOf(s);
   return S.modeFilter.every((f) => m.includes(f));
 }
+// Há algum eixo da lente ligado? Os contadores usam isto para decidir se
+// explicam o recorte.
+export function lensAtiva() { return S.modeFilter.length > 0 || S.fonteFilter !== null; }
 export function bestLabel(s) {
   return modesOf(s).includes('T2') ? 'Cifra + acompanhamento' : 'Cifra';
 }
