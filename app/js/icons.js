@@ -53,6 +53,9 @@ export const I = {
   save: (w = 19) => stroke(w, '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>', 2.2),
   sort: (w = 16) => s(w, '<path d="M3 6h18M6 12h12M10 18h4"/>', 'fill="none" stroke="#9A9AA5" stroke-width="2"'),
   funnel: (w = 17) => s(w, '<path d="M3 5h18l-7 8.5V20l-4 1.5v-8z"/>', 'fill="none" stroke="#9A9AA5" stroke-width="2"'),
+  // currentColor, e não o cinza cravado do funnel: a etiqueta vive dentro da
+  // pílula do filtro, que troca de cor quando há fonte ativa.
+  tag: (w = 17) => stroke(w, '<path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.6" cy="7.6" r="1.3"/>'),
   disc: (w = 18, on) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="${on ? 'var(--accent)' : 'var(--muted2)'}" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5" fill="${on ? 'var(--accent)' : 'none'}"/></svg>`,
 };
 
