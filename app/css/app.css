@@ -507,9 +507,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .song-id .meta{display:flex;align-items:center;gap:9px;margin-top:9px;color:var(--muted);font-size:13px}
 .song-id .meta .src{color:var(--muted)}
 .song-id .meta .mdot{color:var(--muted3)}
-/* fonte no formulário de adicionar/editar */
-.fonte-row{display:flex;gap:8px;align-items:center}
-.fonte-row .input{flex:1}
 .chip-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chip-row .input{flex:1 1 200px}
 .btn-ghost.sm.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}

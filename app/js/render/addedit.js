@@ -1,5 +1,5 @@
 // render/addedit.js — Adicionar / editar música (artista, cifra imagem/texto, letra, áudio)
-import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist } from '../state.js';
+import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist, fontesSugeridas } from '../state.js';
 import { DB, uid } from '../db.js';
 import { I, esc } from '../icons.js';
 import { offlineBadge } from './home.js';
@@ -16,7 +16,7 @@ export function newDraft(song) {
       title: song.title, tom: song.tom || '',
       fonte: song.fonte || '',
       estilo: song.estilo || '',
-      cifraFonte: song.cifra?.fonte || 'imagem',
+      cifraFonte: song.cifra?.fonte || (song.cifra?.imagens?.length ? 'imagem' : 'texto'),
       imagens: (song.cifra?.imagens || []).map((im) => ({ ...im })),
       cifraTexto: song.cifra?.texto || '',
       acordes: (song.cifra?.acordes || []).join(' '),
@@ -28,7 +28,7 @@ export function newDraft(song) {
   }
   return {
     artistName: '', artistOpen: false, artistQuery: '',
-    title: '', tom: '', fonte: '', estilo: '', cifraFonte: 'imagem',
+    title: '', tom: '', fonte: '', estilo: '', cifraFonte: 'texto',
     imagens: [], cifraTexto: '', acordes: '', letra: '', stems: [], full: [],
     digitacoes: {},
   };
@@ -162,18 +162,17 @@ export function renderAddEdit() {
           <div class="field">
             <label>${t('addedit.field.chartSource')}</label>
             <div class="seg-mini" style="height:52px;align-items:center;padding:6px">
-              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">${t('addedit.chartSource.image')}</button>
               <button style="height:40px" class="${d.cifraFonte === 'texto' ? 'on' : ''}" data-a="setCifraFonte" data-id="texto">${t('addedit.chartSource.text')}</button>
+              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">${t('addedit.chartSource.image')}</button>
             </div>
           </div>
         </div>
 
         <div class="field">
           <label>${t('addedit.field.source')}</label>
-          <div class="fonte-row">
+          <div class="chip-row">
             <input type="text" class="input lg" id="f-fonte" placeholder="${t('addedit.field.sourcePlaceholder')}" value="${esc(d.fonte)}">
-            <button type="button" class="btn-ghost sm ${d.fonte === 'CifraClub' ? 'on' : ''}" data-a="setFonte" data-id="CifraClub">${t('addedit.source.cifraclub')}</button>
-            <button type="button" class="btn-ghost sm ${d.fonte === 'Songbook' ? 'on' : ''}" data-a="setFonte" data-id="Songbook">${t('addedit.source.songbook')}</button>
+            ${fontesSugeridas(S.songs).map((nome) => `<button type="button" class="btn-ghost sm ${d.fonte === nome ? 'on' : ''}" data-a="setFonte" data-id="${esc(nome)}">${esc(nome)}</button>`).join('')}
           </div>
         </div>
 

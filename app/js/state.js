@@ -89,6 +89,29 @@ export function songsOfEstilo(estilo) {
     .sort((a, b) => a.title.localeCompare(b.title, 'pt'));
 }
 
+// Fonte da cifra: de onde ela veio. Os atalhos do formulário não são uma lista
+// escrita à mão — CifraClub e Songbook são fixos porque são os valores do
+// preenchimento automático por tipo de cifra, e o resto vem do que a biblioteca
+// já usa. Dedupe por grafia: "cifraclub" e "CifraClub" são a mesma fonte, e a
+// primeira grafia encontrada é a que aparece. O registro salvo nunca é reescrito.
+export const FONTES_FIXAS = ['CifraClub', 'Songbook'];
+export function fontesSugeridas(songs, limit = 8) {
+  const chave = (nome) => nome.trim().toLowerCase();
+  const fixas = new Set(FONTES_FIXAS.map(chave));
+  const usadas = new Map(); // chave → { nome, n }
+  for (const s of songs || []) {
+    const nome = ((s && s.fonte) || '').trim();
+    if (!nome || fixas.has(chave(nome))) continue;
+    const jaVista = usadas.get(chave(nome));
+    if (jaVista) jaVista.n += 1;
+    else usadas.set(chave(nome), { nome, n: 1 });
+  }
+  const resto = [...usadas.values()]
+    .sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome, 'pt'))
+    .map((f) => f.nome);
+  return [...FONTES_FIXAS, ...resto].slice(0, limit);
+}
+
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {
   const m = ['T1'];

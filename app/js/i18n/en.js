@@ -168,8 +168,6 @@ export const EN = {
   'addedit.chartSource.text': 'Text',
   'addedit.field.source': 'Source (where the chart came from)',
   'addedit.field.sourcePlaceholder': 'Fills in automatically based on the chart type',
-  'addedit.source.cifraclub': 'CifraClub',
-  'addedit.source.songbook': 'Songbook',
   'addedit.field.style': 'Musical style',
   'addedit.field.stylePlaceholder': 'E.g.: Samba',
   'addedit.chartSection.imageTitle': 'Chart images',
