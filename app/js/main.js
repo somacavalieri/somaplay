@@ -208,7 +208,7 @@ async function gravarNoDestino(st, shape, varId) {
 // ---------- ações ----------
 const actions = {
   // navegação
-  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
+  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
   openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
@@ -222,7 +222,7 @@ const actions = {
     else { S.screen = 'home'; }
     update();
   },
-  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
+  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
       ? S.modeFilter.filter((x) => x !== d.id)
@@ -231,6 +231,10 @@ const actions = {
   },
   toggleSortMenu() { S.sortMenuOpen = !S.sortMenuOpen; update(); },
   setSort(d) { S.sort = d.id; S.sortMenuOpen = false; update(); },
+  // setFonte (mais abaixo) já é dos atalhos do formulário — este é o da lente
+  toggleFonteMenu() { S.fonteMenuOpen = !S.fonteMenuOpen; update(); },
+  setFonteFilter(d) { S.fonteFilter = d.id; S.fonteMenuOpen = false; update(); },
+  clearFonte() { S.fonteFilter = null; S.fonteMenuOpen = false; update(); },
 
   // favoritos / popover de listas
   toggleFav(d) { toggleFav(d.id); update(); },
@@ -466,7 +470,6 @@ const actions = {
   setCifraFonte(d) {
     syncDraftFromDOM();
     S.draft.cifraFonte = d.id;
-    if (!(S.draft.fonte && S.draft.fonte.trim())) S.draft.fonte = d.id === 'texto' ? 'CifraClub' : 'Songbook';
     update();
   },
   setFonte(d) { syncDraftFromDOM(); S.draft.fonte = d.id; update(); },
@@ -717,6 +720,7 @@ document.addEventListener('click', (e) => {
   }
   // clique fora fecha menus abertos
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
+  if (S.fonteMenuOpen && !e.target.closest('.fonte-wrap')) { S.fonteMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
@@ -768,8 +772,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.fonteMenuOpen) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.fonteMenuOpen = false;
       update();
     }
   }

@@ -93,6 +93,51 @@ test('isChordTok continua aceitando baixo depois da barra', () => {
   ['D/F#', 'Am/E', 'C/E', 'Cm6/Eb', 'E6/B', 'G7/B'].forEach((t) => assert.equal(isChordTok(t), true, t));
 });
 
+// --- diminuto escrito com "o" minúsculo (spec 2026-08-10) -----------------
+// Quem digita a cifra num teclado comum escreve "Ebo" em vez de "Eb°". O token
+// reprovado derrubava a linha inteira e levava junto os acordes vizinhos.
+
+test('isChordTok aceita o diminuto escrito com "o" minúsculo', () => {
+  // formas que existem de fato no acervo, por frequência
+  ['Ebo', 'Fo', 'Co', 'F#o', 'Bo', 'Bbo', 'G#o', 'D#o', 'Go', 'C#o', 'A#o'].forEach(
+    (t) => assert.equal(isChordTok(t), true, `${t} deveria ser acorde`));
+});
+
+test('isChordTok recusa palavra em que o "o" não é o fim da qualidade', () => {
+  // "Com", "Bom", "Como" e "Dom" abrem com nota e têm letra depois do "o":
+  // aceitar "o" em qualquer posição transformaria palavra comum em acorde.
+  ['Com', 'Bom', 'Como', 'Dom', 'Coma', 'Bola'].forEach(
+    (t) => assert.equal(isChordTok(t), false, `${t} não deveria ser acorde`));
+});
+
+test('chordName preserva o token cru do diminuto com "o"', () => {
+  // o alinhamento acorde<->sílaba depende de cada caractere: nada de renotar
+  assert.equal(chordName('Ebo'), 'Ebo');
+});
+
+test('linha de cifra com "Ebo" volta a ser linha de acordes, com os vizinhos', () => {
+  const linhas = parseCifraText('C         Ebo       Dm         G\nVocê me pergunta pela paixão');
+  const acordes = extractChords(linhas);
+  assert.deepEqual(acordes, ['C', 'Ebo', 'Dm', 'G']);
+});
+
+test('token ambíguo sozinho não faz linha de acordes', () => {
+  // "Amo", "Ao" e "Do" são palavras; sem um acorde inequívoco por perto a linha
+  // continua sendo letra.
+  ['Amo', 'Ao', 'Do Ao', 'Do'].forEach((l) => {
+    assert.deepEqual(extractChords(parseCifraText(l)), [], `${l} não deveria ter acorde`);
+  });
+});
+
+test('token ambíguo vale quando a linha tem um acorde inequívoco', () => {
+  assert.deepEqual(extractChords(parseCifraText('Bo Em')), ['Bo', 'Em']);
+  assert.deepEqual(extractChords(parseCifraText('C Fo Dm7')), ['C', 'Fo', 'Dm7']);
+});
+
+test('linha de letra com palavras que abrem com nota continua letra', () => {
+  assert.deepEqual(extractChords(parseCifraText('Como amo você')), []);
+});
+
 test('isChordTok continua recusando palavra comum', () => {
   ['Alvorada', 'Ela', 'de', 'Frase', 'Cansei', 'Bb7M/oi'].forEach((t) => assert.equal(isChordTok(t), false, t));
 });

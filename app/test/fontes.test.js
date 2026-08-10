@@ -5,7 +5,10 @@
 // "cifraclub" não pode criar um segundo chip) e o corte, que conta os fixos.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fontesSugeridas, FONTES_FIXAS } from '../js/state.js';
+import {
+  fontesSugeridas, FONTES_FIXAS,
+  fontesDaBiblioteca, fonteCasa, fonteOf, SEM_FONTE,
+} from '../js/state.js';
 
 const song = (fonte) => ({ fonte });
 
@@ -54,4 +57,62 @@ test('o limite é ajustável', () => {
   const songs = [song('Ouvido')];
   assert.deepEqual(fontesSugeridas(songs, 3), ['CifraClub', 'Songbook', 'Ouvido']);
   assert.deepEqual(fontesSugeridas(songs, 2), ['CifraClub', 'Songbook']);
+});
+
+// --- filtro por fonte (a lente) -------------------------------------------
+// fontesSugeridas alimenta o formulário e crava CifraClub/Songbook mesmo sem
+// uso. fontesDaBiblioteca alimenta o filtro e não crava nada: oferecer um
+// filtro que não casa com nenhuma música é entregar uma tela vazia de bandeja.
+
+test('biblioteca vazia não oferece nenhuma fonte para filtrar', () => {
+  assert.deepEqual(fontesDaBiblioteca([]), []);
+});
+
+test('as fontes vêm ordenadas por uso, desempate alfabético', () => {
+  const songs = [song('YouTube'), song('Real Book'), song('YouTube'), song('Ouvido')];
+  assert.deepEqual(fontesDaBiblioteca(songs), [
+    { nome: 'YouTube', n: 2 },
+    { nome: 'Ouvido', n: 1 },
+    { nome: 'Real Book', n: 1 },
+  ]);
+});
+
+test('grafias diferentes contam para a mesma fonte, e a primeira aparece', () => {
+  const songs = [song('real book'), song('Real Book'), song('REAL BOOK  ')];
+  assert.deepEqual(fontesDaBiblioteca(songs), [{ nome: 'real book', n: 3 }]);
+});
+
+test('as músicas sem fonte viram um balde no fim da lista', () => {
+  const songs = [song(''), song('   '), song(undefined), {}, song('Songbook')];
+  assert.deepEqual(fontesDaBiblioteca(songs), [
+    { nome: 'Songbook', n: 1 },
+    { nome: SEM_FONTE, n: 4 },
+  ]);
+});
+
+test('sem música sem fonte, o balde não aparece', () => {
+  assert.deepEqual(fontesDaBiblioteca([song('Songbook')]), [{ nome: 'Songbook', n: 1 }]);
+});
+
+test('filtro nulo passa tudo', () => {
+  assert.equal(fonteCasa('Songbook', null), true);
+  assert.equal(fonteCasa('', null), true);
+});
+
+test('o filtro casa apesar da grafia', () => {
+  assert.equal(fonteCasa('Songbook', 'songbook'), true);
+  assert.equal(fonteCasa(' songbook ', 'Songbook'), true);
+  assert.equal(fonteCasa('CifraClub', 'Songbook'), false);
+});
+
+test('o balde sem fonte só casa com quem não tem fonte', () => {
+  assert.equal(fonteCasa('', SEM_FONTE), true);
+  assert.equal(fonteCasa('   ', SEM_FONTE), true);
+  assert.equal(fonteCasa('Songbook', SEM_FONTE), false);
+});
+
+test('fonteOf tira o espaço das pontas e tolera música sem o campo', () => {
+  assert.equal(fonteOf({ fonte: '  Songbook ' }), 'Songbook');
+  assert.equal(fonteOf({}), '');
+  assert.equal(fonteOf(null), '');
 });

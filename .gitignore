@@ -21,3 +21,7 @@ untitled folder/
 # Temporários
 *.tmp
 *.log
+
+# Ferramenta de conversão do songbook do Gil. Os módulos em songs/ carregam a letra
+# transcrita das músicas — conteúdo de terceiros, não entra no repositório público.
+scripts/gil_songbook/

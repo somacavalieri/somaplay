@@ -1,9 +1,17 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
+
+// O que está recortando a biblioteca agora, em texto puro. Quem imprime no HTML
+// escapa: o nome da fonte é conteúdo do usuário e t() não escapa parâmetro.
+function filtroAtivoLabel() {
+  const partes = S.modeFilter.slice();
+  if (S.fonteFilter) partes.push(S.fonteFilter === SEM_FONTE ? t('home.fonte.none') : S.fonteFilter);
+  return partes.join(' · ');
+}
 
 function artistCards() {
   const q = S.query.trim().toLowerCase();
@@ -21,8 +29,8 @@ function artistCards() {
       <div class="s">${S.artists.length ? t('home.empty.noArtistsModeSub') : t('home.empty.addSongHint')}</div></div>`;
   }
   return `<div class="artist-grid">` + items.map(({ a, songs, matching }) => {
-    const label = S.modeFilter.length
-      ? `${matching.length} ${matching.length === 1 ? t('common.song') : t('common.songs')} · ${S.modeFilter.join('/')}`
+    const label = lensAtiva()
+      ? `${matching.length} ${matching.length === 1 ? t('common.song') : t('common.songs')} · ${esc(filtroAtivoLabel())}`
       : `${songs.length} ${songs.length === 1 ? t('common.song') : t('common.songs')}`;
     return `<div class="card-artist" data-a="openArtist" data-id="${a.id}">
       <div class="avatar ${a.av}">${esc(a.name[0] || '?')}</div>
@@ -86,7 +94,7 @@ function songsTab() {
     `<button class="${S.sort === k ? 'on' : ''}" data-a="setSort" data-id="${k}">${sortLabels[k]} ${S.sort === k ? I.check(16, 2.5) : ''}</button>`).join('') + `</div>` : '';
 
   const count = t('home.songs.summary', { shown: flat.length, total: all.length, sort: sortLabels[S.sort] })
-    + (S.modeFilter.length ? t('home.songs.filterSuffix', { filter: S.modeFilter.join(', ') }) : '');
+    + (lensAtiva() ? t('home.songs.filterSuffix', { filter: esc(filtroAtivoLabel()) }) : '');
 
   const rows = flat.length
     ? flat.map((s) => songRow(s)).join('')
@@ -146,6 +154,35 @@ export function homeResults() {
   return listsTab();
 }
 
+// O controle de fonte é um camaleão: ícone quando não filtra nada, pílula com o
+// nome e um × quando filtra. O rótulo e o × são botões IRMÃOS, não aninhados —
+// a delegação de clique usa closest('[data-a]'), e um <button> dentro de outro
+// entregaria o clique errado.
+function fonteControl() {
+  const ativa = S.fonteFilter;
+  const rotuloDe = (nome) => (nome === SEM_FONTE ? t('home.fonte.none') : esc(nome));
+  const itens = fontesDaBiblioteca(S.songs);
+
+  const menu = S.fonteMenuOpen ? `<div class="fonte-menu">
+      <button class="${ativa ? '' : 'on'}" data-a="clearFonte">
+        <span class="nm">${t('home.fonte.all')}</span>${ativa ? '' : I.check(16, 2.5)}</button>
+      ${itens.map(({ nome, n }) => {
+        const on = !!ativa && nome.toLowerCase() === ativa.toLowerCase();
+        return `<button class="${on ? 'on' : ''}" data-a="setFonteFilter" data-id="${esc(nome)}">
+          <span class="nm">${rotuloDe(nome)} <em>· ${n}</em></span>${on ? I.check(16, 2.5) : ''}</button>`;
+      }).join('')}
+    </div>` : '';
+
+  const gatilho = ativa
+    ? `<div class="fonte-pill">
+        <button class="lbl" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}<span>${rotuloDe(ativa)}</span></button>
+        <button class="x" data-a="clearFonte" title="${t('home.fonte.clear')}">${I.close(15)}</button>
+      </div>`
+    : `<button class="chip fonte" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}</button>`;
+
+  return `<div class="fonte-wrap">${gatilho}${menu}</div>`;
+}
+
 export function renderHome() {
   const isL = S.tab === 'lists';
   const tabsub = isL
@@ -177,7 +214,7 @@ export function renderHome() {
       </div>
       <div class="tabsub">${tabsub}</div>
       <div class="lens ${isL ? 'off' : ''}" title="${isL ? t('home.lens.disabledHint') : t('home.lens.filterHint')}">
-        ${I.funnel()}${chips}
+        ${I.funnel()}${fonteControl()}${chips}
       </div>
     </div>
     <div class="content-scroll" id="home-results">${homeResults()}</div>
