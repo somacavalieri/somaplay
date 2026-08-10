@@ -16,7 +16,7 @@ export function newDraft(song) {
       title: song.title, tom: song.tom || '',
       fonte: song.fonte || '',
       estilo: song.estilo || '',
-      cifraFonte: song.cifra?.fonte || 'imagem',
+      cifraFonte: song.cifra?.fonte || (song.cifra?.imagens?.length ? 'imagem' : 'texto'),
       imagens: (song.cifra?.imagens || []).map((im) => ({ ...im })),
       cifraTexto: song.cifra?.texto || '',
       acordes: (song.cifra?.acordes || []).join(' '),
@@ -28,7 +28,7 @@ export function newDraft(song) {
   }
   return {
     artistName: '', artistOpen: false, artistQuery: '',
-    title: '', tom: '', fonte: '', estilo: '', cifraFonte: 'imagem',
+    title: '', tom: '', fonte: '', estilo: '', cifraFonte: 'texto',
     imagens: [], cifraTexto: '', acordes: '', letra: '', stems: [], full: [],
     digitacoes: {},
   };
@@ -162,8 +162,8 @@ export function renderAddEdit() {
           <div class="field">
             <label>${t('addedit.field.chartSource')}</label>
             <div class="seg-mini" style="height:52px;align-items:center;padding:6px">
-              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">${t('addedit.chartSource.image')}</button>
               <button style="height:40px" class="${d.cifraFonte === 'texto' ? 'on' : ''}" data-a="setCifraFonte" data-id="texto">${t('addedit.chartSource.text')}</button>
+              <button style="height:40px" class="${d.cifraFonte === 'imagem' ? 'on' : ''}" data-a="setCifraFonte" data-id="imagem">${t('addedit.chartSource.image')}</button>
             </div>
           </div>
         </div>
