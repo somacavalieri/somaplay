@@ -269,3 +269,39 @@ export function chordSVG(name, small, dict) {
   }
   return s + '</svg>';
 }
+
+// Reflow do par acorde/letra (spec 2026-08-10). O alinhamento da cifra em texto é
+// posicional: acorde e sílaba se encontram pela coluna do caractere. Deixar cada linha
+// quebrar por conta própria (a de acorde não quebrava e sumia; a de letra quebrava)
+// destrói isso. Aqui as duas quebram JUNTAS, na mesma coluna, e só onde nenhuma das
+// duas está no meio de um token.
+export function wrapBlock(chords, lyric, cols) {
+  const c = String(chords == null ? '' : chords).replace(/\s+$/, '');
+  const l = String(lyric == null ? '' : lyric).replace(/\s+$/, '');
+  const end = Math.max(c.length, l.length);
+  const n = Math.floor(cols);
+  if (!(n > 1) || end <= n) return [{ chords: c, lyric: l }];
+
+  // corte válido: além do fim da linha, ou com espaço encostado de um dos lados
+  const ok = (s, i) => i >= s.length || s[i - 1] === ' ' || s[i] === ' ';
+
+  const out = [];
+  for (let pos = 0; pos < end;) {
+    let cut = pos + n;
+    if (end - pos <= n) {
+      cut = end;
+    } else {
+      let k = cut;
+      while (k > pos + 1 && !(ok(c, k) && ok(l, k))) k--;
+      // token único mais largo que a tela: corta na largura mesmo, para não travar
+      cut = k > pos + 1 ? k : pos + n;
+    }
+    const a = c.slice(pos, cut).replace(/\s+$/, '');
+    const b = l.slice(pos, cut).replace(/\s+$/, '');
+    const lead = (s) => s.length - s.replace(/^ +/, '').length;
+    const pad = (a && b) ? Math.min(lead(a), lead(b)) : (a ? lead(a) : lead(b));
+    if (a || b) out.push({ chords: a.slice(pad), lyric: b.slice(pad) });
+    pos = cut;
+  }
+  return out.length ? out : [{ chords: c, lyric: l }];
+}

@@ -4,7 +4,7 @@
 import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
-import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs, chordName } from '../chords.js';
+import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs, chordName, wrapBlock } from '../chords.js';
 import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
@@ -145,6 +145,38 @@ function chordLineHTML(chordLine) {
     : esc(sg.text))).join('');
 }
 
+// Reflow (spec 2026-08-10): largura da cifra em colunas, medida no DOM depois do
+// render. 0 = ainda não medido, e aí não se quebra nada. `cifraColsPrev` corta a
+// oscilação de 1 coluna quando a barra de rolagem entra e sai.
+let cifraCols = 0;
+let cifraColsPrev = 0;
+
+function measureCifraCols() {
+  const el = document.querySelector('.cifra-text');
+  const w = el ? el.clientWidth : 0;
+  if (!w) return 0;
+  // Sonda dentro da própria .cifra-text: herda fonte, tamanho e zoom exatos. Medir
+  // pelo canvas dava caractere mais estreito que o real (720/12,8 = 56 colunas onde
+  // só cabiam 54), e a linha continuava vazando.
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre;font-weight:700';
+  probe.textContent = '0'.repeat(100);
+  el.appendChild(probe);
+  const chPx = probe.getBoundingClientRect().width / 100;
+  probe.remove();
+  return chPx > 0 ? Math.max(8, Math.floor(w / chPx)) : 0;
+}
+
+// Mede e, se a largura mudou, re-renderiza uma vez. Devolve true se re-renderizou.
+function reflowCifra(update) {
+  const cols = measureCifraCols();
+  if (!cols || cols === cifraCols || cols === cifraColsPrev) return false;
+  cifraColsPrev = cifraCols;
+  cifraCols = cols;
+  update();
+  return true;
+}
+
 function cifraTextHTML(song) {
   const parsed = parsedCifra(song);
   const zoom = S.settings.cifraZoom / 100;
@@ -155,12 +187,17 @@ function cifraTextHTML(song) {
   const lines = parsed.map((ln) => {
     let h = '';
     if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
-    if (ln.hasChords) {
-      h += (mini && ln.hasLyric)
-        ? chordDiagRowHTML(ln.chords, dict, meas)
-        : `<div class="ch">${chordLineHTML(ln.chords)}</div>`;
+    // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
+    // cima da sílaba dele quando a linha não cabe na tela
+    for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
+                              ln.hasLyric ? ln.lyric : '', cifraCols)) {
+      if (ln.hasChords && p.chords) {
+        h += (mini && ln.hasLyric)
+          ? chordDiagRowHTML(p.chords, dict, meas)
+          : `<div class="ch">${chordLineHTML(p.chords)}</div>`;
+      }
+      if (ln.hasLyric) h += `<div class="ly">${esc(p.lyric)}</div>`;
     }
-    if (ln.hasLyric) h += `<div class="ly">${esc(ln.lyric)}</div>`;
     return h;
   }).join('');
   const chordNames = song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsed);
@@ -374,6 +411,16 @@ let mixerWasOpen = false;
 export function afterRenderPlay(update) {
   const song = currentSong();
   if (!song) return;
+
+  // Reflow: mede a largura real e re-renderiza se mudou. O update() reentra aqui e,
+  // com a largura já estável, segue o fluxo normal.
+  if (reflowCifra(update)) return;
+  const cifraEl = document.querySelector('.cifra-text');
+  if (cifraEl && !cifraEl._roWired && typeof ResizeObserver === 'function') {
+    cifraEl._roWired = true;
+    // rotação de tela, mixer abrindo/fechando: a largura muda sem re-render
+    new ResizeObserver(() => { cifraColsPrev = 0; reflowCifra(update); }).observe(cifraEl);
+  }
 
   // relógio do transporte → patch direto no DOM (sem re-render)
   audio.onTime = (pos, dur) => {
