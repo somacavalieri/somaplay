@@ -168,8 +168,6 @@ export const PT = {
   'addedit.chartSource.text': 'Texto',
   'addedit.field.source': 'Fonte (de onde veio a cifra)',
   'addedit.field.sourcePlaceholder': 'Preenche sozinho pelo tipo da cifra',
-  'addedit.source.cifraclub': 'CifraClub',
-  'addedit.source.songbook': 'Songbook',
   'addedit.field.style': 'Estilo musical',
   'addedit.field.stylePlaceholder': 'Ex.: Samba',
   'addedit.chartSection.imageTitle': 'Imagens de cifra',

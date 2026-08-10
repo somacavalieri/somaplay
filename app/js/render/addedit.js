@@ -1,5 +1,5 @@
 // render/addedit.js — Adicionar / editar música (artista, cifra imagem/texto, letra, áudio)
-import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist } from '../state.js';
+import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist, fontesSugeridas } from '../state.js';
 import { DB, uid } from '../db.js';
 import { I, esc } from '../icons.js';
 import { offlineBadge } from './home.js';
@@ -170,10 +170,9 @@ export function renderAddEdit() {
 
         <div class="field">
           <label>${t('addedit.field.source')}</label>
-          <div class="fonte-row">
+          <div class="chip-row">
             <input type="text" class="input lg" id="f-fonte" placeholder="${t('addedit.field.sourcePlaceholder')}" value="${esc(d.fonte)}">
-            <button type="button" class="btn-ghost sm ${d.fonte === 'CifraClub' ? 'on' : ''}" data-a="setFonte" data-id="CifraClub">${t('addedit.source.cifraclub')}</button>
-            <button type="button" class="btn-ghost sm ${d.fonte === 'Songbook' ? 'on' : ''}" data-a="setFonte" data-id="Songbook">${t('addedit.source.songbook')}</button>
+            ${fontesSugeridas(S.songs).map((nome) => `<button type="button" class="btn-ghost sm ${d.fonte === nome ? 'on' : ''}" data-a="setFonte" data-id="${esc(nome)}">${esc(nome)}</button>`).join('')}
           </div>
         </div>
 
