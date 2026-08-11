@@ -322,6 +322,32 @@ Registrados aqui para não se perderem. Cada um é spec próprio.
    chama Lista. Cria "Para o Léo", joga as músicas dentro, exporta a lista — e o amigo
    recebe o repertório já montado.
 
+### Sobras conhecidas, deixadas de fora de propósito
+
+Levantadas nas revisões desta implementação e julgadas menores que o custo de arrumar
+agora. Ficam registradas para não virarem surpresa.
+
+- **`somaplay-sem-fonte-<data>` mesmo com o app em inglês.** O sentinela `__sem_fonte` vira
+  slug em português, enquanto `fileMulti` é traduzido. Arrumar direito é passar a palavra
+  traduzida do balde, como `palavraFontes` já faz.
+- **`musicasPresentes` é O(n·m)** — o predicado `songById` é um `find` linear. Vale só na
+  aba Listas e no popover, sob ação do usuário. Se um dia a aba Listas renderizar a cada
+  tecla, vira `Set`.
+- **`exportBackup` e o render discordam do que `[]` significa**: o render trata como "nada
+  marcado", a ação como "tudo". Hoje é inalcançável — botão `disabled` não dispara clique
+  e não há atalho de teclado. Vira bug no dia em que alguém adicionar um.
+- **`.btn-ghost` não tem regra `:disabled`**, e `chordpop.js` renderiza um desabilitado. É
+  o mesmo defeito que consertamos em `.btn-primary`, em outra classe, vindo de outra
+  branch.
+- **`importSamples()` não zera `S.exportFontes`**, ao contrário do import de backup. A
+  música de exemplo não tem `fonte` no nível certo, então ela pode introduzir o balde
+  "Sem fonte" desmarcado enquanto há seleção ativa.
+- **Importar um arquivo parcial antigo por cima de uma lista viva reverte a lista.**
+  `mergePlan` passa as listas inteiras e o import faz `DB.putList` — a lista é
+  *substituída* por id, nunca fundida. É deliberado, e é o que faz a lista se curar; mas o
+  export recortado torna rotina a ação que expõe isso. Fundir listas por união seria outra
+  decisão de design, com o próprio spec.
+
 ## Verificação
 
 **Automática** (`cd app && node --test`).
