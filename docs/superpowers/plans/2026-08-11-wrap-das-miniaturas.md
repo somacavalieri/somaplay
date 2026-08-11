@@ -118,7 +118,19 @@ test('predicado que rejeita tudo não trava', () => {
 test('o predicado só é consultado em corte válido', () => {
   let chamadas = 0;
   wrapBlock(CH, LY, 40, () => { chamadas++; return true; });
-  assert.ok(chamadas < CH.length, `${chamadas} chamadas para ${CH.length} caracteres`);
+  // Ordem certa: 2 chamadas. Com `serve` antes dos `ok`, viram 6. Um limite
+  // frouxo (< CH.length, que é 73) deixaria as duas passarem e não guardaria nada.
+  assert.ok(chamadas <= 2, `${chamadas} chamadas; a ordem dos operandos inverteu?`);
+});
+
+test('o atalho testa exatamente o pedaço que devolve', () => {
+  // Recuo comum às duas linhas: 17% das linhas do songbook têm, até 9 colunas.
+  // Se o atalho testar o pedaço sem recuo e devolver o pedaço com, ele aprova
+  // uma fileira mais estreita do que a desenhada — e ela vaza.
+  const vistos = [];
+  const r = wrapBlock('   Am   G', '  quando chove', 20, (t) => { vistos.push(t); return true; });
+  assert.equal(vistos.length, 1);
+  assert.equal(vistos[0], r[0].chords);
 });
 
 test('composição real: linha densa não deixa fileira acima da caixa', () => {
@@ -172,7 +184,10 @@ export function wrapBlock(chords, lyric, cols, cabe) {
   if (!(n > 1)) return [{ chords: c, lyric: l }];
   // O atalho também consulta `cabe`: a maioria das fileiras de miniatura que
   // vazam cabe em colunas e não cabe em pixel.
-  if (end <= n && serve(0, end)) return [{ chords: c, lyric: l }];
+  // Testa `c` CRU, porque é `c` cru que este atalho devolve — com recuo e tudo.
+  // Testar o pedaço sem recuo (serve/peca) aprovaria uma fileira mais estreita
+  // do que a que vai ser desenhada, e 17% das linhas do songbook têm recuo comum.
+  if (end <= n && (!cabe || cabe(c))) return [{ chords: c, lyric: l }];
 
   const out = [];
   for (let pos = 0; pos < end;) {

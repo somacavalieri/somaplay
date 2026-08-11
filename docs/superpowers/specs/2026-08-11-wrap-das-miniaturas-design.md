@@ -91,8 +91,19 @@ Duas mudanças no corpo, e a primeira é a que se esquece:
 1. **O atalho do início também consulta `cabe`.** Hoje `if (!(n > 1) || end <= n) return
    [{chords, lyric}]` devolve a linha inteira quando ela cabe em colunas. É exatamente o
    caso da maioria das fileiras que vazam: cabem em 60 colunas e não cabem em 720 px.
-   Passa a ser `if (!(n > 1)) return …` e, em seguida, `if (end <= n && serve(0, end))
-   return …`.
+   Passa a ser `if (!(n > 1)) return …` e, em seguida,
+   `if (end <= n && (!cabe || cabe(c))) return …`.
+
+   **Repare que o atalho testa `c` cru, e não o `serve`/`peca` que o laço usa.** É de
+   propósito, e a regra é uma só: **testar o que se devolve**. Este atalho devolve `c`
+   com o recuo esquerdo intacto; o laço devolve o pedaço já sem recuo. Testar o pedaço
+   sem recuo aqui aprovaria uma fileira mais estreita do que a desenhada — e **50 das 295
+   linhas do songbook (17%) têm recuo comum às duas linhas, até 9 colunas**, o que a 12 px
+   por coluna são ~108 px invisíveis ao predicado: mais que um diagrama inteiro.
+
+   A alternativa — o atalho passar a devolver o pedaço sem recuo, para casar com o teste —
+   foi medida e descartada: ela faz `wrapBlock(x, y, n, () => true)` divergir de
+   `wrapBlock(x, y, n)`, quebrando a equivalência que o teste cobra.
 
 2. **O recuo do corte passa a exigir as duas condições.** Hoje o laço tem dois ramos — o
    último pedaço corta em `end` sem procurar corte válido, porque o resto cabe. Com
@@ -207,8 +218,14 @@ já está publicado em `main`. O `SHELL` **não muda** — nenhum módulo novo.
 - linha que cabe em colunas mas é rejeitada pelo `cabe` → é quebrada mesmo assim (o atalho
   do início não escapa). Sem este teste, o bug volta silencioso: é o caso da maioria das
   fileiras que vazam hoje;
-- **`cabe` recebe o pedaço já aparado**, não a fatia crua — uma linha com recuo à esquerda
-  prova a diferença;
+- **no laço, `cabe` recebe o pedaço já aparado**, não a fatia crua — uma linha com recuo à
+  esquerda prova a diferença;
+- **no atalho, `cabe` recebe exatamente a string que o atalho devolve** — o mesmo teste com
+  recuo comum, comparando o que o predicado viu com o que voltou. É o caso que 17% das
+  linhas do songbook exercitam;
+- **o contador de chamadas do predicado precisa de limite apertado.** Nesta fixture a ordem
+  certa dá 2 chamadas e a invertida dá 6; um limite frouxo deixa as duas passarem e não
+  guarda nada;
 - pedaço que não dá para cortar mais → volta inteiro, sem laço infinito;
 - `cabe` só é chamado em cortes válidos — contador de chamadas, para provar que a ordem dos
   operandos não regrediu.
