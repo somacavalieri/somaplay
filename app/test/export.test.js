@@ -12,8 +12,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { recorteParaExport, nomeDoExport, stampDeHoje } from '../js/backup.js';
 
+// 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
+// mesmo se os artistas fossem filtrados, e a asserção que mais importa não
+// poderia falhar. Ele é o que separa "devolveu tudo" de "filtrou e coube".
 const lib = () => ({
-  artists: [{ id: 'ar1', name: 'Gil' }, { id: 'ar2', name: 'Caetano' }],
+  artists: [{ id: 'ar1', name: 'Gil' }, { id: 'ar2', name: 'Caetano' }, { id: 'ar3', name: 'Sem músicas' }],
   songs: [
     { id: 's1', artistId: 'ar1', fonte: 'Songbook' },
     { id: 's2', artistId: 'ar1', fonte: 'CifraClub' },
@@ -71,7 +74,7 @@ test('não muta o estado recebido', () => {
   const estado = lib();
   recorteParaExport(estado, { songIds: new Set(['s1']) });
   assert.equal(estado.songs.length, 3);
-  assert.equal(estado.artists.length, 2);
+  assert.equal(estado.artists.length, 3);
 });
 
 test('tolera biblioteca com campos ausentes', () => {

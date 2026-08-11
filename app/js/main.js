@@ -719,6 +719,11 @@ function wireBackupInput() {
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
       const res = await importLibrary(f, { merge });
+      // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
+      // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
+      // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
+      // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
+      S.exportFontes = null;
       applyTheme();
       update();
       toast(merge

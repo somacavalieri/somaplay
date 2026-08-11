@@ -99,6 +99,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 
 .btn-primary{height:48px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:var(--accent);color:var(--bg);border:none;border-radius:12px;font-family:var(--f-title);font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap}
 .btn-primary:hover{background:var(--accent-hover)}
+.btn-primary:disabled{opacity:.4;cursor:default;background:var(--accent)}
 .btn-primary.small{height:46px;border-radius:10px;font-family:var(--f-body);font-weight:700;font-size:14px;padding:0 20px}
 .btn-ghost{height:46px;padding:0 16px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-weight:600;font-size:14px;cursor:pointer}
 .btn-ghost.lg{height:50px;padding:0 22px;border-radius:12px;color:var(--text);font-size:15px}
@@ -442,9 +443,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .toggle-sw.on span{left:27px}
 .storage-bar{height:12px;border-radius:8px;background:var(--bg);overflow:hidden;margin-bottom:18px}
 .storage-bar div{height:100%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:8px;min-width:2px}
-.pair-btns{display:flex;gap:12px}
-.pair-btns button{flex:1;height:50px;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-weight:600;cursor:pointer}
-.pair-btns button:hover{background:var(--surface2-hover)}
 
 /* --- Ordenar dropdown --- */
 .sort-wrap{position:relative}
