@@ -345,3 +345,53 @@ test('o que não é tablatura continua não sendo', () => {
   assert.equal(isTabLine(''), false);
   assert.equal(isTabLine('   '), false);
 });
+
+test('linhas de tab consecutivas viram um bloco só', () => {
+  const p = parseCifraText([
+    'E|-0---0---|',
+    'B|-2---2---|',
+    'G|-2---2---|',
+  ].join('\n'));
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', 'B|-2---2---|', 'G|-2---2---|']);
+  assert.equal(p[0].hasLyric, false);
+});
+
+test('linha em branco encerra o bloco de tab', () => {
+  const p = parseCifraText('E|-0---0---|\n\nB|-2---2---|');
+  assert.equal(p.length, 3);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|']);
+  assert.equal(p[1].isTab, false);
+  assert.deepEqual(p[2].tab, ['B|-2---2---|']);
+});
+
+test('a linha de acordes logo acima entra no bloco de tab', () => {
+  const p = parseCifraText('   A\nE|-0---0---|\nB|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].chords, '   A');          // coluna preservada byte a byte
+  assert.equal(p[0].hasLyric, false);          // não vira par acorde/letra
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', 'B|-2---2---|']);
+});
+
+test('acorde acima da tab continua entrando na grade da música', () => {
+  assert.deepEqual(extractChords(parseCifraText('   A   C#m7\nE|-0---0---|')), ['A', 'C#m7']);
+});
+
+test('tab não atrapalha o par acorde/letra normal', () => {
+  const p = parseCifraText('[Tab]\nE|-0---0---|\n\n     C      G\nEla me disse assim');
+  assert.equal(p[0].isSection, true);
+  assert.equal(p[1].isTab, true);
+  assert.equal(p[3].hasChords, true);
+  assert.equal(p[3].chords, '     C      G');
+  assert.equal(p[3].lyric, 'Ela me disse assim');
+  assert.equal(p[3].isTab, false);
+});
+
+test('linha que não é tab segue com tab vazio', () => {
+  const p = parseCifraText('Ela me disse assim');
+  assert.equal(p[0].isTab, false);
+  assert.deepEqual(p[0].tab, []);
+});

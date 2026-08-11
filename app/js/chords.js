@@ -149,35 +149,61 @@ function isChordLine(line) {
   return true;
 }
 
-// Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra.
-// Retorna linhas normalizadas: { isSection, section, hasChords, chords, hasLyric, lyric }
+// Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra /
+// bloco de tablatura.
+// Retorna linhas normalizadas:
+// { isSection, section, hasChords, chords, hasLyric, lyric, isTab, tab }
 export function parseCifraText(text) {
   const out = [];
   const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const semRabo = (s) => s.replace(/\s+$/, '');
+  // Corrida de linhas de tab a partir de i. As cordas de um mesmo bloco têm de
+  // sair juntas: elas compartilham a fonte, e fonte diferente desalinha coluna.
+  const corridaTab = (i) => {
+    const run = [];
+    while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
+    return run;
+  };
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i];
     const trimmed = raw.trim();
     if (!trimmed) { out.push({ lyric: ' ' }); i++; continue; }
     if (/^\[.+\]$/.test(trimmed)) { out.push({ section: trimmed }); i++; continue; }
+    if (isTabLine(raw)) {
+      const run = corridaTab(i);
+      out.push({ tab: run });
+      i += run.length;
+      continue;
+    }
     if (isChordLine(raw)) {
       const next = lines[i + 1];
+      // Tab logo abaixo: a linha de acordes entra no bloco em vez de virar par
+      // acorde/letra. Ela marca a coluna onde o acorde vale — fora do bloco, o
+      // bloco encolheria e ela não, e a coluna se perderia.
+      if (next !== undefined && isTabLine(next)) {
+        const run = corridaTab(i + 1);
+        out.push({ chords: semRabo(raw), tab: run });
+        i += 1 + run.length;
+        continue;
+      }
       if (next !== undefined && next.trim() && !isChordLine(next) && !/^\[.+\]$/.test(next.trim())) {
-        out.push({ chords: raw.replace(/\s+$/, ''), lyric: next.replace(/\s+$/, '') });
+        out.push({ chords: semRabo(raw), lyric: semRabo(next) });
         i += 2;
       } else {
-        out.push({ chords: raw.replace(/\s+$/, '') });
+        out.push({ chords: semRabo(raw) });
         i++;
       }
       continue;
     }
-    out.push({ lyric: raw.replace(/\s+$/, '') });
+    out.push({ lyric: semRabo(raw) });
     i++;
   }
   return out.map((l) => ({
     section: l.section || '', isSection: !!l.section,
     chords: l.chords || '', hasChords: !!l.chords,
     lyric: l.lyric || '', hasLyric: !!l.lyric,
+    tab: l.tab || [], isTab: !!(l.tab && l.tab.length),
   }));
 }
 
