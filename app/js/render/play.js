@@ -171,8 +171,9 @@ function measureCifra() {
 }
 
 // Mede e, se a largura em COLUNAS mudou, re-renderiza uma vez. A largura em px é
-// guardada sempre: variação menor que um caractere não vale um re-render, e a
-// fileira tem 6px de folga entre blocos para absorver isso.
+// guardada sempre: variação menor que um caractere não vale um re-render — por isso
+// `cifraBoxPx` pode ficar até a largura de um caractere à frente das fileiras já
+// desenhadas na tela, uma diferença limitada que se corrige sozinha no próximo render.
 function reflowCifra(update) {
   const { cols, px } = measureCifra();
   if (px) cifraBoxPx = px;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { wrapBlock, layoutChordRow, chordDiagWidth } from '../js/chords.js';
+import { wrapBlock, layoutChordRow, chordDiagWidth, chordName } from '../js/chords.js';
 
 // Coluna em que cada acorde começa numa linha de acordes.
 function chordCols(line) {
@@ -174,7 +174,7 @@ test('composição real: linha densa não deixa fileira acima da caixa', () => {
   // Sem predicado de mentira: as larguras vêm de chordDiagWidth, que é o que o
   // app usa de verdade. 300px é a caixa de um celular estreito.
   const CAIXA = 300;
-  const larg = (tok, isChord) => (isChord ? chordDiagWidth(tok, true, null) : tok.length * 8);
+  const larg = (tok, isChord) => (isChord ? chordDiagWidth(chordName(tok), true, null) : tok.length * 8);
   const cabe = (trecho) => {
     const it = layoutChordRow(trecho, 12, larg);
     if (!it.length) return true;

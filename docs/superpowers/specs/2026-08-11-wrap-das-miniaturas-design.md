@@ -42,9 +42,14 @@ verdade:
 | 360 px (celular) | 1090 | 142 | 1129 | +4% | **0** | 6 |
 | 300 px | 1197 | 180 | 1278 | +7% | **0** | 5 |
 
-**O vazamento acaba em toda largura**, e o crescimento vertical fica entre 0% e 7% — o
-corte recua para o corte válido anterior, que quase sempre cabe no mesmo número de pedaços.
-A saída de emergência dispara pouco, e nas medições **nenhuma vez deixou um vazamento**.
+**Nas medições, o vazamento acaba em toda largura testada**, e o crescimento vertical fica
+entre 0% e 7% — o corte recua para o corte válido anterior, que quase sempre cabe no mesmo
+número de pedaços. A saída de emergência dispara pouco, e nas medições **nenhuma vez deixou
+um vazamento** — mas ela segue sendo a exceção irredutível do mecanismo: uma palavra da
+letra comprida demais, sem corte válido em lugar nenhum, ainda pode deixar a fileira acima
+da caixa. Em fuzz adversarial fora deste corpus isso já apareceu: ~0,30% das fileiras acima
+de uma caixa de 300 px, pior caso +64 px — um diagrama a mais — sempre pela mesma saída de
+emergência.
 
 Sanidade: a 720 px, exatamente **41 linhas mudam de saída** — as mesmas 41 que vazam. O
 predicado está sendo consultado, não passando batido.
@@ -104,6 +109,17 @@ Duas mudanças no corpo, e a primeira é a que se esquece:
    A alternativa — o atalho passar a devolver o pedaço sem recuo, para casar com o teste —
    foi medida e descartada: ela faz `wrapBlock(x, y, n, () => true)` divergir de
    `wrapBlock(x, y, n)`, quebrando a equivalência que o teste cobra.
+
+   **O caminho da rejeição também é intencional.** Quando `cabe` rejeita `c` cru só por
+   causa do recuo comum, o laço entra, e o primeiro candidato (`k = lim = end`, onde as
+   duas `ok()` são triviais) já serve — porque `serve` testa `peca(pos, end)`, que sai com
+   o `pad` descontado. A linha volta **num pedaço só, com o recuo removido**: é reparo por
+   deslocamento à esquerda, não quebra em dois pedaços (nas medições, isso disparou em 27
+   linhas na caixa de 720 px e em 9 na de 328 px). O acorde continua sobre a sílaba certa
+   porque `peca` tira o mesmo `pad` das duas linhas; o efeito visível é só que **um bloco
+   recuado fica mais à esquerda no modo miniatura do que no modo texto** — na verificação
+   manual isso pode parecer regressão, não é defeito, e "consertar" traria o vazamento de
+   volta.
 
 2. **O recuo do corte passa a exigir as duas condições.** Hoje o laço tem dois ramos — o
    último pedaço corta em `end` sem procurar corte válido, porque o resto cabe. Com
