@@ -127,7 +127,9 @@ test('linha que cabe em colunas mas o predicado rejeita é quebrada mesmo assim'
 
 test('o predicado recebe o pedaço aparado, não a fatia crua', () => {
   const vistos = [];
-  wrapBlock('    C   G', '    dó  sol', 60, (t) => { vistos.push(t); return true; });
+  // cols=8 força a passagem pelo loop (e não pelo atalho), onde peca() tira o recuo.
+  // A linha '    C   G' tem 9 caracteres, então com 8 colunas precisa quebrar.
+  wrapBlock('    C   G', '    dó  sol', 8, (t) => { vistos.push(t); return true; });
   assert.ok(vistos.length > 0, 'o predicado nem foi chamado');
   for (const t of vistos) assert.ok(!/^ /.test(t), `veio com recuo: ${JSON.stringify(t)}`);
 });
@@ -153,7 +155,19 @@ test('predicado que rejeita tudo não trava', () => {
 test('o predicado só é consultado em corte válido', () => {
   let chamadas = 0;
   wrapBlock(CH, LY, 40, () => { chamadas++; return true; });
-  assert.ok(chamadas < CH.length, `${chamadas} chamadas para ${CH.length} caracteres`);
+  // Ordem certa: 2 chamadas. Com `serve` antes dos `ok`, viram 6. O limite
+  // frouxo de antes (< CH.length) deixava as duas passarem.
+  assert.ok(chamadas <= 2, `${chamadas} chamadas; a ordem dos operandos inverteu?`);
+});
+
+test('o atalho testa exatamente o pedaço que devolve', () => {
+  // Recuo comum às duas linhas: 17% das linhas do songbook têm. Se o atalho
+  // testar o pedaço sem recuo e devolver o pedaço com, aprova uma fileira mais
+  // estreita do que a desenhada — e ela vaza.
+  const vistos = [];
+  const r = wrapBlock('   Am   G', '  quando chove', 20, (t) => { vistos.push(t); return true; });
+  assert.equal(vistos.length, 1);
+  assert.equal(vistos[0], r[0].chords);
 });
 
 test('composição real: linha densa não deixa fileira acima da caixa', () => {

@@ -396,9 +396,10 @@ export function wrapBlock(chords, lyric, cols, cabe) {
   const serve = (pos, cut) => !cabe || cabe(peca(pos, cut).chords);
 
   if (!(n > 1)) return [{ chords: c, lyric: l }];
-  // O atalho também consulta `cabe`: a maioria das fileiras de miniatura que
-  // vazam cabe em colunas e não cabe em pixel.
-  if (end <= n && serve(0, end)) return [{ chords: c, lyric: l }];
+  // O atalho devolve `c` CRU, com recuo e tudo — então é `c` que o predicado
+  // tem de julgar. Testar o pedaço sem recuo aprova uma fileira mais estreita
+  // do que a que vai ser desenhada.
+  if (end <= n && (!cabe || cabe(c))) return [{ chords: c, lyric: l }];
 
   const out = [];
   for (let pos = 0; pos < end;) {
