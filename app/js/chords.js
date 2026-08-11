@@ -165,38 +165,49 @@ export function parseCifraText(text) {
   const out = [];
   const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
   const semRabo = (s) => s.replace(/\s+$/, '');
-  // Corrida de linhas de tab a partir de i. As cordas de um mesmo bloco têm de
-  // sair juntas: elas compartilham a fonte, e fonte diferente desalinha coluna.
-  // Corrida sem âncora nenhuma não é tablatura — uma linha só de traços é
-  // indistinguível de uma corda muda, e só a vizinhança separa as duas.
+  // Corrida de linhas de tab a partir de i, sem julgar âncora — só varre. As
+  // cordas de um mesmo bloco têm de sair juntas: elas compartilham a fonte, e
+  // fonte diferente desalinha coluna. Corrida sem âncora nenhuma não é
+  // tablatura — uma linha só de traços é indistinguível de uma corda muda, e
+  // só a vizinhança separa as duas; quem julga isso agora é cada chamador.
   const corridaTab = (i) => {
     const run = [];
     while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
-    return run.some(isTabAnchor) ? run : [];
+    return run;
   };
+  // Fim (exclusivo) da última corrida sem âncora já julgada. O julgamento é
+  // monotônico: se a corrida inteira não tem âncora, nenhum sufixo dela tem.
+  // Sem isso, uma corrida de k linhas sem âncora custa O(k²) — cada linha
+  // dispararia corridaTab de novo, reescaneando o resto da corrida só para
+  // redescobrir que continua sem âncora.
+  let semAncoraAte = 0;
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i];
     const trimmed = raw.trim();
     if (!trimmed) { out.push({ lyric: ' ' }); i++; continue; }
     if (/^\[.+\]$/.test(trimmed)) { out.push({ section: trimmed }); i++; continue; }
-    if (isTabLine(raw)) {
+    if (i >= semAncoraAte && isTabLine(raw)) {
       const run = corridaTab(i);
-      if (run.length) { out.push({ tab: run }); i += run.length; continue; }
-      // corrida sem âncora: cai no fluxo normal, esta linha é letra
+      if (run.some(isTabAnchor)) { out.push({ tab: run }); i += run.length; continue; }
+      // corrida sem âncora: lembra até onde ela vai para não reescanear linha a
+      // linha, e cai no fluxo normal — esta linha ainda pode ser letra ou,
+      // grudada num acorde, linha de acordes.
+      semAncoraAte = i + run.length;
     }
     if (isChordLine(raw)) {
       const next = lines[i + 1];
       // Tab logo abaixo: a linha de acordes entra no bloco em vez de virar par
       // acorde/letra. Ela marca a coluna onde o acorde vale — fora do bloco, o
       // bloco encolheria e ela não, e a coluna se perderia.
-      if (next !== undefined && isTabLine(next)) {
+      if (next !== undefined && (i + 1) >= semAncoraAte && isTabLine(next)) {
         const run = corridaTab(i + 1);
-        if (run.length) {
+        if (run.some(isTabAnchor)) {
           out.push({ chords: semRabo(raw), tab: run });
           i += 1 + run.length;
           continue;
         }
+        semAncoraAte = i + 1 + run.length;
         // corrida sem âncora: segue para o pareamento acorde/letra normal
       }
       if (next !== undefined && next.trim() && !isChordLine(next) && !/^\[.+\]$/.test(next.trim())) {

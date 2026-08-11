@@ -439,3 +439,41 @@ test('bloco sem rótulo nenhum vale se tiver dígito', () => {
   assert.equal(p[0].isTab, true);
   assert.equal(p[0].tab.length, 2);
 });
+
+// --- Fix round 1: corrida rejeitada não pode ser reescaneada linha a linha -
+
+test('corrida longa sem âncora sai linha a linha, na ordem, byte a byte, e um acorde no meio continua acorde', () => {
+  const traco = '-'.repeat(20); // sem dígito, sem rótulo — nunca ancora
+  // branco no meio corta a corrida em duas, então o acorde não pareia com a
+  // linha seguinte de traço (o par acorde/letra normal consumiria as duas).
+  const texto = [traco, traco, traco, traco, traco, '          D ------', '', traco, traco, traco].join('\n');
+  const p = parseCifraText(texto);
+  assert.equal(p.length, 10);
+  for (const k of [0, 1, 2, 3, 4]) {
+    assert.equal(p[k].isTab, false);
+    assert.equal(p[k].lyric, traco);
+  }
+  assert.equal(p[5].isTab, false);
+  assert.equal(p[5].hasChords, true);
+  assert.deepEqual(extractChords([p[5]]), ['D']);
+  assert.equal(p[6].isTab, false); // separador em branco entre as duas corridas
+  for (const k of [7, 8, 9]) {
+    assert.equal(p[k].isTab, false);
+    assert.equal(p[k].lyric, traco);
+  }
+});
+
+test('desempenho: 5000 linhas de traço sem âncora não voltam a ser O(n²)', () => {
+  // Guarda contra a regressão medida na revisão: sem o cache de corrida
+  // rejeitada, 5000 linhas levavam ~1,3s (curva quadrática). Com o cache, é
+  // varredura linear — a folga de 500ms é generosa para não ser frágil em CI
+  // lento, mas nem de perto alcança o tempo quadrático antigo.
+  const linhas = Array.from({ length: 5000 }, () => '-'.repeat(20));
+  const texto = linhas.join('\n');
+  const inicio = Date.now();
+  const p = parseCifraText(texto);
+  const duracao = Date.now() - inicio;
+  assert.equal(p.length, 5000);
+  assert.equal(p.every((l) => l.isTab === false), true);
+  assert.ok(duracao < 500, `esperava bem menos de 500ms, levou ${duracao}ms`);
+});
