@@ -14,7 +14,7 @@
 
 - **Nada de dependência nova, nada de build.** O app é servido como está.
 - **Nunca alterar o texto da cifra do usuário.** `esc()` imprime a linha byte a byte. Nenhuma substituição de caractere dentro da tab — a coluna é a informação.
-- **Toda mudança em `app/css/` ou `app/js/` exige bump de `VERSION` em `app/sw.js:2`.** O `SHELL` **não** muda aqui: nenhum módulo novo.
+- **Toda mudança em `app/css/` ou `app/js/` exige bump de `VERSION` em `app/sw.js:2` antes do merge.** Neste plano o bump acontece **uma vez, na Tarefa 3** — não uma vez por tarefa. As Tarefas 1 e 2 mexem em `app/js/chords.js` sem bump de propósito: commit intermediário de branch não é publicado, e só o estado final do branch chega ao usuário. O `SHELL` **não** muda: nenhum módulo novo.
 - **Nada de `t()` em valor de `data-*`.** Não se aplica a este plano (não há `data-*` novo), mas vale se surgir.
 - **Verificar com `cd app && node --test` e `node --check`.** UI é verificação manual no navegador — não há harness de DOM, de propósito.
 - **Commitar apenas os arquivos listados em cada tarefa, nunca `git add -A`.** Há trabalho não relacionado na árvore: `pendencias.md` modificado e `docs/campo_armonico/` sem rastrear. Nenhum dos dois entra em commit nenhum deste plano.
@@ -404,6 +404,13 @@ cd app && node --test && node --check js/render/play.js
 Esperado: PASS. `shell.test.js` continua verde (nenhum módulo novo).
 
 - [ ] **Passo 6: verificar no navegador — esta é a verificação que conta**
+
+> **Quem faz:** este passo **não é do implementador** — ele não tem navegador nem a
+> biblioteca do usuário no IndexedDB. O implementador vai até o Passo 5, commita
+> (Passo 7) e reporta. A verificação abaixo fica com quem coordena, que roda o que dá
+> para rodar sem estado de usuário (Chrome headless numa página de diagnóstico com as
+> linhas reais da música) e entrega o resto ao usuário, dizendo explicitamente o que
+> conferiu e o que não conferiu.
 
 ```bash
 cd app && python3 -m http.server 8137
