@@ -744,8 +744,11 @@ document.addEventListener('click', (e) => {
   if (t) {
     const name = t.dataset.a;
     if (actions[name]) {
-      // scrim fecha só se o clique foi nele mesmo (não no conteúdo)
-      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker') && t !== e.target && e.target.closest('[data-stop]')) return;
+      // scrim fecha só se o clique nasceu fora do conteúdo protegido.
+      // Testar `t !== e.target` não serve: o alvo real de um botão com ícone é o
+      // <svg> de dentro, então o X do próprio popover seria descartado aqui.
+      const stop = e.target.closest('[data-stop]');
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker') && stop && !stop.contains(t)) return;
       actions[name](t.dataset, e, t);
       return;
     }
