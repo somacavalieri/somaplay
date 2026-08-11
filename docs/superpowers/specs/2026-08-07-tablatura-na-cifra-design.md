@@ -106,6 +106,50 @@ rejeitaria uma pauta legítima.
 Linha de técnica desconhecida cai no comportamento de hoje (vira letra e quebra).
 É degradação aceitável: conserta-se ampliando o alfabeto quando aparecer.
 
+### Âncora e corrida — o que o A/B obrigou a mudar (2026-08-11)
+
+A regra acima decide **por linha**, e o A/B contra o acervo mostrou que ela não pode:
+**uma linha só de traços é indistinguível de uma corda muda.** `-----------------` é
+divisor decorativo de seção numa música e é a corda Mi grave calada na outra. Nenhuma
+inspeção da linha isolada separa as duas.
+
+O A/B (199 `.somaplay`, 5.733 cifras, 393.892 linhas) promoveu 12.002 linhas a tab, com
+**40 falso positivo em 21 músicas**: 27 divisores decorativos, 11 linhas de diagrama de
+acorde ASCII (`+-+-+-+-+-+`), 1 marcador de repetição (`<---`) e — o único de custo
+real — `          D ------` em "Tô um Lixo", que é linha de acordes e perderia a cor de
+acento e o toque.
+
+Duas correções foram testadas contra as 12.002 linhas e **descartadas por derrubarem
+tab legítima**:
+
+- **Exigir a barra `|` ou `:`** — derruba 408 linhas. O acervo tem tab sem barra
+  nenhuma: `E---------------12-10---------`.
+- **Exigir o rótulo de corda grudado no corpo** — derruba 354. O acervo tem rótulo
+  separado por espaço (`E |--------0-|`) e tem bloco sem rótulo nenhum
+  (`-9-9----9-9-----9-----9---`).
+
+Também foi considerada e rejeitada a inversão de ordem — testar `isChordLine` antes de
+`isTabLine`. `isChordTok` aceita `-` e dígito depois da nota, então
+`E---------12-10---` casa como acorde, e centenas de linhas de tab legítima voltariam a
+ser linha de acordes.
+
+**A regra que fica: âncora por linha, decisão por corrida.**
+
+Uma linha de tab é **âncora** quando se decide sozinha:
+
+- tem **rótulo de corda seguido de barra**, com ou sem espaço — `E|`, `E |`, `e:`; ou
+- tem **rótulo de corda grudado num traço** — `E-------`; ou
+- contém **algum dígito** de casa.
+
+Uma linha que passa no alfabeto e na proporção mas não é âncora é **ambígua**. Ambígua
+só entra no bloco quando a corrida a que ela pertence tem **pelo menos uma âncora**.
+Corrida sem âncora nenhuma não é tablatura: é divisor, diagrama ou marcador, e segue
+como letra.
+
+A medição justifica o desenho: **11.786 das 12.002 linhas (98,2%) são âncora** e se
+decidem sozinhas. Só **216 (1,8%)** dependem da vizinhança — e é nesse resto que os 40
+falso positivo moram, todos em corrida sem âncora.
+
 ### Bloco de tablatura
 
 **Linhas de tab consecutivas formam um bloco único.** As seis cordas precisam da

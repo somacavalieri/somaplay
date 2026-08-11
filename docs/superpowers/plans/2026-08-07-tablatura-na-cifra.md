@@ -557,3 +557,149 @@ git commit -m "docs: record the tablature A/B result against the library"
 **Nomes:** `isTabLine`, `TAB_ALFABETO`, `corridaTab`, `semRabo`, `tabBlockHTML`, `--cols`, `.tabwrap`, `.tab` — usados com a mesma grafia em todas as tarefas.
 
 **Sem placeholder:** todo passo de código traz o código.
+
+---
+
+### Tarefa 5: âncora e contexto de corrida
+
+Nasceu do A/B da Tarefa 4, que achou 40 falso positivo em 21 músicas. Ver a seção
+"Âncora e corrida" do spec para o porquê e para as duas correções que foram testadas e
+descartadas antes desta.
+
+**Arquivos:**
+- Modificar: `app/js/chords.js` — `isTabAnchor` nova (não exportada), e o agrupamento de corrida em `parseCifraText`
+- Testar: `app/test/cifraparse.test.js`
+
+**Interfaces:**
+- Consome: `isTabLine(line)` da Tarefa 1, sem alteração.
+- Produz: nada de novo para fora. `parseCifraText` continua devolvendo `tab` / `isTab`; só muda **quais** corridas viram bloco.
+
+- [ ] **Passo 1: escrever os testes que falham**
+
+Adicionar ao fim de `app/test/cifraparse.test.js`:
+
+```js
+test('corrida sem âncora nenhuma não é tablatura', () => {
+  // divisor decorativo de seção: sem rótulo de corda e sem dígito
+  const p = parseCifraText('-----------------');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasLyric, true);
+  assert.equal(p[0].lyric, '-----------------');
+});
+
+test('acorde com traço de sustentação continua linha de acordes', () => {
+  // "Tô um Lixo": D sustentado, não tablatura
+  const p = parseCifraText('          D ------\nEu tô um lixo aah');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasChords, true);
+  assert.deepEqual(extractChords(p), ['D']);
+});
+
+test('diagrama de acorde ASCII não é tablatura', () => {
+  assert.equal(parseCifraText('+-+-+-+-+-+')[0].isTab, false);
+  assert.equal(parseCifraText('<---')[0].isTab, false);
+});
+
+test('corda muda entra no bloco porque a corrida tem âncora', () => {
+  // a 2a linha é só traço — ambígua sozinha, tab por vizinhança
+  const p = parseCifraText('E|-0---0---|\n-----------\nG|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', '-----------', 'G|-2---2---|']);
+});
+
+test('as três formas de âncora valem', () => {
+  assert.equal(parseCifraText('E|-0---0---|')[0].isTab, true);   // rótulo + barra
+  assert.equal(parseCifraText('E |-0---0---|')[0].isTab, true);  // rótulo + espaço + barra
+  assert.equal(parseCifraText('E---------12-10---')[0].isTab, true); // rótulo grudado no traço
+  assert.equal(parseCifraText('-9-9----9-9-----9--')[0].isTab, true); // sem rótulo, mas tem dígito
+});
+
+test('bloco sem rótulo nenhum vale se tiver dígito', () => {
+  const p = parseCifraText('-----3----|----0-----|\n-----0----|----2-----|');
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].tab.length, 2);
+});
+```
+
+- [ ] **Passo 2: rodar e confirmar que falha**
+
+```bash
+cd app && node --test test/cifraparse.test.js
+```
+
+Esperado: FAIL nos testes de corrida sem âncora — hoje `-----------------` e `D ------` viram bloco de tab.
+
+- [ ] **Passo 3: implementar**
+
+Em `app/js/chords.js`, logo depois de `isTabLine`:
+
+```js
+// Âncora: linha de tab que se decide sozinha. Rótulo de corda seguido de barra
+// (com ou sem espaço), rótulo grudado num traço, ou dígito de casa em qualquer
+// lugar. O A/B contra o acervo mediu 98,2% das linhas de tab nesta situação.
+const isTabAnchor = (line) => {
+  const s = String(line).trim();
+  return /^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s) || /\d/.test(s);
+};
+```
+
+E em `parseCifraText`, a `corridaTab` passa a devolver corrida vazia quando não há
+âncora — o que faz os dois pontos de chamada caírem sozinhos no caminho antigo:
+
+```js
+  // Corrida de linhas de tab a partir de i. As cordas de um mesmo bloco têm de
+  // sair juntas: elas compartilham a fonte, e fonte diferente desalinha coluna.
+  // Corrida sem âncora nenhuma não é tablatura — uma linha só de traços é
+  // indistinguível de uma corda muda, e só a vizinhança separa as duas.
+  const corridaTab = (i) => {
+    const run = [];
+    while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
+    return run.some(isTabAnchor) ? run : [];
+  };
+```
+
+E os dois pontos de chamada passam a conferir se a corrida veio vazia. No caminho do
+bloco solto:
+
+```js
+    if (isTabLine(raw)) {
+      const run = corridaTab(i);
+      if (run.length) { out.push({ tab: run }); i += run.length; continue; }
+      // corrida sem âncora: cai no fluxo normal, esta linha é letra
+    }
+```
+
+No caminho da linha de acordes com tab abaixo:
+
+```js
+      if (next !== undefined && isTabLine(next)) {
+        const run = corridaTab(i + 1);
+        if (run.length) {
+          out.push({ chords: semRabo(raw), tab: run });
+          i += 1 + run.length;
+          continue;
+        }
+        // corrida sem âncora: segue para o pareamento acorde/letra normal
+      }
+```
+
+Atenção: o `if (isTabLine(raw))` deixa de ter `continue` incondicional. Confira que a
+linha segue para `isChordLine` e daí para o `out.push({ lyric: ... })`, e que `i` avança
+em todos os caminhos.
+
+- [ ] **Passo 4: rodar a suíte inteira**
+
+```bash
+cd app && node --test && node --check js/chords.js
+```
+
+Esperado: PASS em tudo, os 6 testes novos inclusive. Nenhum dos testes de tab das
+Tarefas 1 e 2 pode regredir.
+
+- [ ] **Passo 5: commitar**
+
+```bash
+git add app/js/chords.js app/test/cifraparse.test.js
+git commit -m "fix: a run of tab lines needs an anchor to count as tablature"
+```
