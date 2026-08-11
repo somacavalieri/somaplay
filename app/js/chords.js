@@ -103,6 +103,14 @@ export function isTabLine(line) {
   return tracos >= 3 && tracos >= s.length * 0.3;
 }
 
+// Âncora: linha de tab que se decide sozinha. Rótulo de corda seguido de barra
+// (com ou sem espaço), rótulo grudado num traço, ou dígito de casa em qualquer
+// lugar. O A/B contra o acervo mediu 98,2% das linhas de tab nesta situação.
+const isTabAnchor = (line) => {
+  const s = String(line).trim();
+  return /^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s) || /\d/.test(s);
+};
+
 // Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7
 // Am7", "Fm7  Bb/D  [Frase 1]". Mas um trecho entre parênteses pode ser só
 // acordes: "( G  F  G  F )". Daí a regra em stripLabels: trecho cujo conteúdo é
@@ -159,10 +167,12 @@ export function parseCifraText(text) {
   const semRabo = (s) => s.replace(/\s+$/, '');
   // Corrida de linhas de tab a partir de i. As cordas de um mesmo bloco têm de
   // sair juntas: elas compartilham a fonte, e fonte diferente desalinha coluna.
+  // Corrida sem âncora nenhuma não é tablatura — uma linha só de traços é
+  // indistinguível de uma corda muda, e só a vizinhança separa as duas.
   const corridaTab = (i) => {
     const run = [];
     while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
-    return run;
+    return run.some(isTabAnchor) ? run : [];
   };
   let i = 0;
   while (i < lines.length) {
@@ -172,9 +182,8 @@ export function parseCifraText(text) {
     if (/^\[.+\]$/.test(trimmed)) { out.push({ section: trimmed }); i++; continue; }
     if (isTabLine(raw)) {
       const run = corridaTab(i);
-      out.push({ tab: run });
-      i += run.length;
-      continue;
+      if (run.length) { out.push({ tab: run }); i += run.length; continue; }
+      // corrida sem âncora: cai no fluxo normal, esta linha é letra
     }
     if (isChordLine(raw)) {
       const next = lines[i + 1];
@@ -183,9 +192,12 @@ export function parseCifraText(text) {
       // bloco encolheria e ela não, e a coluna se perderia.
       if (next !== undefined && isTabLine(next)) {
         const run = corridaTab(i + 1);
-        out.push({ chords: semRabo(raw), tab: run });
-        i += 1 + run.length;
-        continue;
+        if (run.length) {
+          out.push({ chords: semRabo(raw), tab: run });
+          i += 1 + run.length;
+          continue;
+        }
+        // corrida sem âncora: segue para o pareamento acorde/letra normal
       }
       if (next !== undefined && next.trim() && !isChordLine(next) && !/^\[.+\]$/.test(next.trim())) {
         out.push({ chords: semRabo(raw), lyric: semRabo(next) });

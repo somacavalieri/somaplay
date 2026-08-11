@@ -395,3 +395,47 @@ test('linha que não é tab segue com tab vazio', () => {
   assert.equal(p[0].isTab, false);
   assert.deepEqual(p[0].tab, []);
 });
+
+// --- Tarefa 5: âncora e contexto de corrida --------------------------------
+
+test('corrida sem âncora nenhuma não é tablatura', () => {
+  // divisor decorativo de seção: sem rótulo de corda e sem dígito
+  const p = parseCifraText('-----------------');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasLyric, true);
+  assert.equal(p[0].lyric, '-----------------');
+});
+
+test('acorde com traço de sustentação continua linha de acordes', () => {
+  // "Tô um Lixo": D sustentado, não tablatura
+  const p = parseCifraText('          D ------\nEu tô um lixo aah');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasChords, true);
+  assert.deepEqual(extractChords(p), ['D']);
+});
+
+test('diagrama de acorde ASCII não é tablatura', () => {
+  assert.equal(parseCifraText('+-+-+-+-+-+')[0].isTab, false);
+  assert.equal(parseCifraText('<---')[0].isTab, false);
+});
+
+test('corda muda entra no bloco porque a corrida tem âncora', () => {
+  // a 2a linha é só traço — ambígua sozinha, tab por vizinhança
+  const p = parseCifraText('E|-0---0---|\n-----------\nG|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', '-----------', 'G|-2---2---|']);
+});
+
+test('as três formas de âncora valem', () => {
+  assert.equal(parseCifraText('E|-0---0---|')[0].isTab, true);   // rótulo + barra
+  assert.equal(parseCifraText('E |-0---0---|')[0].isTab, true);  // rótulo + espaço + barra
+  assert.equal(parseCifraText('E---------12-10---')[0].isTab, true); // rótulo grudado no traço
+  assert.equal(parseCifraText('-9-9----9-9-----9--')[0].isTab, true); // sem rótulo, mas tem dígito
+});
+
+test('bloco sem rótulo nenhum vale se tiver dígito', () => {
+  const p = parseCifraText('-----3----|----0-----|\n-----0----|----2-----|');
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].tab.length, 2);
+});
