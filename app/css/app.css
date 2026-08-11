@@ -256,10 +256,21 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .star-btn.on{color:var(--accent)}
 
 .cifra-scroll{flex:1;min-height:0;overflow-y:auto;padding:30px 56px 96px}
-.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;overflow-x:auto}
+.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;overflow-x:auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 .cifra-text .sec{color:var(--accent);font-weight:700;margin:20px 0 6px;font-size:15px;letter-spacing:.5px}
 .cifra-text .ch{color:var(--accent);font-weight:700;white-space:pre;min-height:6px}
 .cifra-text .ly{color:var(--text);white-space:pre;margin-bottom:5px}
+
+/* Tablatura: grade de largura fixa. Nunca quebra e nunca rola — encolhe.
+   --cols é a maior largura do bloco em caracteres, escrita pelo render.
+   1em é a fonte do zoom (teto); 100cqi/(cols*.6) é a fonte em que cols colunas
+   ocupam a largura do container, dado o avanço .6em da monoespaçada.
+   O container-type fica aqui e não no .cifra-text de propósito: ele implica
+   contain:layout, que criaria bloco contentor para position:fixed e alcançaria
+   o popover de acorde. O overflow-x é rede de segurança para fallback de fonte
+   com avanço diferente de .6em — vira rolagem mínima em vez de voltar a quebrar. */
+.cifra-text .tabwrap{container-type:inline-size;overflow-x:auto;margin:6px 0}
+.cifra-text .tab{white-space:pre;font-size:min(1em,calc(100cqi/(var(--cols) * .6)))}
 
 /* miniaturas inline ("Miniaturas na música") */
 .cifra-text .ch-diag-row{position:relative;height:100px;margin:6px 0 2px}
