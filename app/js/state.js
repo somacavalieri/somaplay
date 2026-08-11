@@ -78,6 +78,12 @@ export const audio = new AudioEngine();
 // ---------- helpers de biblioteca ----------
 export function artistById(id) { return S.artists.find((a) => a.id === id) || null; }
 export function songById(id) { return S.songs.find((s) => s.id === id) || null; }
+// Id órfão numa lista existe de propósito: um export por fonte leva a lista
+// inteira, e as músicas que faltam chegam quando a outra fonte for importada.
+// Até lá o contador não pode prometer o que a tela não mostra.
+export function musicasPresentes(l) {
+  return ((l && l.musicas) || []).filter((id) => songById(id));
+}
 export function songsOfArtist(artistId) {
   return S.songs.filter((s) => s.artistId === artistId)
     .sort((a, b) => a.title.localeCompare(b.title, 'pt'));
