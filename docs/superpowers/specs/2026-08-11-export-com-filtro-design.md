@@ -65,6 +65,11 @@ eles é contextual, de onde a coisa já está.
 Desmarcar uma materializa o array com as outras; remarcar todas volta para `null`. A
 caixinha mestra é literalmente `S.exportFontes === null`.
 
+Esse "remarcar todas" se decide por **pertinência, não por contagem**: a seleção vive na
+sessão, mas a biblioteca muda por baixo dela — renomear a fonte de uma música, ou apagar
+a última música de uma fonte, deixa na seleção uma grafia que não existe mais. Comparar
+tamanhos faria um clique numa única caixinha virar "todas as fontes".
+
 O ganho: com `null`, `recorteParaExport` devolve o estado inteiro, e o caminho do backup
 completo fica **provadamente idêntico ao de hoje** — é uma asserção do teste, não uma
 esperança.

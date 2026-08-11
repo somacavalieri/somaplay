@@ -671,12 +671,16 @@ Depois **substitua** `exportBackup` (hoje linhas 565–569) por:
     const prox = atual.includes(d.id) ? atual.filter((x) => x !== d.id) : [...atual, d.id];
     // Remarcar tudo volta para o sentinela: sem isso "todas" teria duas
     // representações, e o nome do arquivo não voltaria a ser somaplay-backup-*.
-    S.exportFontes = prox.length === todas.length ? null : prox;
+    // Pertinência, não tamanho: a seleção é da sessão e a biblioteca muda por
+    // baixo dela. Com uma grafia velha guardada, contar daria "todas" errado.
+    S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
   },
   async exportBackup() {
     const fontes = S.exportFontes;
-    const sel = fontes ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
+    // `fontes?.length`, não `fontes`: [] é truthy, e nomeDoExport trata [] como
+    // "tudo". Sem o .length, os dois lados discordariam do que [] significa.
+    const sel = fontes?.length ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
     const fileName = nomeDoExport(fontes, stampDeHoje(), t('settings.export.fileMulti'));
     toast(t('msg.backup.exporting'));
     try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
