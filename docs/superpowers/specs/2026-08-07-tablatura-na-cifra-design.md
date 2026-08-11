@@ -1,6 +1,6 @@
 # Soma_play — Tablatura na cifra em texto — design
 
-**Data:** 2026-08-07 · **Estado:** especificado
+**Data:** 2026-08-07 · **Estado:** implementado e verificado (A/B no acervo + navegador headless; ver "Verificação" para o que ficou por conferir no aparelho)
 **Origem:** defeito relatado — a tab de "Força Estranha" (Caetano Veloso) quebra cada
 corda em duas linhas. As seis cordas viram doze, o bloco dobra de altura e a grade
 some.
@@ -243,13 +243,36 @@ alinhamento acorde↔sílaba não se move; o que muda é `|-` deixar de parecer 
   (`!---->`, `^^^`), letra com travessão, marca `%`. Mais o agrupamento: seis cordas
   num bloco só, linha em branco encerrando, linha de acordes anterior absorvida,
   `extractChords` seguindo enxergando o acorde.
-- **A/B contra o acervo** — parser antigo vs novo sobre as cifras dos backups e do
-  `samples.js`, contando linhas promovidas a tab e conferindo que nenhuma linha de
-  acordes ou de letra foi capturada. Mesmo método que pegou a regressão do design de
-  2026-07-30; vale manter para qualquer mexida nessa regra.
-- **No app** — "Força Estranha" nos zooms 80/100/110/150/200%, com e sem miniaturas,
-  em janela larga e estreita: seis cordas, seis linhas, `A` sobre a coluna certa,
-  `|` limpo, sem rolagem horizontal.
+- **A/B contra o acervo** — `isTabLine` rodado sobre **199 arquivos `.somaplay`,
+  5.739 cifras únicas, 394.034 linhas** (árvore inteira do repo local, deduplicada por
+  título+texto). Mesmo método que pegou a regressão do design de 2026-07-30, e que aqui
+  fez o mesmo serviço: **a primeira versão promoveu 12.002 linhas com 40 falso positivo
+  em 21 músicas**, o que obrigou a regra de âncora acima.
+
+  Depois da âncora: **2.154 blocos, 11.950 linhas, zero bloco sem âncora.** Os quatro
+  falso positivo nominais conferidos um a um — divisor decorativo, `+-+-+-+-+-+`,
+  `<---`, e `          D ------`, que voltou a ser linha de acordes com o `D` em
+  `extractChords`. As cinco formas legítimas seguem tab, inclusive a corrida mista com
+  corda muda entre duas cordas ancoradas.
+
+  **Vale manter o método para qualquer mexida nessa regra.** Nenhuma das duas correções
+  descartadas parecia errada lendo código; foi a medição que as derrubou.
+
+- **Desempenho** — a primeira versão da âncora reescaneava a corrida rejeitada a cada
+  linha, O(n²): 8.000 linhas de traço levavam 3,5 s, 20.000 levavam ~20,8 s, o que
+  travaria a thread principal ao abrir uma música colada de PDF mal convertido. A
+  fronteira `semAncoraAte` guarda o fim da última corrida rejeitada e a escaneia uma
+  vez só: 20.000 linhas em 11 ms.
+
+- **No app** — "Força Estranha" nos zooms 100/110/150/200%, conferido em Chrome
+  headless com o CSS real: seis cordas em **seis linhas** em todos eles, `A` sobre a
+  coluna 4, `|` limpo, sem rolagem lateral. Em 110% a fonte do bloco encolhe de 22px
+  para 21,82px e o conteúdo fica em 720px — exatamente a largura do container, porque
+  `720/(55 × 0,6) = 21,818`. De 150% em diante o bloco fica no teto e só a letra cresce.
+
+  **Fora do alcance do headless, fica com o usuário:** popover de acorde dentro do
+  bloco, miniaturas ligadas e desligadas, `ResizeObserver` na rotação do tablet, uma
+  música sem tab, e o reflow do par acorde/letra numa cifra longa.
 
 ## Fora de escopo (decidido)
 
