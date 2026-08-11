@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName, splitChordTok } from '../js/chords.js';
+import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName, splitChordTok, isTabLine } from '../js/chords.js';
 
 // Helper: só as linhas com acordes, na ordem
 const chordLines = (t) => parseCifraText(t).filter((l) => l.hasChords).map((l) => l.chords);
@@ -310,4 +310,38 @@ test('par acorde/letra clássico continua pareado', () => {
   const p = parseCifraText('C       G\nQuando eu vi');
   assert.equal(p.length, 1);
   assert.deepEqual([p[0].chords, p[0].lyric], ['C       G', 'Quando eu vi']);
+});
+
+test('linha de tablatura é reconhecida', () => {
+  assert.equal(isTabLine('E|-0---0----------0-----------------------------------|'), true);
+  assert.equal(isTabLine('A|-0--------------------------------------------------|'), true);
+  assert.equal(isTabLine('E|----------------------------------------------------|'), true);
+  // tab curta: corridas de dois traços, sem nenhum "---"
+  assert.equal(isTabLine('E|--0--2--3--|'), true);
+  // sem nome de corda, e com dois-pontos no lugar da barra
+  assert.equal(isTabLine('|---3---5---|'), true);
+  assert.equal(isTabLine('e:---3---5---|'), true);
+  // símbolos de técnica: hammer, pull, bend, slide
+  assert.equal(isTabLine('G|--5h7p5--7b9--5/7--|'), true);
+  // espaço à esquerda não atrapalha
+  assert.equal(isTabLine('  D|-2-----2-----2-----2--------------------------------|'), true);
+});
+
+test('o que não é tablatura continua não sendo', () => {
+  // linha de acordes com traço separando — maiúscula fora do nome da corda derruba
+  assert.equal(isTabLine('C ---- G'), false);
+  assert.equal(isTabLine('Am7  ----  D7'), false);
+  // ornamento e marca, que já são tratados por MARK
+  assert.equal(isTabLine('!---->'), false);
+  assert.equal(isTabLine('^^^^^^'), false);
+  assert.equal(isTabLine('%'), false);
+  // digitação inline: alfabeto bate, mas não tem traço nenhum
+  assert.equal(isTabLine('0221xx'), false);
+  // letra com travessão
+  assert.equal(isTabLine('Ela disse — vou embora'), false);
+  assert.equal(isTabLine('Ela disse: eu vou'), false);
+  // linha de acordes e vazio
+  assert.equal(isTabLine('   A'), false);
+  assert.equal(isTabLine(''), false);
+  assert.equal(isTabLine('   '), false);
 });

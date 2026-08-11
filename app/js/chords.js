@@ -82,6 +82,27 @@ function chordsOfTok(tok) {
 const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]/]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
 const isChordOrMark = (t) => chordsOfTok(t).length > 0 || MARK.test(t);
 
+// Alfabeto de tablatura: nome da corda opcional, barra ou dois-pontos, e daí em
+// diante só traço, dígito, barra de compasso e os símbolos de técnica e
+// ornamento. Maiúscula fora do nome da corda derruba o casamento — é o que
+// mantém "C ---- G" como linha de acordes e "Ela disse: ---" como letra.
+const TAB_ALFABETO = /^[A-Ga-g]?[#b]?\s*[|:]{0,2}[-\d|:hpbsrtvx~^*.+()<>\\/ ]+$/;
+
+// Linha de tablatura — a pauta de uma corda ("E|-0---0---|", "|---3---|").
+// Não é letra nem linha de acordes: é grade de largura fixa, onde a coluna
+// carrega a informação, e quebrar a linha destrói a grade.
+// O critério de traço é proporção, não corrida: tab curta tem corrida curta
+// ("E|--0--2--3--|" não tem nenhum "---"), e a proporção pega as duas. É ela
+// também que separa a pauta da digitação inline "0221xx", que não tem traço.
+// O piso é 30% porque tab densa de técnica é pouco tracejada — em
+// "G|--5h7p5--7b9--5/7--|" o traço é só 36% da linha.
+export function isTabLine(line) {
+  const s = String(line).trim();
+  if (!TAB_ALFABETO.test(s)) return false;
+  const tracos = (s.match(/-/g) || []).length;
+  return tracos >= 3 && tracos >= s.length * 0.3;
+}
+
 // Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7
 // Am7", "Fm7  Bb/D  [Frase 1]". Mas um trecho entre parênteses pode ser só
 // acordes: "( G  F  G  F )". Daí a regra em stripLabels: trecho cujo conteúdo é
