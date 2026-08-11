@@ -37,8 +37,8 @@ export function stampDeHoje(d = new Date()) {
 // `palavraFontes` chega de fora ("fontes"/"sources") para a função ficar pura:
 // nome de arquivo não é dado persistido, então traduzir aqui é seguro.
 export function nomeDoExport(fontes, stamp, palavraFontes) {
-  const slug = (nome) => String(nome)
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // tira acento
+  const slug = (parte) => String(parte)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tira acento
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const nome = () => {
     if (!fontes || !fontes.length) return 'backup';
