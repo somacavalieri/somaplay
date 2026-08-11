@@ -195,10 +195,27 @@ Em 100% de zoom uma tab de 55 colunas fica nos 20px normais (caberiam 60). A par
 de ~110% ela para de crescer e passa a caber. Reflui sozinha em resize e rotação,
 sem medir nada em JS e sem ouvinte de evento.
 
-O `container-type` fica no `.tabwrap`, não no `.cifra-text`: `container-type` implica
-`contain: layout style inline-size`, e `contain:layout` cria bloco contentor para
-descendente `position:fixed` — no `.cifra-text` isso alcançaria o popover de acorde.
-No wrapper, que só contém a tab, é inócuo.
+O `container-type` fica no `.tabwrap`, não no `.cifra-text` — mas não pelo motivo que
+uma revisão anterior deste spec afirmou. Medido em Chrome headless com controle:
+
+```
+sem contenção              → filho fixed em 10,10
+container-type:inline-size → filho fixed em 10,10   (NÃO prende)
+contain:layout              → filho fixed em 59,535    (prende)
+```
+
+`container-type:inline-size` sozinho **não** cria bloco contentor para descendente
+`position:fixed` — a afirmação de que ele "implica `contain:layout`" e por isso
+alcançaria o popover é falsa; só `contain:layout` produz esse efeito, medido acima.
+Além disso `.chord-pop` é irmão de `.cifra-scroll`, não descendente do `.tabwrap` —
+está duplamente fora do alcance de qualquer contenção aqui, então mesmo que
+`container-type` prendesse `position:fixed`, o popover não seria afetado.
+
+O motivo real é escopo: o `.tabwrap` é o menor elemento que fornece o `100cqi` de que a
+conta do `min()` acima precisa. Pôr `container-type` na `.cifra-text` inteira seria
+instrumento grosso — criaria contexto de empilhamento, mexeria em colapso de margem, e
+envolveria justamente o elemento que `measureCifraCols()` mede para o reflow do
+par acorde/letra. No `.tabwrap`, que só contém a tab, nada disso se aplica.
 
 O `overflow-x:auto` é rede de segurança. Se a fonte cair para um fallback com avanço
 diferente de 0,6em (Consolas é 0,55), o excesso vira uma rolagem mínima em vez de
@@ -215,7 +232,9 @@ alinhamento acorde↔sílaba não se move; o que muda é `|-` deixar de parecer 
 
 ## O que não muda
 
-- **`.ly` continua `pre-wrap`.** Letra comum deve quebrar. Só tab ganha tratamento.
+- **Este trabalho não toca `.ly`.** O reflow (`fbf95a8`, anterior a este trabalho) já
+  trocou `.ly` de `pre-wrap` para `pre` — ver "Como o reflow mudou o defeito" acima. Só
+  tab ganha tratamento novo aqui.
 - **`esc()` continua imprimindo a linha byte a byte.** Nada de substituição de
   caractere dentro da tab.
 - **Modelo de dados e backup.** A cifra é guardada crua em `cifra.texto` e

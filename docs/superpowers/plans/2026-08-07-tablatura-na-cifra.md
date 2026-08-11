@@ -57,7 +57,7 @@ Os dois mecanismos não se contradizem, se dividem pelo tipo de conteúdo: par a
 - Consome: nada.
 - Produz: `export function isTabLine(line: string): boolean` — verdadeiro para a pauta de uma corda. Usada pela Tarefa 2.
 
-- [ ] **Passo 1: escrever os testes que falham**
+- [x] **Passo 1: escrever os testes que falham**
 
 Adicionar ao fim de `app/test/cifraparse.test.js`, e incluir `isTabLine` no import da linha 3:
 
@@ -97,7 +97,7 @@ test('o que não é tablatura continua não sendo', () => {
 });
 ```
 
-- [ ] **Passo 2: rodar e confirmar que falha**
+- [x] **Passo 2: rodar e confirmar que falha**
 
 ```bash
 cd app && node --test test/cifraparse.test.js
@@ -105,7 +105,7 @@ cd app && node --test test/cifraparse.test.js
 
 Esperado: FAIL — `SyntaxError` ou `The requested module '../js/chords.js' does not provide an export named 'isTabLine'`.
 
-- [ ] **Passo 3: implementar `isTabLine`**
+- [x] **Passo 3: implementar `isTabLine`**
 
 Em `app/js/chords.js`, logo depois da linha `const isChordOrMark = ...`:
 
@@ -132,7 +132,7 @@ export function isTabLine(line) {
 }
 ```
 
-- [ ] **Passo 4: rodar e confirmar que passa**
+- [x] **Passo 4: rodar e confirmar que passa**
 
 ```bash
 cd app && node --test test/cifraparse.test.js && node --check js/chords.js
@@ -140,7 +140,7 @@ cd app && node --test test/cifraparse.test.js && node --check js/chords.js
 
 Esperado: PASS, sem falha nova na suíte.
 
-- [ ] **Passo 5: commitar**
+- [x] **Passo 5: commitar**
 
 ```bash
 git add app/js/chords.js app/test/cifraparse.test.js
@@ -159,7 +159,7 @@ git commit -m "feat: recognize tablature lines in the cifra parser"
 - Consome: `isTabLine(line)` da Tarefa 1.
 - Produz: cada linha devolvida por `parseCifraText` ganha dois campos — `tab: string[]` (linhas cruas da pauta, vazio quando não é tab) e `isTab: boolean`. Um bloco de tab pode trazer `chords`/`hasChords` preenchidos: é a linha de acordes que estava logo acima. Consumido pela Tarefa 3.
 
-- [ ] **Passo 1: escrever os testes que falham**
+- [x] **Passo 1: escrever os testes que falham**
 
 Adicionar ao fim de `app/test/cifraparse.test.js`:
 
@@ -215,7 +215,7 @@ test('linha que não é tab segue com tab vazio', () => {
 });
 ```
 
-- [ ] **Passo 2: rodar e confirmar que falha**
+- [x] **Passo 2: rodar e confirmar que falha**
 
 ```bash
 cd app && node --test test/cifraparse.test.js
@@ -223,7 +223,7 @@ cd app && node --test test/cifraparse.test.js
 
 Esperado: FAIL — `p.length` 3 em vez de 1, e `p[0].isTab` `undefined`.
 
-- [ ] **Passo 3: reescrever `parseCifraText`**
+- [x] **Passo 3: reescrever `parseCifraText`**
 
 Substituir o corpo inteiro de `parseCifraText` em `app/js/chords.js` por:
 
@@ -292,7 +292,7 @@ Atualizar também o comentário de bloco acima da função (linhas 131-132) para
 // { isSection, section, hasChords, chords, hasLyric, lyric, isTab, tab }
 ```
 
-- [ ] **Passo 4: rodar a suíte inteira**
+- [x] **Passo 4: rodar a suíte inteira**
 
 ```bash
 cd app && node --test && node --check js/chords.js
@@ -300,7 +300,7 @@ cd app && node --test && node --check js/chords.js
 
 Esperado: PASS em tudo. Atenção especial aos testes antigos de par acorde/letra — nenhum pode regredir.
 
-- [ ] **Passo 5: commitar**
+- [x] **Passo 5: commitar**
 
 ```bash
 git add app/js/chords.js app/test/cifraparse.test.js
@@ -320,7 +320,7 @@ git commit -m "feat: group consecutive tablature lines into a single block"
 - Consome: `ln.isTab`, `ln.tab`, `ln.chords`, `ln.hasChords` da Tarefa 2; `chordLineHTML(chordLine)` e `esc()`, já existentes em `play.js`.
 - Produz: marcação `.tabwrap > .tab[style="--cols:N"]`, consumida pelo CSS desta mesma tarefa.
 
-- [ ] **Passo 1: adicionar o CSS**
+- [x] **Passo 1: adicionar o CSS**
 
 Em `app/css/app.css`, trocar a linha 259 por (acrescenta só o desligamento de ligadura; o `overflow-x:auto` já veio com o reflow e **fica**):
 
@@ -345,7 +345,7 @@ E inserir logo depois da linha `.cifra-text .ly{...}` (linha 262):
 .cifra-text .tab{white-space:pre;font-size:min(1em,calc(100cqi/(var(--cols) * .6)))}
 ```
 
-- [ ] **Passo 2: adicionar `tabBlockHTML` em `play.js`**
+- [x] **Passo 2: adicionar `tabBlockHTML` em `play.js`**
 
 Inserir logo antes de `function cifraTextHTML(song) {` (linha 180):
 
@@ -363,7 +363,7 @@ function tabBlockHTML(ln) {
 }
 ```
 
-- [ ] **Passo 3: desviar em `cifraTextHTML`, antes do `wrapBlock`**
+- [x] **Passo 3: desviar em `cifraTextHTML`, antes do `wrapBlock`**
 
 Em `app/js/render/play.js:187`, o callback do `.map` hoje começa assim:
 
@@ -389,13 +389,13 @@ Acrescentar **uma** linha, como primeira instrução do callback:
 
 O resto do callback — `isSection`, o laço do `wrapBlock`, as miniaturas — fica exatamente como está. Um bloco de tab nunca chega ao `wrapBlock`.
 
-- [ ] **Passo 4: bump do Service Worker**
+- [x] **Passo 4: bump do Service Worker**
 
 Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v27';` → `'somaplay-v28'`.
 
 O `SHELL` não muda — nenhum módulo novo. Se a linha já estiver numa versão maior que v27, subir um a partir dela: a versão só precisa ser monotônica.
 
-- [ ] **Passo 5: rodar a suíte e o check de sintaxe**
+- [x] **Passo 5: rodar a suíte e o check de sintaxe**
 
 ```bash
 cd app && node --test && node --check js/render/play.js
@@ -403,7 +403,7 @@ cd app && node --test && node --check js/render/play.js
 
 Esperado: PASS. `shell.test.js` continua verde (nenhum módulo novo).
 
-- [ ] **Passo 6: verificar no navegador — esta é a verificação que conta**
+- [~] **Passo 6: verificar no navegador — esta é a verificação que conta (PARCIAL — ver nota abaixo)**
 
 > **Quem faz:** este passo **não é do implementador** — ele não tem navegador nem a
 > biblioteca do usuário no IndexedDB. O implementador vai até o Passo 5, commita
@@ -431,7 +431,13 @@ Importar `forca-estranha-cifraclub.somaplay` (Ajustes → Importar, modo merge) 
 11. **O reflow continua intacto** — numa música de linha longa (lote do Songbook do Gil), o par acorde/letra segue quebrando junto, na mesma coluna, com o acorde sobre a sílaba certa. A tab sair do `wrapBlock` não pode ter mexido nisso.
 12. **`ResizeObserver` não entra em laço** — estreitar e alargar a janela várias vezes numa música com tab: a cifra reflui e estabiliza, sem piscar. O bloco de tab não participa da medição de colunas, mas divide a `.cifra-text` com quem participa.
 
-- [ ] **Passo 7: commitar**
+> **Resultado real (revisão final, 2026-08-11):** itens **1 a 6** e o **mecanismo** do
+> item **9** (posicionamento de `position:fixed` sob `container-type` vs.
+> `contain:layout` — ver "Verificação" no spec) foram conferidos em Chrome headless.
+> Itens **7, 8, 10, 11 e 12** dependem da biblioteca do usuário no aparelho (IndexedDB,
+> tablet real) e **continuam abertos** — não foram verificados.
+
+- [x] **Passo 7: commitar**
 
 ```bash
 git add app/js/render/play.js app/css/app.css app/sw.js
@@ -451,7 +457,7 @@ Mesmo método que pegou a regressão do design de 2026-07-30: rodar o parser nov
 - Consome: `parseCifraText` e `isTabLine` das Tarefas 1 e 2.
 - Produz: relatório no terminal. Nenhum artefato no repositório.
 
-- [ ] **Passo 1: escrever o script**
+- [x] **Passo 1: escrever o script**
 
 ```js
 // scripts/ab-tab.mjs — A/B do reconhecimento de tablatura contra o acervo.
@@ -501,26 +507,26 @@ for (const [k, linhas] of porMusica) {
 }
 ```
 
-- [ ] **Passo 2: rodar**
+- [x] **Passo 2: rodar**
 
 ```bash
 node scripts/ab-tab.mjs
 ```
 
-- [ ] **Passo 3: ler o relatório linha a linha**
+- [x] **Passo 3: ler o relatório linha a linha**
 
 Critério de aprovação: **toda** linha listada é pauta de tablatura de verdade. Uma única linha de acordes ou de letra na lista reprova — nesse caso, apertar `TAB_ALFABETO` ou a proporção de traços na Tarefa 1, adicionar o caso como teste de falso positivo, e rodar de novo.
 
 Se `SAMPLES` não for exportado com esse nome, ajustar o import olhando `app/js/samples.js` — o script é descartável, não vale inventar abstração para ele.
 
-- [ ] **Passo 4: apagar o script**
+- [x] **Passo 4: apagar o script**
 
 ```bash
 rm scripts/ab-tab.mjs
 git status --short   # confirmar que nada de scripts/ ficou para trás
 ```
 
-- [ ] **Passo 5: registrar o resultado no spec**
+- [x] **Passo 5: registrar o resultado no spec**
 
 Em `docs/superpowers/specs/2026-08-07-tablatura-na-cifra-design.md`, na seção "Verificação", trocar a descrição do A/B pelo número real (ex.: "A/B em 222 cifras: 312 linhas promovidas a tab, 0 falso positivo"), e trocar `**Estado:** especificado` por `**Estado:** implementado e verificado`.
 
@@ -574,7 +580,7 @@ descartadas antes desta.
 - Consome: `isTabLine(line)` da Tarefa 1, sem alteração.
 - Produz: nada de novo para fora. `parseCifraText` continua devolvendo `tab` / `isTab`; só muda **quais** corridas viram bloco.
 
-- [ ] **Passo 1: escrever os testes que falham**
+- [x] **Passo 1: escrever os testes que falham**
 
 Adicionar ao fim de `app/test/cifraparse.test.js`:
 
@@ -622,7 +628,7 @@ test('bloco sem rótulo nenhum vale se tiver dígito', () => {
 });
 ```
 
-- [ ] **Passo 2: rodar e confirmar que falha**
+- [x] **Passo 2: rodar e confirmar que falha**
 
 ```bash
 cd app && node --test test/cifraparse.test.js
@@ -630,7 +636,7 @@ cd app && node --test test/cifraparse.test.js
 
 Esperado: FAIL nos testes de corrida sem âncora — hoje `-----------------` e `D ------` viram bloco de tab.
 
-- [ ] **Passo 3: implementar**
+- [x] **Passo 3: implementar**
 
 Em `app/js/chords.js`, logo depois de `isTabLine`:
 
@@ -688,7 +694,7 @@ Atenção: o `if (isTabLine(raw))` deixa de ter `continue` incondicional. Confir
 linha segue para `isChordLine` e daí para o `out.push({ lyric: ... })`, e que `i` avança
 em todos os caminhos.
 
-- [ ] **Passo 4: rodar a suíte inteira**
+- [x] **Passo 4: rodar a suíte inteira**
 
 ```bash
 cd app && node --test && node --check js/chords.js
@@ -697,7 +703,7 @@ cd app && node --test && node --check js/chords.js
 Esperado: PASS em tudo, os 6 testes novos inclusive. Nenhum dos testes de tab das
 Tarefas 1 e 2 pode regredir.
 
-- [ ] **Passo 5: commitar**
+- [x] **Passo 5: commitar**
 
 ```bash
 git add app/js/chords.js app/test/cifraparse.test.js

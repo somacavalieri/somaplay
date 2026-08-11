@@ -265,10 +265,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
    --cols é a maior largura do bloco em caracteres, escrita pelo render.
    1em é a fonte do zoom (teto); 100cqi/(cols*.6) é a fonte em que cols colunas
    ocupam a largura do container, dado o avanço .6em da monoespaçada.
-   O container-type fica aqui e não no .cifra-text de propósito: ele implica
-   contain:layout, que criaria bloco contentor para position:fixed e alcançaria
-   o popover de acorde. O overflow-x é rede de segurança para fallback de fonte
-   com avanço diferente de .6em — vira rolagem mínima em vez de voltar a quebrar. */
+   O container-type fica aqui e não no .cifra-text de propósito, mas não por
+   conter position:fixed: medido em Chrome headless, container-type:inline-size
+   sozinho NÃO cria bloco contentor para fixed (filho continua em 10,10, igual
+   sem contenção nenhuma) — só contain:layout prende (filho vai para 59,535).
+   Além disso .chord-pop é irmão de .cifra-scroll, não descendente do .tabwrap:
+   está duplamente fora do alcance. A razão real é escopo: o .tabwrap é o menor
+   elemento que fornece o 100cqi de que a conta precisa. Pôr container-type na
+   .cifra-text inteira seria instrumento grosso — criaria contexto de
+   empilhamento, mexeria em colapso de margem, e envolveria justamente o
+   elemento que measureCifraCols() mede para o reflow. O overflow-x é rede de
+   segurança para fallback de fonte com avanço diferente de .6em — vira
+   rolagem mínima em vez de voltar a quebrar. */
 .cifra-text .tabwrap{container-type:inline-size;overflow-x:auto;margin:6px 0}
 .cifra-text .tab{white-space:pre;font-size:min(1em,calc(100cqi/(var(--cols) * .6)))}
 
