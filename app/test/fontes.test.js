@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   fontesSugeridas, FONTES_FIXAS,
-  fontesDaBiblioteca, fonteCasa, fonteOf, SEM_FONTE,
+  fontesDaBiblioteca, fonteCasa, fonteOf, SEM_FONTE, songIdsDasFontes,
 } from '../js/state.js';
 
 const song = (fonte) => ({ fonte });
@@ -115,4 +115,50 @@ test('fonteOf tira o espaço das pontas e tolera música sem o campo', () => {
   assert.equal(fonteOf({ fonte: '  Songbook ' }), 'Songbook');
   assert.equal(fonteOf({}), '');
   assert.equal(fonteOf(null), '');
+});
+
+// --- a seleção que a exportação usa ---------------------------------------
+// O motor de export não sabe o que é fonte: ele recebe um conjunto de ids.
+// Esta é a função que traduz o eixo "fonte" nesse conjunto — e é aqui que um
+// eixo novo (artista, lista) entraria amanhã, sem tocar em backup.js.
+
+test('nenhuma fonte marcada não seleciona nada', () => {
+  assert.deepEqual([...songIdsDasFontes([{ id: 'a', fonte: 'Songbook' }], [])], []);
+});
+
+test('marca as músicas da fonte escolhida, apesar da grafia', () => {
+  const songs = [
+    { id: 'a', fonte: 'Songbook' },
+    { id: 'b', fonte: ' songbook ' },
+    { id: 'c', fonte: 'CifraClub' },
+  ];
+  assert.deepEqual([...songIdsDasFontes(songs, ['Songbook'])], ['a', 'b']);
+});
+
+test('o balde sem fonte pega só quem não tem fonte', () => {
+  const songs = [{ id: 'a', fonte: 'Songbook' }, { id: 'b', fonte: '   ' }, { id: 'c' }];
+  assert.deepEqual([...songIdsDasFontes(songs, [SEM_FONTE])], ['b', 'c']);
+});
+
+test('várias fontes somam, sem repetir id', () => {
+  const songs = [
+    { id: 'a', fonte: 'Songbook' },
+    { id: 'b', fonte: 'CifraClub' },
+    { id: 'c', fonte: 'VJ' },
+  ];
+  const sel = songIdsDasFontes(songs, ['Songbook', 'CifraClub']);
+  assert.equal(sel.size, 2);
+  assert.deepEqual([...sel], ['a', 'b']);
+});
+
+test('fonte que não existe mais na biblioteca não contribui e não quebra', () => {
+  assert.deepEqual([...songIdsDasFontes([{ id: 'a', fonte: 'Songbook' }], ['Fonte Apagada'])], []);
+});
+
+test('devolve um Set, não um array', () => {
+  assert.ok(songIdsDasFontes([], []) instanceof Set);
+});
+
+test('tolera biblioteca e seleção ausentes', () => {
+  assert.equal(songIdsDasFontes(null, null).size, 0);
 });

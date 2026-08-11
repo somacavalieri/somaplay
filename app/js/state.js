@@ -150,6 +150,20 @@ export function fonteCasa(fonteDaMusica, filtro) {
 }
 export function matchesFonte(s) { return fonteCasa(fonteOf(s), S.fonteFilter); }
 
+// O motor de exportação não sabe o que é fonte: ele recebe um conjunto de ids
+// de música. Esta é a função que traduz o eixo "fonte" nesse conjunto, e é o
+// lugar onde um eixo novo (artista, lista) entraria sem tocar em backup.js.
+// A comparação é fonteCasa, a mesma da lente: "songbook" e "Songbook " são a
+// mesma fonte. Uma fonte marcada que sumiu da biblioteca não contribui.
+export function songIdsDasFontes(songs, fontes) {
+  const escolhidas = fontes || [];
+  const out = new Set();
+  for (const s of songs || []) {
+    if (escolhidas.some((f) => fonteCasa(fonteOf(s), f))) out.add(s.id);
+  }
+  return out;
+}
+
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {
   const m = ['T1'];
