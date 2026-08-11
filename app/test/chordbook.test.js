@@ -275,3 +275,17 @@ test('a forma achada pelo canônico mantém o id do nome canônico', () => {
 test('nome que não é acorde continua sem forma', () => {
   assert.deepEqual(shapesOf('Xyz'), []);
 });
+
+test('shapesOf acha o acorde com a extensão depois da barra', () => {
+  // "Em7/5b" é o mesmo acorde que "Em7(5-)", e é assim que o acervo escreve
+  const alvo = shapesOf('Em7(5-)')[0].frets;
+  for (const n of ['Em7/5b', 'Em7/5-', 'Em7(b5)']) {
+    assert.ok(shapesOf(n).length, `${n} ficou sem forma`);
+    assert.deepEqual(shapesOf(n)[0].frets, alvo, n);
+  }
+});
+
+test('baixo depois da barra continua sendo baixo, não extensão', () => {
+  // D/F# não pode cair na forma de "D(F#)" — nem existe, mas a regra tem de ser clara
+  assert.deepEqual(shapesOf('D/F#'), []);
+});
