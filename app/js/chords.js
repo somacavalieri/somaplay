@@ -374,32 +374,46 @@ export function chordSVG(name, small, dict) {
 // quebrar por conta própria (a de acorde não quebrava e sumia; a de letra quebrava)
 // destrói isso. Aqui as duas quebram JUNTAS, na mesma coluna, e só onde nenhuma das
 // duas está no meio de um token.
-export function wrapBlock(chords, lyric, cols) {
+export function wrapBlock(chords, lyric, cols, cabe) {
   const c = String(chords == null ? '' : chords).replace(/\s+$/, '');
   const l = String(lyric == null ? '' : lyric).replace(/\s+$/, '');
   const end = Math.max(c.length, l.length);
   const n = Math.floor(cols);
-  if (!(n > 1) || end <= n) return [{ chords: c, lyric: l }];
 
   // corte válido: além do fim da linha, ou com espaço encostado de um dos lados
   const ok = (s, i) => i >= s.length || s[i - 1] === ' ' || s[i] === ' ';
+  const lead = (s) => s.length - s.replace(/^ +/, '').length;
+
+  // O pedaço COMO ELE VAI SER DESENHADO: aparado à direita e sem o recuo comum
+  // às duas linhas. É isso que `cabe` precisa julgar — espaço que ninguém
+  // desenha não pode entrar na conta da largura.
+  const peca = (pos, cut) => {
+    const a = c.slice(pos, cut).replace(/\s+$/, '');
+    const b = l.slice(pos, cut).replace(/\s+$/, '');
+    const pad = (a && b) ? Math.min(lead(a), lead(b)) : (a ? lead(a) : lead(b));
+    return { chords: a.slice(pad), lyric: b.slice(pad) };
+  };
+  const serve = (pos, cut) => !cabe || cabe(peca(pos, cut).chords);
+
+  if (!(n > 1)) return [{ chords: c, lyric: l }];
+  // O atalho devolve `c` CRU, com recuo e tudo — então é `c` que o predicado
+  // tem de julgar. Testar o pedaço sem recuo aprova uma fileira mais estreita
+  // do que a que vai ser desenhada.
+  if (end <= n && (!cabe || cabe(c))) return [{ chords: c, lyric: l }];
 
   const out = [];
   for (let pos = 0; pos < end;) {
-    let cut = pos + n;
-    if (end - pos <= n) {
-      cut = end;
-    } else {
-      let k = cut;
-      while (k > pos + 1 && !(ok(c, k) && ok(l, k))) k--;
-      // token único mais largo que a tela: corta na largura mesmo, para não travar
-      cut = k > pos + 1 ? k : pos + n;
-    }
-    const a = c.slice(pos, cut).replace(/\s+$/, '');
-    const b = l.slice(pos, cut).replace(/\s+$/, '');
-    const lead = (s) => s.length - s.replace(/^ +/, '').length;
-    const pad = (a && b) ? Math.min(lead(a), lead(b)) : (a ? lead(a) : lead(b));
-    if (a || b) out.push({ chords: a.slice(pad), lyric: b.slice(pad) });
+    const lim = Math.min(pos + n, end);
+    let k = lim;
+    // `serve` só é avaliado depois de `ok` passar nas DUAS linhas: só nos
+    // cortes válidos, não a cada caractere.
+    while (k > pos + 1 && !((ok(c, k) && ok(l, k)) && serve(pos, k))) k--;
+    // Não deu para recuar: corta na largura mesmo, para não travar. É a mesma
+    // escapatória de sempre — token único mais largo que a tela, ou dois
+    // acordes colados na mesma sílaba.
+    const cut = k > pos + 1 ? k : lim;
+    const p = peca(pos, cut);
+    if (p.chords || p.lyric) out.push(p);
     pos = cut;
   }
   return out.length ? out : [{ chords: c, lyric: l }];
