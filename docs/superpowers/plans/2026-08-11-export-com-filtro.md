@@ -823,33 +823,38 @@ git commit -m "fix: count only the songs a list can actually show"
 - Consumes: tudo das Tarefas 1–5.
 - Produces: nada.
 
-- [ ] **Passo 1: bump da VERSION**
+- [x] **Passo 1: bump da VERSION — DISPENSADO na execução**
 
-Em `app/sw.js`, linha 2, troque:
+Este passo foi escrito a partir de uma leitura que envelheceu: a branch foi reescrita
+durante a sessão, e o `app/sw.js` **já estava em `somaplay-v29`** quando as tarefas
+começaram. O bump veio de `e439d7f` (o fix de tablatura), que é ancestral de todos os
+commits deste plano.
 
-```js
-const VERSION = 'somaplay-v28';
-```
+Os números medidos na hora da execução:
 
-por:
+| onde | VERSION |
+|---|---|
+| `main` | `somaplay-v21` |
+| merge-base | `somaplay-v21` |
+| topo da branch | `somaplay-v29` |
 
-```js
-const VERSION = 'somaplay-v29';
-```
+Pelo critério das Global Constraints deste plano — *commit intermediário de branch não é
+publicado, e só o estado final do branch chega ao usuário* — `v29` contra `v21` já força
+a reinstalação do Service Worker no merge. Um segundo bump não compraria nada. Decisão do
+autor durante a execução: **não bumpar.**
 
-O `SHELL` **não muda** — nenhum módulo novo entrou. `export.test.js` está em `app/test/`, que não é pré-cacheado.
+O `SHELL` não muda — nenhum módulo novo entrou. `export.test.js` está em `app/test/`, que
+não é pré-cacheado, e `shell.test.js` confirma.
+
+**Se esta branch for publicada em pedaços**, em vez de entrar em `main` de uma vez, este
+raciocínio cai por terra e cada pedaço precisa do seu próprio bump.
 
 - [ ] **Passo 2: rodar a bateria toda**
 
 Rodar: `cd app && node --test`
 Esperado: PASS, tudo. `shell.test.js` continua verde.
 
-- [ ] **Passo 3: commitar**
-
-```bash
-git add app/sw.js
-git commit -m "chore: bump the service worker to v29"
-```
+- [x] **Passo 3: commitar — sem commit, nada de código mudou nesta tarefa**
 
 - [ ] **Passo 4: verificar no navegador — esta é a verificação que conta**
 
