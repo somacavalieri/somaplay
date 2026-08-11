@@ -1,6 +1,6 @@
 // render/settings.js — Configurações (tela mínima do MVP, §10 do PRD)
-import { S } from '../state.js';
-import { I } from '../icons.js';
+import { S, fontesDaBiblioteca, songIdsDasFontes, SEM_FONTE } from '../state.js';
+import { I, esc } from '../icons.js';
 import { DB } from '../db.js';
 import { SCROLL_MIN, SCROLL_MAX } from '../scroll-speed.js';
 import { t, getLang } from '../i18n.js';
@@ -77,15 +77,13 @@ export function renderSettings() {
         </div>
 
         <div class="setting-block" style="padding:20px;margin-top:6px">
-          <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.backup.heading')}</div>
+          <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.storage.heading')}</div>
           <div style="color:var(--muted);font-size:13px;margin-bottom:14px" id="storage-label">${t('storage.calculating')}</div>
-          <div class="storage-bar"><div id="storage-fill" style="width:2%"></div></div>
-          <div class="pair-btns">
-            <button data-a="exportBackup">${I.download()}${t('settings.backup.export')}</button>
-            <button data-a="importBackup">${I.uploadSm()}${t('settings.backup.import')}</button>
-          </div>
-          <button class="btn-ghost" style="width:100%;margin-top:8px;height:44px;justify-content:center" data-a="importBackupMerge">${I.uploadSm()}${t('settings.backup.merge')}</button>
+          <div class="storage-bar" style="margin-bottom:0"><div id="storage-fill" style="width:2%"></div></div>
         </div>
+
+        ${blocoExportar()}
+        ${blocoImportar()}
 
         <button class="setting-row link" data-a="importSamples">
           <div style="width:46px;height:46px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--teal-tint2);color:var(--teal)">${I.music(20)}</div>
@@ -113,4 +111,53 @@ export async function fillStorageInfo() {
   } else {
     el.textContent = t('storage.unavailable');
   }
+}
+
+// O bloco Exportar. As linhas vêm de fontesDaBiblioteca — mais usadas primeiro,
+// "Sem fonte" por último. O data-id carrega a GRAFIA SALVA da fonte, nunca
+// traduzida: ela é conteúdo do usuário. Só o balde usa o sentinela, com o
+// rótulo traduzido no que se vê.
+function blocoExportar() {
+  const fontes = fontesDaBiblioteca(S.songs);
+  const sel = S.exportFontes;                        // null = todas
+  const marcada = (nome) => sel === null || sel.includes(nome);
+  const n = sel === null ? S.songs.length : songIdsDasFontes(S.songs, sel).size;
+
+  // Menos de duas fontes: biblioteca nova não merece uma caixinha solitária.
+  const linhas = fontes.length < 2 ? '' : `
+    <button class="check-row" data-a="toggleExportAll">
+      <span class="checkbox ${sel === null ? 'on' : ''}">${sel === null ? I.check(15) : ''}</span>
+      <span class="nm">${t('home.fonte.all')}</span>
+      <span class="ct">${S.songs.length}</span>
+    </button>
+    <div style="height:1px;background:var(--border);margin:4px 12px"></div>
+    ${fontes.map((f) => `
+      <button class="check-row" data-a="toggleExportFonte" data-id="${esc(f.nome)}">
+        <span class="checkbox ${marcada(f.nome) ? 'on' : ''}">${marcada(f.nome) ? I.check(15) : ''}</span>
+        <span class="nm">${f.nome === SEM_FONTE ? t('home.fonte.none') : esc(f.nome)}</span>
+        <span class="ct">${f.n}</span>
+      </button>`).join('')}`;
+
+  const rotulo = n
+    ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
+    : t('settings.export.nothing');
+
+  return `<div class="setting-block" style="padding:20px;margin-top:6px">
+    <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:10px">${t('settings.export.sub')}</div>
+    ${linhas}
+    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n ? '' : 'disabled'}>${I.download()}${rotulo}</button>
+  </div>`;
+}
+
+// O bloco Importar. A hierarquia é o recado: adicionar/atualizar é o botão de
+// todo dia, substituir é destrutivo e por isso é fantasma e vermelho.
+function blocoImportar() {
+  return `<div class="setting-block" style="padding:20px;margin-top:6px">
+    <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:14px">${t('settings.import.heading')}</div>
+    <button class="btn-primary" style="width:100%" data-a="importBackupMerge">${I.uploadSm()}${t('settings.import.merge')}</button>
+    <div style="color:var(--muted);font-size:13px;margin:8px 2px 18px">${t('settings.import.mergeSub')}</div>
+    <button class="btn-ghost danger" style="width:100%;height:44px" data-a="importBackup">${t('settings.import.replace')}</button>
+    <div style="color:var(--muted);font-size:13px;margin:8px 2px 0">${t('settings.import.replaceSub')}</div>
+  </div>`;
 }

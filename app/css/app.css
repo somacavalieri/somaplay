@@ -102,6 +102,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .btn-primary.small{height:46px;border-radius:10px;font-family:var(--f-body);font-weight:700;font-size:14px;padding:0 20px}
 .btn-ghost{height:46px;padding:0 16px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-weight:600;font-size:14px;cursor:pointer}
 .btn-ghost.lg{height:50px;padding:0 22px;border-radius:12px;color:var(--text);font-size:15px}
+.btn-ghost.danger{color:var(--red)}
 
 .tabrow{display:flex;align-items:center;gap:14px;padding:13px 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
 .segtab{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px}

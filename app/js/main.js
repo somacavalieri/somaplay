@@ -3,7 +3,7 @@ import {
   S, audio, initState, applyTheme, saveSettings,
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
   createList, listById, toggleSongInList, reorderInList, favList,
-  persistCurrentStems, applyVarToSongs,
+  persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -17,7 +17,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary } from './backup.js';
+import { exportLibrary, importLibrary, nomeDoExport, stampDeHoje } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -562,9 +562,26 @@ const actions = {
     S.settings.chordNotationTouched = true;
     saveSettings(); update();
   },
+  toggleExportAll() {
+    // null = todas. Marcada, desmarca tudo; desmarcada ou parcial, marca tudo.
+    S.exportFontes = S.exportFontes === null ? [] : null;
+    update();
+  },
+  toggleExportFonte(d) {
+    const todas = fontesDaBiblioteca(S.songs).map((f) => f.nome);
+    const atual = S.exportFontes === null ? todas : S.exportFontes;
+    const prox = atual.includes(d.id) ? atual.filter((x) => x !== d.id) : [...atual, d.id];
+    // Remarcar tudo volta para o sentinela: sem isso "todas" teria duas
+    // representações, e o nome do arquivo não voltaria a ser somaplay-backup-*.
+    S.exportFontes = prox.length === todas.length ? null : prox;
+    update();
+  },
   async exportBackup() {
+    const fontes = S.exportFontes;
+    const sel = fontes ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
+    const fileName = nomeDoExport(fontes, stampDeHoje(), t('settings.export.fileMulti'));
     toast(t('msg.backup.exporting'));
-    try { await exportLibrary(); toast(t('msg.backup.exported')); }
+    try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
