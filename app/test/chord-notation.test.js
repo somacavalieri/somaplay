@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toIntl, toBr, canonico, display } from '../js/chord-notation.js';
+import { toIntl, toBr, canonico, nomesDeBusca, display } from '../js/chord-notation.js';
 import { CATALOG } from '../js/chords-catalog.js';
 
 test('converte os sufixos maiores para notação internacional', () => {
@@ -132,4 +132,30 @@ test('canonico também troca o bemol do baixo depois da barra', () => {
 
 test('canonico devolve inalterado o que já está canônico', () => {
   ['C', 'Am7', 'F#m', 'G7M', 'A#°'].forEach((n) => assert.equal(canonico(n), n, n));
+});
+
+// --- nomes de busca: a barra do CifraClub também carrega extensão ----------
+
+test('nomesDeBusca trata extensão depois da barra como parêntese', () => {
+  // "Em7/5b" é o mesmo acorde que "Em7(5-)", que o catálogo tem
+  assert.ok(nomesDeBusca('Em7/5b').includes('Em7(5-)'));
+  assert.ok(nomesDeBusca('Em7/5-').includes('Em7(5-)'));
+  assert.ok(nomesDeBusca('C7/9-').includes('C7(9-)'));
+  assert.ok(nomesDeBusca('D7/4').includes('D7(4)'));
+});
+
+test('nomesDeBusca cobre as duas grafias da alteração', () => {
+  assert.ok(nomesDeBusca('Em7(b5)').includes('Em7(5-)'));
+  assert.ok(nomesDeBusca('Am7(5-)').includes('Am7(b5)'));
+  assert.ok(nomesDeBusca('C7(b9)').includes('C7(9-)'));
+});
+
+test('nomesDeBusca não confunde baixo com extensão', () => {
+  // depois da barra vem NOTA: é baixo, e baixo não vira parêntese
+  assert.ok(!nomesDeBusca('D/F#').some((n) => n.includes('(F#)')));
+  assert.ok(!nomesDeBusca('Am/E').some((n) => n.includes('(E)')));
+});
+
+test('nomesDeBusca começa pelo nome literal', () => {
+  assert.equal(nomesDeBusca('C')[0], 'C');
 });

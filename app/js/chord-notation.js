@@ -80,3 +80,43 @@ export function canonico(name) {
   const i = s.indexOf('/');
   return i === -1 ? semBemol(s) : semBemol(s.slice(0, i)) + '/' + semBemol(s.slice(i + 1));
 }
+
+// A alteração tem duas grafias vivas e nenhuma é "a certa": o catálogo escreve
+// '(5-)' e '(9-)', o toBr canoniza para '(b5)' e '(b9)'. Alinhar o toBr mudaria
+// o que aparece na tela de quem usa notação brasileira — então a permissividade
+// fica AQUI, na busca, e a exibição continua estável.
+const ALTERACOES = [['(b5)', '(5-)'], ['(b9)', '(9-)'], ['(b13)', '(13-)']];
+const NOTA = /^[A-G][#b]?$/;
+
+function comAlteracoes(nome) {
+  // '5b' é uma terceira grafia da mesma coisa, e aparece depois da barra
+  const base = nome.replace(/\(5b\)/g, '(b5)').replace(/\(9b\)/g, '(b9)').replace(/\(13b\)/g, '(b13)');
+  const out = [base];
+  for (const [a, b] of ALTERACOES) {
+    for (const v of [...out]) {
+      if (v.includes(a)) out.push(v.split(a).join(b));
+      else if (v.includes(b)) out.push(v.split(b).join(a));
+    }
+  }
+  return out;
+}
+
+// Nomes a tentar no catálogo, em ordem, começando pelo literal. É BUSCA, não
+// exibição: o nome que vai para a tela continua sendo o que a cifra escreveu.
+export function nomesDeBusca(name) {
+  const s = String(name);
+  const bases = [s];
+  // Na notação do CifraClub a barra carrega extensão além de baixo — 'Em7/5b',
+  // 'A7/13', 'F#7/5+'. Quando o que vem depois NÃO é nota, vale tentar como
+  // extensão entre parênteses; quando é nota, é baixo e fica quieto.
+  const i = s.indexOf('/');
+  if (i > 0 && !NOTA.test(s.slice(i + 1))) bases.push(`${s.slice(0, i)}(${s.slice(i + 1)})`);
+
+  const out = [];
+  for (const b of bases) {
+    for (const v of [b, canonico(b)]) {
+      for (const w of comAlteracoes(v)) if (!out.includes(w)) out.push(w);
+    }
+  }
+  return out;
+}

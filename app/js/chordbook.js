@@ -4,7 +4,7 @@
 // registro do usuário: { name, vars:[{id,frets,barre?,label}], hidden:[id], defaultId }
 import { CATALOG } from './chords-catalog.js';
 import { DB, uid } from './db.js';
-import { toIntl, toBr, canonico } from './chord-notation.js';
+import { toIntl, toBr, nomesDeBusca } from './chord-notation.js';
 import { t } from './i18n.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
@@ -107,17 +107,20 @@ export function chordbookRecords() { return [...BOOK.values()]; }
 
 export function shapesOf(name) {
   if (CACHE.has(name)) return CACHE.get(name);
-  // A cifra escreve o mesmo acorde de vários jeitos — 'F°', 'Fº', 'Fo', 'Fdim',
-  // 'Fdim7' — e o bemol concorre com o sustenido ('Bb°' x 'A#°'). O catálogo
-  // guarda uma grafia só; quando o literal não tem forma, cai para o canônico.
-  // Isso vale para todo o catálogo, não só diminuto: 'Bbm7' acha 'A#m7'.
+  // A cifra escreve o mesmo acorde de vários jeitos — 'F°'/'Fº'/'Fo'/'Fdim',
+  // 'Bb°'/'A#°', 'Em7/5b'/'Em7(5-)'. O catálogo guarda uma grafia só; quando o
+  // literal não tem forma, tenta as outras (nomesDeBusca, em chord-notation.js).
+  // Vale para todo o catálogo, não só diminuto: 'Bbm7' acha 'A#m7'.
   let builtins = builtinShapes(name);
   if (!builtins.length) {
-    const alt = canonico(name);
-    // o id sai como `b:<canônico>:<i>`, e é isso que se quer: a mesma forma tem
-    // o mesmo id em qualquer grafia, então lápide e digitação gravadas param de
-    // depender de como a cifra escreveu o acorde
-    if (alt !== name) builtins = builtinShapes(alt);
+    // o id sai como `b:<grafia que achou>:<i>`, e é isso que se quer: a mesma
+    // forma tem o mesmo id em qualquer grafia, então lápide e digitação gravadas
+    // param de depender de como a cifra escreveu o acorde
+    for (const alt of nomesDeBusca(name)) {
+      if (alt === name) continue;
+      builtins = builtinShapes(alt);
+      if (builtins.length) break;
+    }
   }
   // o delta do usuário continua sendo lido pelo nome LITERAL: quem editou 'Fº'
   // gravou um registro 'Fº'. O mergeShapes casa por id, então override e lápide
