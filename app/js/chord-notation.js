@@ -88,6 +88,24 @@ export function canonico(name) {
 const ALTERACOES = [['(b5)', '(5-)'], ['(b9)', '(9-)'], ['(b13)', '(13-)']];
 const NOTA = /^[A-G][#b]?$/;
 
+// Sufixos que a cifra trata como o mesmo acorde e o catálogo guarda numa grafia
+// só: '7+' = '7M' = 'maj7', '4' = 'sus4' = '(4)', '9' = 'add9' = '(9)'.
+// A âncora no fim é o que separa '7M' de '7' — "A7" não pode virar "A7M", que é
+// outro acorde. Por isso a alternativa longa vem antes da curta em cada regex.
+const SINONIMOS = [
+  [/(?:7\+|maj7|7M)$/, ['7M', '7+', 'maj7']],
+  [/(?:sus4|\(4\)|4)$/, ['(4)', '4', 'sus4']],
+  [/(?:add9|\(9\)|9)$/, ['(9)', '9', 'add9']],
+];
+
+function comSinonimos(nome) {
+  for (const [re, formas] of SINONIMOS) {
+    if (!re.test(nome)) continue;
+    return formas.map((f) => nome.replace(re, f));
+  }
+  return [nome];
+}
+
 function comAlteracoes(nome) {
   // '5b' é uma terceira grafia da mesma coisa, e aparece depois da barra
   const base = nome.replace(/\(5b\)/g, '(b5)').replace(/\(9b\)/g, '(b9)').replace(/\(13b\)/g, '(b13)');
@@ -115,7 +133,9 @@ export function nomesDeBusca(name) {
   const out = [];
   for (const b of bases) {
     for (const v of [b, canonico(b)]) {
-      for (const w of comAlteracoes(v)) if (!out.includes(w)) out.push(w);
+      for (const w of comAlteracoes(v)) {
+        for (const x of comSinonimos(w)) if (!out.includes(x)) out.push(x);
+      }
     }
   }
   return out;

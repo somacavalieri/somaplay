@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { catalogShapes, catalogDefault } from '../js/chords-catalog.js';
+import { CATALOG, catalogShapes, catalogDefault } from '../js/chords-catalog.js';
 import { chordSVG, isChordTok } from '../js/chords.js';
 
 test('catalogDefault devolve forma conhecida', () => {
@@ -184,9 +184,11 @@ test('nenhuma forma CAGED estoura a janela de 4 casas do diagrama', () => {
 // Lidos por pixel da tabela do usuário e conferidos pelas notas. O teste
 // RECALCULA as notas em vez de repetir os frets: repetir os números duplicaria
 // um eventual erro de digitação em vez de pegá-lo.
-const SEMI = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+const SEMI = { C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6,
+               G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11 };
 const AFINACAO = [4, 9, 2, 7, 11, 4];   // Mi grave, Lá, Ré, Sol, Si, Mi agudo
-const RAIZES = Object.keys(SEMI);
+// só as 12 grafias que o catálogo usa; bemol resolve por canonização, não por entrada
+const RAIZES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 test('catálogo tem os 12 diminutos, e cada um soa o acorde certo', () => {
   for (const raiz of RAIZES) {
@@ -212,4 +214,56 @@ test('o diminuto do catálogo tem a fundamental no baixo', () => {
 test('C#° preserva a forma antiga no índice 0 (catálogo é append-only)', () => {
   // o índice vira o id persistido `b:C#°:0`, gravado em lápides e digitações
   assert.deepEqual(catalogShapes('C#°')[0].frets, [-1, 4, 5, 3, 5, 3]);
+});
+
+// --- conferência permanente das formas elementares (spec 2026-08-11) -------
+// Todo acorde do catálogo cuja gramática é simples o bastante para calcular as
+// notas tem de soar exatamente o que o nome diz. É o que trava erro de digitação
+// num lote gerado — e o que autoriza confiar em gerar em lote.
+const INTERVALOS = {
+  '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], m7: [0, 3, 7, 10],
+  '7M': [0, 4, 7, 11], 'm7M': [0, 3, 7, 11], 6: [0, 4, 7, 9], m6: [0, 3, 7, 9],
+  '(4)': [0, 5, 7], '(9)': [0, 4, 7, 2], 'm(9)': [0, 3, 7, 2],
+};
+const RE_SIMPLES = /^([A-G][#b]?)(m?)(7M|7|6|\(4\)|\(9\)|)$/;
+
+test('toda forma elementar do catálogo soa o acorde do seu nome', () => {
+  let conferidas = 0;
+  for (const nome of Object.keys(CATALOG)) {
+    const m = RE_SIMPLES.exec(nome);
+    if (!m) continue;
+    const q = INTERVALOS[(m[2] || '') + (m[3] || '')];
+    if (!q) continue;
+    const raiz = SEMI[m[1]];
+    const alvo = new Set(q.map((i) => (raiz + i) % 12));
+    const quinta = (raiz + 7) % 12;
+    for (const f of catalogShapes(nome)) {
+      const soa = new Set(f.frets.map((x, i) => (x < 0 ? null : (AFINACAO[i] + x) % 12))
+        .filter((n) => n !== null));
+      // nota estranha nunca é aceitável
+      for (const n of soa) assert.ok(alvo.has(n), `${nome} tem nota estranha em [${f.frets.join(', ')}]`);
+      // a fundamental tem de estar lá
+      assert.ok(soa.has(raiz), `${nome} sem a fundamental em [${f.frets.join(', ')}]`);
+      // a única nota dispensável é a quinta — é praxe omiti-la num acorde de
+      // sétima, e o "C7" do catálogo (x 3 2 3 1 0) faz exatamente isso
+      for (const n of alvo) {
+        if (soa.has(n) || n === quinta) continue;
+        assert.fail(`${nome} não soa ${n} em [${f.frets.join(', ')}]`);
+      }
+      conferidas++;
+    }
+  }
+  assert.ok(conferidas >= 90, `esperava conferir 90+ formas, conferi ${conferidas}`);
+});
+
+test('nenhuma forma elementar exige vão maior que 4 casas', () => {
+  for (const nome of Object.keys(CATALOG)) {
+    if (!RE_SIMPLES.test(nome)) continue;
+    for (const f of catalogShapes(nome)) {
+      const d = f.frets.filter((x) => x > 0);
+      if (d.length < 2) continue;
+      const vao = Math.max(...d) - Math.min(...d) + 1;
+      assert.ok(vao <= 4, `${nome}: ${vao} casas em [${f.frets.join(', ')}]`);
+    }
+  }
 });

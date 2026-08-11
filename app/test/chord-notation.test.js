@@ -159,3 +159,31 @@ test('nomesDeBusca não confunde baixo com extensão', () => {
 test('nomesDeBusca começa pelo nome literal', () => {
   assert.equal(nomesDeBusca('C')[0], 'C');
 });
+
+// --- sinônimos de sufixo (plano 2026-08-11-catalogo-lote1) -----------------
+// A cifra usa '7+', '7M' e 'maj7' para o mesmo acorde; idem '4'/'sus4' e
+// '9'/'add9'. O catálogo guarda uma grafia só.
+
+test('nomesDeBusca unifica 7+, 7M e maj7', () => {
+  assert.ok(nomesDeBusca('C7+').includes('C7M'));
+  assert.ok(nomesDeBusca('Dmaj7').includes('D7M'));
+  assert.ok(nomesDeBusca('G7M').includes('G7+'));
+  assert.ok(nomesDeBusca('Am7+').includes('Am7M'));
+});
+
+test('nomesDeBusca unifica 4 e sus4', () => {
+  assert.ok(nomesDeBusca('A4').includes('Asus4'));
+  assert.ok(nomesDeBusca('Esus4').includes('E4'));
+  assert.ok(nomesDeBusca('D7(4)').includes('D7(4)'));
+});
+
+test('nomesDeBusca unifica 9 e add9', () => {
+  assert.ok(nomesDeBusca('G9').includes('Gadd9'));
+  assert.ok(nomesDeBusca('Cadd9').includes('C9'));
+});
+
+test('sinônimo de sufixo não mexe em acorde de sétima simples', () => {
+  // "A7" não pode virar "A7M" — são acordes diferentes
+  assert.ok(!nomesDeBusca('A7').includes('A7M'));
+  assert.ok(!nomesDeBusca('Am7').includes('Am7M'));
+});
