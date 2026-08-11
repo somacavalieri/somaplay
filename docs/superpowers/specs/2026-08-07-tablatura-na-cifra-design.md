@@ -139,7 +139,25 @@ Uma linha de tab é **âncora** quando se decide sozinha:
 
 - tem **rótulo de corda seguido de barra**, com ou sem espaço — `E|`, `E |`, `e:`; ou
 - tem **rótulo de corda grudado num traço** — `E-------`; ou
-- contém **algum dígito** de casa.
+- contém **algum dígito** de casa **e não é linha de acordes**.
+
+A ressalva da terceira forma saiu da revisão final, e é estreita de propósito. Sem ela,
+o dígito da *extensão* do acorde vira âncora e o acorde some da grade "Acordes desta
+música":
+
+```
+D  ------    → linha de acordes, extractChords = ["D"]     (o `m` de Am7 já barrava
+Am7 -------- → linha de acordes, extractChords = ["Am7"]    esse caso por acaso)
+D7 ------    → sem a ressalva: bloco de tab, extractChords = []
+A7 -------   → sem a ressalva: bloco de tab, extractChords = []
+```
+
+A ressalva vale **só** para a forma por dígito. As duas formas por rótulo continuam
+incondicionais, e têm de continuar: `E---------12-10---------` é tab legítima e
+**também** casa em `isChordTok` (que aceita `-` e dígito depois da nota). Se a guarda
+valesse para elas, centenas de linhas de tab do acervo voltariam a ser linha de acordes
+— é a mesma razão pela qual inverter a ordem de `isChordLine` e `isTabLine` foi
+rejeitado acima.
 
 Uma linha que passa no alfabeto e na proporção mas não é âncora é **ambígua**. Ambígua
 só entra no bloco quando a corrida a que ela pertence tem **pelo menos uma âncora**.
