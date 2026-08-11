@@ -106,9 +106,16 @@ export function isTabLine(line) {
 // Âncora: linha de tab que se decide sozinha. Rótulo de corda seguido de barra
 // (com ou sem espaço), rótulo grudado num traço, ou dígito de casa em qualquer
 // lugar. O A/B contra o acervo mediu 98,2% das linhas de tab nesta situação.
+// A âncora por dígito não vale quando a linha já é linha de acordes: "D7 ------"
+// e "A7 ---------------" têm dígito só porque a extensão do acorde tem (D7, A7),
+// e sem a guarda isso promovia a linha a bloco de tab e o acorde SUMIA da grade
+// "Acordes desta música". As outras duas formas de âncora continuam valendo
+// incondicionalmente — é isso que preserva "E---------12-10---", que TAMBÉM
+// casa como acorde em isChordTok e por isso não pode depender desta guarda.
 const isTabAnchor = (line) => {
   const s = String(line).trim();
-  return /^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s) || /\d/.test(s);
+  if (/^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s)) return true;
+  return /\d/.test(s) && !isChordLine(line);
 };
 
 // Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7

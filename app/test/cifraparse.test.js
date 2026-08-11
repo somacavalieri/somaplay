@@ -440,6 +440,43 @@ test('bloco sem rótulo nenhum vale se tiver dígito', () => {
   assert.equal(p[0].tab.length, 2);
 });
 
+// --- Fix round 2: dígito de extensão não pode virar âncora de tab ----------
+
+test('acorde com extensão numérica e traço de sustentação não vira tab (defeito da revisão)', () => {
+  const pD7 = parseCifraText('D7 ------');
+  assert.equal(pD7[0].isTab, false);
+  assert.equal(pD7[0].hasChords, true);
+  assert.deepEqual(extractChords(pD7), ['D7']);
+
+  const pA7 = parseCifraText('A7 ---------------');
+  assert.equal(pA7[0].isTab, false);
+  assert.equal(pA7[0].hasChords, true);
+  assert.deepEqual(extractChords(pA7), ['A7']);
+});
+
+test('não-regressão: rótulo grudado no traço continua âncora mesmo sendo acorde válido', () => {
+  // "E---------12-10---------" TAMBÉM casa como acorde em isChordTok — a guarda
+  // do dígito não pode alcançar este caso, só a forma "dígito solto" alcança.
+  assert.equal(parseCifraText('E---------12-10---------')[0].isTab, true);
+});
+
+test('não-regressão: acorde simples com traço de sustentação segue como estava', () => {
+  const pD = parseCifraText('D ------');
+  assert.equal(pD[0].isTab, false);
+  assert.equal(pD[0].hasChords, true);
+  assert.deepEqual(extractChords(pD), ['D']);
+
+  const pAm7 = parseCifraText('Am7 ----------');
+  assert.equal(pAm7[0].isTab, false);
+  assert.equal(pAm7[0].hasChords, true);
+  assert.deepEqual(extractChords(pAm7), ['Am7']);
+});
+
+test('não-regressão: tab sem rótulo, ancorada só por dígito, continua tab', () => {
+  const p = parseCifraText('-----3----|----0-----|');
+  assert.equal(p[0].isTab, true);
+});
+
 // --- Fix round 1: corrida rejeitada não pode ser reescaneada linha a linha -
 
 test('corrida longa sem âncora sai linha a linha, na ordem, byte a byte, e um acorde no meio continua acorde', () => {
