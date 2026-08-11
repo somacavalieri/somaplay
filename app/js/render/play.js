@@ -128,9 +128,11 @@ function rowMeasurers(cifraFontPx) {
 }
 
 // Fileira nome+diagrama no lugar da linha de acordes (só linhas com letra).
-function chordDiagRowHTML(chordLine, dict, meas) {
-  const items = layoutChordRow(chordLine, meas.chPx, (tok, isChord) =>
-    (isChord ? Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok)) : meas.tok(tok)));
+// `blockWidth` vem de fora: é a MESMA que o predicado do wrap usa. Duas medidas
+// para a mesma coisa divergiriam no dia em que uma mudasse, e a fileira voltaria
+// a vazar sem ninguém entender por quê.
+function chordDiagRowHTML(chordLine, dict, meas, blockWidth) {
+  const items = layoutChordRow(chordLine, meas.chPx, blockWidth);
   const inner = items.map((it) => (it.isChord
     ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="${t('play.chordDiagRow.viewChord')}"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.name, true, dict)}</button>`
     : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
@@ -150,11 +152,12 @@ function chordLineHTML(chordLine) {
 // oscilação de 1 coluna quando a barra de rolagem entra e sai.
 let cifraCols = 0;
 let cifraColsPrev = 0;
+let cifraBoxPx = 0;      // largura da caixa em px — a régua do modo miniatura
 
-function measureCifraCols() {
+function measureCifra() {
   const el = document.querySelector('.cifra-text');
   const w = el ? el.clientWidth : 0;
-  if (!w) return 0;
+  if (!w) return { cols: 0, px: 0 };
   // Sonda dentro da própria .cifra-text: herda fonte, tamanho e zoom exatos. Medir
   // pelo canvas dava caractere mais estreito que o real (720/12,8 = 56 colunas onde
   // só cabiam 54), e a linha continuava vazando.
@@ -164,12 +167,15 @@ function measureCifraCols() {
   el.appendChild(probe);
   const chPx = probe.getBoundingClientRect().width / 100;
   probe.remove();
-  return chPx > 0 ? Math.max(8, Math.floor(w / chPx)) : 0;
+  return chPx > 0 ? { cols: Math.max(8, Math.floor(w / chPx)), px: w } : { cols: 0, px: 0 };
 }
 
-// Mede e, se a largura mudou, re-renderiza uma vez. Devolve true se re-renderizou.
+// Mede e, se a largura em COLUNAS mudou, re-renderiza uma vez. A largura em px é
+// guardada sempre: variação menor que um caractere não vale um re-render, e a
+// fileira tem 6px de folga entre blocos para absorver isso.
 function reflowCifra(update) {
-  const cols = measureCifraCols();
+  const { cols, px } = measureCifra();
+  if (px) cifraBoxPx = px;
   if (!cols || cols === cifraCols || cols === cifraColsPrev) return false;
   cifraColsPrev = cifraCols;
   cifraCols = cols;
@@ -196,6 +202,22 @@ function cifraTextHTML(song) {
   const mini = S.settings.cifraMiniaturas;
   const dict = song.cifra?.digitacoes || null;
   const meas = mini ? rowMeasurers(fontPx) : null;
+
+  // A largura de um bloco da fileira. Uma só, para o desenho e para o predicado.
+  const blockWidth = !mini ? null : (tok, isChord) => (isChord
+    ? Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok))
+    : meas.tok(tok));
+
+  // "Este trecho, montado como fileira, cabe na caixa?" Só o modo miniatura
+  // pergunta — no modo texto a coluna do caractere é a régua certa. Sem medição
+  // ainda (cifraBoxPx = 0), não pergunta nada e o wrap é o de sempre.
+  const cabe = (!mini || !cifraBoxPx) ? undefined : (trecho) => {
+    const itens = layoutChordRow(trecho, meas.chPx, blockWidth);
+    if (!itens.length) return true;
+    const u = itens[itens.length - 1];
+    return u.x + blockWidth(u.tok, u.isChord) <= cifraBoxPx;
+  };
+
   const lines = parsed.map((ln) => {
     // Tab sai do reflow: quebrar a grade em duas destrói a leitura das seis cordas
     // em paralelo. Ela encolhe para caber, no CSS, em vez de quebrar.
@@ -205,10 +227,11 @@ function cifraTextHTML(song) {
     // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
     // cima da sílaba dele quando a linha não cabe na tela
     for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
-                              ln.hasLyric ? ln.lyric : '', cifraCols)) {
+                              ln.hasLyric ? ln.lyric : '', cifraCols,
+                              (mini && ln.hasLyric) ? cabe : undefined)) {
       if (ln.hasChords && p.chords) {
         h += (mini && ln.hasLyric)
-          ? chordDiagRowHTML(p.chords, dict, meas)
+          ? chordDiagRowHTML(p.chords, dict, meas, blockWidth)
           : `<div class="ch">${chordLineHTML(p.chords)}</div>`;
       }
       if (ln.hasLyric) h += `<div class="ly">${esc(p.lyric)}</div>`;
