@@ -17,8 +17,22 @@
 - **Toda mudança em `app/css/` ou `app/js/` exige bump de `VERSION` em `app/sw.js:2`.** O `SHELL` **não** muda aqui: nenhum módulo novo.
 - **Nada de `t()` em valor de `data-*`.** Não se aplica a este plano (não há `data-*` novo), mas vale se surgir.
 - **Verificar com `cd app && node --test` e `node --check`.** UI é verificação manual no navegador — não há harness de DOM, de propósito.
-- **Commitar apenas os arquivos listados em cada tarefa, nunca `git add -A`.** Há trabalho não relacionado sem rastrear em `docs/campo_armonico/`.
-- **Âncoras conferidas em `5a5c44b`** (2026-08-10): `isChordOrMark` em `chords.js:70`, `parseCifraText` em `chords.js:109-139`, `cifraTextHTML` em `play.js:148`, `.cifra-text` em `app.css:245`, `VERSION = 'somaplay-v20'` em `sw.js:2`. Suíte verde nessa base. Se algum número não bater, achar pelo nome — o conteúdo é que vale.
+- **Commitar apenas os arquivos listados em cada tarefa, nunca `git add -A`.** Há trabalho não relacionado na árvore: `pendencias.md` modificado e `docs/campo_armonico/` sem rastrear. Nenhum dos dois entra em commit nenhum deste plano.
+- **Âncoras conferidas em `4d3a4f7`** (2026-08-11): `isChordOrMark` em `chords.js:83`, `parseCifraText` em `chords.js:131-161`, `wrapBlock` em `chords.js:300`, `cifraTextHTML` em `play.js:180`, `.cifra-text` em `app.css:259`, `VERSION = 'somaplay-v27'` em `sw.js:2`. Suíte verde nessa base: 264 testes. Se algum número não bater, achar pelo nome — o conteúdo é que vale.
+
+## O reflow já está no branch — e é por isso que a tab precisa sair dele
+
+`fbf95a8` trouxe o **reflow do par acorde/letra**: `wrapBlock(chords, lyric, cols)` quebra as duas linhas na mesma coluna, e `cifraTextHTML` passa **toda** linha por ele — inclusive as que só têm letra. Uma linha de tab é uma linha só-de-letra, então hoje ela entra na quebra. E como tab não tem espaço nenhum, não existe coluna válida de corte e o `wrapBlock` corta na marra:
+
+```
+wrapBlock('', 'E|-0---0----------0-----------------------------------|', 54)
+  → [0] E|-0---0----------0-----------------------------------|   (54 col)
+    [1] |                                                          (1 col)
+```
+
+Esse `|` órfão é o defeito relatado. **A peça central deste plano é o desvio `if (ln.isTab) return tabBlockHTML(ln);` antes do laço do `wrapBlock`** — é ele que tira a tab do reflow.
+
+Os dois mecanismos não se contradizem, se dividem pelo tipo de conteúdo: par acorde/letra reflui (quebrar em duas linhas continua legível); tab encolhe (quebrar em duas destrói a grade — não há como ler seis cordas em paralelo se metade está embaixo). O spec do reflow descarta "encolher a fonte até caber" para a cifra inteira, com razão; aqui a regra vale só para o bloco de tab.
 
 ## Estrutura de arquivos
 
@@ -36,7 +50,7 @@
 ### Tarefa 1: reconhecer linha de tablatura
 
 **Arquivos:**
-- Modificar: `app/js/chords.js` (inserir logo depois de `isChordOrMark`, linha 70)
+- Modificar: `app/js/chords.js` (inserir logo depois de `isChordOrMark`, linha 83)
 - Testar: `app/test/cifraparse.test.js` (o import fica na linha 3, já com `splitChordTok`)
 
 **Interfaces:**
@@ -138,7 +152,7 @@ git commit -m "feat: recognize tablature lines in the cifra parser"
 ### Tarefa 2: agrupar tablatura em bloco
 
 **Arquivos:**
-- Modificar: `app/js/chords.js:109-139` (comentário de bloco + `parseCifraText`)
+- Modificar: `app/js/chords.js:131-161` (comentário de bloco + `parseCifraText`)
 - Testar: `app/test/cifraparse.test.js`
 
 **Interfaces:**
@@ -269,7 +283,7 @@ export function parseCifraText(text) {
 }
 ```
 
-Atualizar também o comentário de bloco acima da função (linhas 109-110) para citar o novo formato:
+Atualizar também o comentário de bloco acima da função (linhas 131-132) para citar o novo formato:
 
 ```js
 // Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra /
@@ -298,8 +312,8 @@ git commit -m "feat: group consecutive tablature lines into a single block"
 ### Tarefa 3: renderizar o bloco encolhendo para caber
 
 **Arquivos:**
-- Modificar: `app/js/render/play.js` (nova `tabBlockHTML` antes de `cifraTextHTML`; desvio dentro de `cifraTextHTML:155-165`)
-- Modificar: `app/css/app.css:245` e `:248` (inserir depois)
+- Modificar: `app/js/render/play.js` (nova `tabBlockHTML` antes de `cifraTextHTML:180`; desvio na primeira linha do `parsed.map` em `:187`)
+- Modificar: `app/css/app.css:259` e `:262` (inserir depois)
 - Modificar: `app/sw.js:2`
 
 **Interfaces:**
@@ -308,13 +322,15 @@ git commit -m "feat: group consecutive tablature lines into a single block"
 
 - [ ] **Passo 1: adicionar o CSS**
 
-Em `app/css/app.css`, trocar a linha 245 por (acrescenta só o desligamento de ligadura):
+Em `app/css/app.css`, trocar a linha 259 por (acrescenta só o desligamento de ligadura; o `overflow-x:auto` já veio com o reflow e **fica**):
 
 ```css
-.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;overflow-x:auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 ```
 
-E inserir logo depois da linha `.cifra-text .ly{...}`:
+`.cifra-text .ly` **não se toca**: o reflow já a deixou em `white-space:pre`, que é o correto.
+
+E inserir logo depois da linha `.cifra-text .ly{...}` (linha 262):
 
 ```css
 /* Tablatura: grade de largura fixa. Nunca quebra e nunca rola — encolhe.
@@ -331,7 +347,7 @@ E inserir logo depois da linha `.cifra-text .ly{...}`:
 
 - [ ] **Passo 2: adicionar `tabBlockHTML` em `play.js`**
 
-Inserir logo antes de `function cifraTextHTML(song) {` (linha 148):
+Inserir logo antes de `function cifraTextHTML(song) {` (linha 180):
 
 ```js
 // Bloco de tablatura: uma corda por linha, sem quebra, com a linha de acordes de
@@ -347,23 +363,37 @@ function tabBlockHTML(ln) {
 }
 ```
 
-- [ ] **Passo 3: desviar em `cifraTextHTML`**
+- [ ] **Passo 3: desviar em `cifraTextHTML`, antes do `wrapBlock`**
 
-Em `app/js/render/play.js`, trocar a primeira linha do `.map` do bloco `const lines = parsed.map((ln) => {`:
+Em `app/js/render/play.js:187`, o callback do `.map` hoje começa assim:
 
 ```js
   const lines = parsed.map((ln) => {
+    let h = '';
+    if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
+    // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
+    // cima da sílaba dele quando a linha não cabe na tela
+    for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
+                              ln.hasLyric ? ln.lyric : '', cifraCols)) {
+```
+
+Acrescentar **uma** linha, como primeira instrução do callback:
+
+```js
+  const lines = parsed.map((ln) => {
+    // Tab sai do reflow: quebrar a grade em duas destrói a leitura das seis cordas
+    // em paralelo. Ela encolhe para caber, no CSS, em vez de quebrar.
     if (ln.isTab) return tabBlockHTML(ln);
     let h = '';
 ```
 
-O resto do callback fica exatamente como está.
+O resto do callback — `isSection`, o laço do `wrapBlock`, as miniaturas — fica exatamente como está. Um bloco de tab nunca chega ao `wrapBlock`.
 
 - [ ] **Passo 4: bump do Service Worker**
 
-Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v20';` → `'somaplay-v21'`.
+Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v27';` → `'somaplay-v28'`.
 
-O `SHELL` não muda — nenhum módulo novo. (Se o working tree já estiver em `v20` por trabalho não commitado, `v21` continua correto: a versão só precisa ser monotônica.)
+O `SHELL` não muda — nenhum módulo novo. Se a linha já estiver numa versão maior que v27, subir um a partir dela: a versão só precisa ser monotônica.
 
 - [ ] **Passo 5: rodar a suíte e o check de sintaxe**
 
@@ -391,6 +421,8 @@ Importar `forca-estranha-cifraclub.somaplay` (Ajustes → Importar, modo merge) 
 8. **Janela estreita** (arrastar até ~400px) e **rotação** — o bloco reflui sozinho.
 9. **Popover de acorde** — clicar num acorde dentro e fora do bloco de tab: abre e posiciona certo (é o que o `container-type` no wrapper protege).
 10. **Uma música sem tab** — "Andança" ou o sample que acompanha o app: nada mudou.
+11. **O reflow continua intacto** — numa música de linha longa (lote do Songbook do Gil), o par acorde/letra segue quebrando junto, na mesma coluna, com o acorde sobre a sílaba certa. A tab sair do `wrapBlock` não pode ter mexido nisso.
+12. **`ResizeObserver` não entra em laço** — estreitar e alargar a janela várias vezes numa música com tab: a cifra reflui e estabiliza, sem piscar. O bloco de tab não participa da medição de colunas, mas divide a `.cifra-text` com quem participa.
 
 - [ ] **Passo 7: commitar**
 

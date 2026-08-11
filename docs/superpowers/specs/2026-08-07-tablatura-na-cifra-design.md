@@ -9,6 +9,11 @@ Este design **revoga** a decisão registrada em
 `2026-07-30-reconhecimento-de-linha-de-acordes-design.md` §"Ainda fora do
 reconhecimento", que deixava linha de tablatura como texto de propósito.
 
+**Revisto em 2026-08-11.** Entre a escrita deste design e a implementação entrou o
+reflow do par acorde/letra (`fbf95a8`, spec `2026-08-10-reflow-da-cifra-texto-design.md`).
+Ele mudou a mecânica do defeito sem consertá-lo — ver "Como o reflow mudou o defeito"
+abaixo.
+
 ## Causa raiz
 
 As linhas de tab do CifraClub vêm com largura fixa — em "Força Estranha", **55
@@ -29,6 +34,38 @@ Cabem `720 / (0,6 × fontPx)` colunas, porque o avanço da JetBrains Mono é 0,6
 Com o zoom em 110% (`fontPx = 22`) cabem **54** colunas e a 55ª — o `|` de
 fechamento — desce sozinha. Em 100% caberiam 60 e nada quebraria: por isso o
 defeito só aparece com zoom ou em tela estreita, e por isso passou despercebido.
+
+### Como o reflow mudou o defeito (2026-08-11)
+
+`fbf95a8` trocou `.ly` de `pre-wrap` para `pre` e pôs `overflow-x:auto` na
+`.cifra-text`, então a quebra por CSS descrita acima **não acontece mais**. No lugar
+dela, `cifraTextHTML` passa toda linha por `wrapBlock` — inclusive as que só têm
+letra, que é o caso da tab. E como tab não tem espaço nenhum, não existe coluna
+válida de corte e o `wrapBlock` corta na largura medida:
+
+```
+wrapBlock('', 'E|-0---0----------0-----------------------------------|', 54)
+  → [0] E|-0---0----------0-----------------------------------|   (54 col)
+    [1] |                                                          (1 col)
+```
+
+Mesmo sintoma, mecanismo novo: o `|` de fechamento continua descendo sozinho e o
+bloco continua dobrando de altura. A correção também muda de lugar — em vez de mexer
+no `white-space`, o bloco de tab tem de **sair do `wrapBlock`**.
+
+### Reflow e encolher não se contradizem
+
+O spec do reflow descarta "encolher a fonte até caber" porque, para a cifra inteira,
+a linha mais larga da música passaria a ditar o tamanho de todas — num songbook de 90
+colunas a fonte fica ilegível. A objeção é correta e continua valendo.
+
+A regra aqui é outra porque o conteúdo é outro. **Par acorde/letra reflui; tab
+encolhe.** Cortar um par acorde/letra na coluna 54 e continuar embaixo é legível — é
+o que uma cifra impressa faz. Cortar uma tab na coluna 54 e empilhar o resto não é
+uma tab quebrada em duas: é uma tab destruída, porque a leitura depende de ver as
+seis cordas em paralelo, e metade delas passa a estar noutro sistema. Tab não reflui,
+então só resta encolher — e o custo do encolhimento é limitado, porque ele vale só
+para o bloco, não para a música.
 
 **Achado secundário:** a `jbmono-latin.woff2` embutida traz `liga` e `calt`, ativos
 por padrão no navegador. É o que faz `|-` sair como `├─` em vez do `|` limpo.
