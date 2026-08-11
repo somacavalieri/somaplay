@@ -82,7 +82,11 @@ export const CATALOG = {
   'G/F':     [{ frets: [1, -1, 0, 0, 0, 3], default: true }],
   'D7(4)':   [{ frets: [-1, -1, 0, 2, 1, 3], default: true }],
   'F7M':     [{ frets: [-1, -1, 3, 2, 1, 0], default: true }],
-  'C#°':     [{ frets: [-1, 4, 5, 3, 5, 3], default: true }],
+  // A forma de índice 0 é a antiga e continua sendo a padrão: o índice vira o id
+  // persistido `b:C#°:0`. A segunda vem da tabela de diminutos do autor, lida por
+  // pixel e conferida pelas notas — é a que fecha a família com E°, G° e A#°.
+  'C#°':     [{ frets: [-1, 4, 5, 3, 5, 3], default: true },
+              { frets: [-1, 4, 5, 3, 5, -1] }],
   'C/D':     [{ frets: [-1, -1, 0, 0, 1, 0], default: true }],
   'Bb7M':    [{ frets: [-1, 1, 3, 2, 3, -1], default: true }],
   'C#7':     [{ frets: [-1, 4, 3, 4, 2, 4], default: true }],
@@ -99,6 +103,23 @@ export const CATALOG = {
   'C#m5-':   [{ frets: [-1, 4, 2, 0, -1, -1], default: true }],
   'Dm7/C':   [{ frets: [-1, 3, 0, 2, 1, 1], default: true }],
   'D7/F#':   [{ frets: [2, 0, 0, 2, 1, 2], default: true }],
+  // — diminutos: tabela do autor (chords/_diagramas/diminutos.png), lida por pixel
+  //   e conferida nota a nota. São 12 posições dos mesmos três acordes, cada uma
+  //   com a fundamental no baixo: C°=D#°=F#°=A°, C#°=E°=G°=A#°, D°=F°=G#°=B°.
+  //   O 'A#°' usa o Sol solto — a tabela não desenha corda solta, e sem ele
+  //   faltaria a 7ª diminuta. O 'D°' vem da posição marcada '4ª' na tabela. —
+  'C°':      [{ frets: [-1, 3, 4, 2, 4, -1], default: true }],
+  'D°':      [{ frets: [-1, 5, 6, 4, 6, -1], default: true }],
+  'D#°':     [{ frets: [-1, -1, 1, 2, 1, 2], default: true }],
+  'E°':      [{ frets: [-1, -1, 2, 3, 2, 3], default: true }],
+  'F°':      [{ frets: [-1, -1, 3, 4, 3, 4], default: true }],
+  'F#°':     [{ frets: [2, -1, 1, 2, 1, -1], default: true }],
+  'G°':      [{ frets: [3, -1, 2, 3, 2, -1], default: true }],
+  'G#°':     [{ frets: [4, -1, 3, 4, 3, -1], default: true }],
+  'A°':      [{ frets: [5, -1, 4, 5, 4, -1], default: true }],
+  'A#°':     [{ frets: [-1, 1, 2, 0, 2, -1], default: true }],
+  'B°':      [{ frets: [-1, 2, 3, 1, 3, -1], default: true }],
+
 };
 
 export function catalogShapes(name) {
