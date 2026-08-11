@@ -10,7 +10,7 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport } from '../js/backup.js';
+import { recorteParaExport, nomeDoExport, stampDeHoje } from '../js/backup.js';
 
 const lib = () => ({
   artists: [{ id: 'ar1', name: 'Gil' }, { id: 'ar2', name: 'Caetano' }],
@@ -77,4 +77,38 @@ test('não muta o estado recebido', () => {
 test('tolera biblioteca com campos ausentes', () => {
   const r = recorteParaExport({}, { songIds: new Set(['s1']) });
   assert.deepEqual(r, { artists: [], songs: [], lists: [] });
+});
+
+// --- nome do arquivo -------------------------------------------------------
+// Quatro arquivos chamados somaplay-backup-2026-08-11 na pasta de Downloads não
+// servem para nada. O nome precisa dizer o recorte.
+
+test('sem recorte, o nome é o de sempre', () => {
+  assert.equal(nomeDoExport(null, '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
+  assert.equal(nomeDoExport([], '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
+});
+
+test('uma fonte vira o nome dela', () => {
+  assert.equal(nomeDoExport(['Songbook'], '2026-08-11', 'fontes'), 'somaplay-songbook-2026-08-11.somaplay');
+});
+
+test('o slug tira acento e espaço', () => {
+  assert.equal(nomeDoExport(['Coletâneas VJ'], '2026-08-11', 'fontes'), 'somaplay-coletaneas-vj-2026-08-11.somaplay');
+});
+
+test('o balde sem fonte tem nome legível', () => {
+  assert.equal(nomeDoExport(['__sem_fonte'], '2026-08-11', 'fontes'), 'somaplay-sem-fonte-2026-08-11.somaplay');
+});
+
+test('duas ou mais fontes viram a contagem, na língua do app', () => {
+  assert.equal(nomeDoExport(['A', 'B', 'C'], '2026-08-11', 'fontes'), 'somaplay-3-fontes-2026-08-11.somaplay');
+  assert.equal(nomeDoExport(['A', 'B'], '2026-08-11', 'sources'), 'somaplay-2-sources-2026-08-11.somaplay');
+});
+
+test('uma fonte que vira slug vazio cai no nome genérico', () => {
+  assert.equal(nomeDoExport(['###'], '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
+});
+
+test('o carimbo de data é zero-padded', () => {
+  assert.equal(stampDeHoje(new Date(2026, 0, 5)), '2026-01-05');
 });
