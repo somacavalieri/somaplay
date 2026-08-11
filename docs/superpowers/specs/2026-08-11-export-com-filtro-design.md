@@ -305,7 +305,7 @@ módulo novo.
 Registrados aqui para não se perderem. Cada um é spec próprio.
 
 1. **"Exportar esta lista"** no menu `⋯` que a tela da lista já tem. Uma linha:
-   `{ songIds: l.musicas, listIds: [l.id] }` — e o `listIds` garante que os outros
+   `{ songIds: new Set(l.musicas), listIds: new Set([l.id]) }` — e o `listIds` garante que os outros
    repertórios do usuário não viajem junto para o amigo. É o principal caso do "efeito
    comunidade", e serve melhor que qualquer aba em Configurações.
 2. **"Exportar este artista"** — mesma ideia, mas a tela do artista hoje não tem menu
@@ -328,7 +328,7 @@ Em `test/export.test.js`, sobre `recorteParaExport`:
 - só as músicas cujo id está no conjunto;
 - artista sem música no recorte fica de fora; artista com pelo menos uma entra;
 - `listIds: null` → todas as listas, intactas, com os ids órfãos preservados;
-- `listIds: ['x']` → só a lista x;
+- `listIds: new Set(['x'])` → só a lista x;
 - conjunto vazio → recorte vazio, sem quebrar (a UI não deixa chegar aqui, mas a função
   não pode explodir).
 
