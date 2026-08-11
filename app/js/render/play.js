@@ -177,6 +177,18 @@ function reflowCifra(update) {
   return true;
 }
 
+// Bloco de tablatura: uma corda por linha, sem quebra, com a linha de acordes de
+// cima junto para escalar com ele e não perder a coluna. O CSS calcula a fonte a
+// partir de --cols; aqui só se mede a largura em caracteres.
+// Miniaturas não entram: diagrama de 100px posicionado em pixel não pertence a
+// uma grade de tab.
+function tabBlockHTML(ln) {
+  const cols = Math.max(ln.chords.length, ...ln.tab.map((l) => l.length));
+  const acordes = ln.hasChords ? `<div class="ch">${chordLineHTML(ln.chords)}</div>` : '';
+  const cordas = ln.tab.map((l) => `<div>${esc(l)}</div>`).join('');
+  return `<div class="tabwrap"><div class="tab" style="--cols:${cols}">${acordes}${cordas}</div></div>`;
+}
+
 function cifraTextHTML(song) {
   const parsed = parsedCifra(song);
   const zoom = S.settings.cifraZoom / 100;
@@ -185,6 +197,9 @@ function cifraTextHTML(song) {
   const dict = song.cifra?.digitacoes || null;
   const meas = mini ? rowMeasurers(fontPx) : null;
   const lines = parsed.map((ln) => {
+    // Tab sai do reflow: quebrar a grade em duas destrói a leitura das seis cordas
+    // em paralelo. Ela encolhe para caber, no CSS, em vez de quebrar.
+    if (ln.isTab) return tabBlockHTML(ln);
     let h = '';
     if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
     // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em

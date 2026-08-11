@@ -1,5 +1,5 @@
 // render/popover.js — popover "Adicionar à lista" (checkbox por lista + nova lista)
-import { S, songById, artistName } from '../state.js';
+import { S, songById, artistName, musicasPresentes } from '../state.js';
 import { I, esc } from '../icons.js';
 import { t } from '../i18n.js';
 
@@ -8,10 +8,11 @@ export function renderPopover() {
   if (!song) return '';
   const rows = S.lists.map((l) => {
     const checked = l.musicas.includes(song.id);
+    const nPresentes = musicasPresentes(l).length;
     return `<button class="check-row" data-a="popToggleList" data-id="${l.id}">
       <span class="checkbox ${checked ? 'on' : ''}">${checked ? I.check(15) : ''}</span>
       <span class="nm">${esc(l.nome)}</span>
-      <span class="ct">${l.musicas.length} ${l.musicas.length === 1 ? t('common.song') : t('common.songs')}</span>
+      <span class="ct">${nPresentes} ${nPresentes === 1 ? t('common.song') : t('common.songs')}</span>
     </button>`;
   }).join('');
 

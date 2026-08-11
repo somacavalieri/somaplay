@@ -82,6 +82,42 @@ function chordsOfTok(tok) {
 const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]/]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
 const isChordOrMark = (t) => chordsOfTok(t).length > 0 || MARK.test(t);
 
+// Alfabeto de tablatura: nome da corda opcional, barra ou dois-pontos, e daí em
+// diante só traço, dígito, barra de compasso e os símbolos de técnica e
+// ornamento. Maiúscula fora do nome da corda derruba o casamento — é o que
+// mantém "C ---- G" como linha de acordes e "Ela disse: ---" como letra.
+const TAB_ALFABETO = /^[A-Ga-g]?[#b]?\s*[|:]{0,2}[-\d|:hpbsrtvx~^*.+()<>\\/ ]+$/;
+
+// Linha de tablatura — a pauta de uma corda ("E|-0---0---|", "|---3---|").
+// Não é letra nem linha de acordes: é grade de largura fixa, onde a coluna
+// carrega a informação, e quebrar a linha destrói a grade.
+// O critério de traço é proporção, não corrida: tab curta tem corrida curta
+// ("E|--0--2--3--|" não tem nenhum "---"), e a proporção pega as duas. É ela
+// também que separa a pauta da digitação inline "0221xx", que não tem traço.
+// O piso é 30% porque tab densa de técnica é pouco tracejada — em
+// "G|--5h7p5--7b9--5/7--|" o traço é só 36% da linha.
+export function isTabLine(line) {
+  const s = String(line).trim();
+  if (!TAB_ALFABETO.test(s)) return false;
+  const tracos = (s.match(/-/g) || []).length;
+  return tracos >= 3 && tracos >= s.length * 0.3;
+}
+
+// Âncora: linha de tab que se decide sozinha. Rótulo de corda seguido de barra
+// (com ou sem espaço), rótulo grudado num traço, ou dígito de casa em qualquer
+// lugar. O A/B contra o acervo mediu 98,2% das linhas de tab nesta situação.
+// A âncora por dígito não vale quando a linha já é linha de acordes: "D7 ------"
+// e "A7 ---------------" têm dígito só porque a extensão do acorde tem (D7, A7),
+// e sem a guarda isso promovia a linha a bloco de tab e o acorde SUMIA da grade
+// "Acordes desta música". As outras duas formas de âncora continuam valendo
+// incondicionalmente — é isso que preserva "E---------12-10---", que TAMBÉM
+// casa como acorde em isChordTok e por isso não pode depender desta guarda.
+const isTabAnchor = (line) => {
+  const s = String(line).trim();
+  if (/^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s)) return true;
+  return /\d/.test(s) && !isChordLine(line);
+};
+
 // Rótulos convivem com acordes na mesma linha no estilo CifraClub — "[Intro] Em7
 // Am7", "Fm7  Bb/D  [Frase 1]". Mas um trecho entre parênteses pode ser só
 // acordes: "( G  F  G  F )". Daí a regra em stripLabels: trecho cujo conteúdo é
@@ -128,35 +164,76 @@ function isChordLine(line) {
   return true;
 }
 
-// Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra.
-// Retorna linhas normalizadas: { isSection, section, hasChords, chords, hasLyric, lyric }
+// Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra /
+// bloco de tablatura.
+// Retorna linhas normalizadas:
+// { isSection, section, hasChords, chords, hasLyric, lyric, isTab, tab }
 export function parseCifraText(text) {
   const out = [];
   const lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+  const semRabo = (s) => s.replace(/\s+$/, '');
+  // Corrida de linhas de tab a partir de i, sem julgar âncora — só varre. As
+  // cordas de um mesmo bloco têm de sair juntas: elas compartilham a fonte, e
+  // fonte diferente desalinha coluna. Corrida sem âncora nenhuma não é
+  // tablatura — uma linha só de traços é indistinguível de uma corda muda, e
+  // só a vizinhança separa as duas; quem julga isso agora é cada chamador.
+  const corridaTab = (i) => {
+    const run = [];
+    while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
+    return run;
+  };
+  // Fim (exclusivo) da última corrida sem âncora já julgada. O julgamento é
+  // monotônico: se a corrida inteira não tem âncora, nenhum sufixo dela tem.
+  // Sem isso, uma corrida de k linhas sem âncora custa O(k²) — cada linha
+  // dispararia corridaTab de novo, reescaneando o resto da corrida só para
+  // redescobrir que continua sem âncora.
+  let semAncoraAte = 0;
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i];
     const trimmed = raw.trim();
     if (!trimmed) { out.push({ lyric: ' ' }); i++; continue; }
     if (/^\[.+\]$/.test(trimmed)) { out.push({ section: trimmed }); i++; continue; }
+    if (i >= semAncoraAte && isTabLine(raw)) {
+      const run = corridaTab(i);
+      if (run.some(isTabAnchor)) { out.push({ tab: run }); i += run.length; continue; }
+      // corrida sem âncora: lembra até onde ela vai para não reescanear linha a
+      // linha, e cai no fluxo normal — esta linha ainda pode ser letra ou,
+      // grudada num acorde, linha de acordes.
+      semAncoraAte = i + run.length;
+    }
     if (isChordLine(raw)) {
       const next = lines[i + 1];
+      // Tab logo abaixo: a linha de acordes entra no bloco em vez de virar par
+      // acorde/letra. Ela marca a coluna onde o acorde vale — fora do bloco, o
+      // bloco encolheria e ela não, e a coluna se perderia.
+      if (next !== undefined && (i + 1) >= semAncoraAte && isTabLine(next)) {
+        const run = corridaTab(i + 1);
+        if (run.some(isTabAnchor)) {
+          out.push({ chords: semRabo(raw), tab: run });
+          i += 1 + run.length;
+          continue;
+        }
+        semAncoraAte = i + 1 + run.length;
+        // corrida sem âncora: segue para o pareamento acorde/letra normal
+      }
       if (next !== undefined && next.trim() && !isChordLine(next) && !/^\[.+\]$/.test(next.trim())) {
-        out.push({ chords: raw.replace(/\s+$/, ''), lyric: next.replace(/\s+$/, '') });
+        out.push({ chords: semRabo(raw), lyric: semRabo(next) });
         i += 2;
       } else {
-        out.push({ chords: raw.replace(/\s+$/, '') });
+        out.push({ chords: semRabo(raw) });
         i++;
       }
       continue;
     }
-    out.push({ lyric: raw.replace(/\s+$/, '') });
+    out.push({ lyric: semRabo(raw) });
     i++;
   }
   return out.map((l) => ({
     section: l.section || '', isSection: !!l.section,
     chords: l.chords || '', hasChords: !!l.chords,
     lyric: l.lyric || '', hasLyric: !!l.lyric,
+    tab: l.tab || [], isTab: !!(l.tab && l.tab.length),
   }));
 }
 

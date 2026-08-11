@@ -31,6 +31,7 @@ export const S = {
   // popover adicionar-à-lista
   popoverSongId: null,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
+  exportFontes: null,      // seleção do export: null = todas | array de grafias
 
   // biblioteca (cache em memória, espelho do IDB)
   artists: [],
@@ -77,6 +78,19 @@ export const audio = new AudioEngine();
 // ---------- helpers de biblioteca ----------
 export function artistById(id) { return S.artists.find((a) => a.id === id) || null; }
 export function songById(id) { return S.songs.find((s) => s.id === id) || null; }
+// Id órfão numa lista existe de propósito: um export por fonte leva a lista
+// inteira, e as músicas que faltam chegam quando a outra fonte for importada.
+// Até lá o contador não pode prometer o que a tela não mostra.
+export function musicasPresentes(l) {
+  return ((l && l.musicas) || []).filter((id) => songById(id));
+}
+// Os índices REAIS das músicas que a tela mostra, na ordem em que aparecem: a
+// ponte entre a POSIÇÃO VISÍVEL — o que o dedo arrasta, o que data-idx carrega —
+// e o índice que moveItem move. Com um id órfão as duas coisas se separam, e sem
+// esta tradução o arraste reordena a música errada.
+export function indicesPresentes(l) {
+  return ((l && l.musicas) || []).map((id, i) => (songById(id) ? i : -1)).filter((i) => i >= 0);
+}
 export function songsOfArtist(artistId) {
   return S.songs.filter((s) => s.artistId === artistId)
     .sort((a, b) => a.title.localeCompare(b.title, 'pt'));
@@ -149,6 +163,20 @@ export function fonteCasa(fonteDaMusica, filtro) {
   return nome.toLowerCase() === filtro.trim().toLowerCase();
 }
 export function matchesFonte(s) { return fonteCasa(fonteOf(s), S.fonteFilter); }
+
+// O motor de exportação não sabe o que é fonte: ele recebe um conjunto de ids
+// de música. Esta é a função que traduz o eixo "fonte" nesse conjunto, e é o
+// lugar onde um eixo novo (artista, lista) entraria sem tocar em backup.js.
+// A comparação é fonteCasa, a mesma da lente: "songbook" e "Songbook " são a
+// mesma fonte. Uma fonte marcada que sumiu da biblioteca não contribui.
+export function songIdsDasFontes(songs, fontes) {
+  const escolhidas = fontes || [];
+  const out = new Set();
+  for (const s of songs || []) {
+    if (escolhidas.some((f) => fonteCasa(fonteOf(s), f))) out.add(s.id);
+  }
+  return out;
+}
 
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {

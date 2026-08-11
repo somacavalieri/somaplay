@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
@@ -133,7 +133,7 @@ function listsTab() {
           ${l.sistema ? `<span class="badge-system">${t('common.system')}</span>` : ''}
           ${l.fixada && !l.sistema ? `<span class="pin-ind" title="${t('common.pinned')}">${I.pin()}</span>` : ''}
         </div>
-        <div style="color:var(--muted);font-size:13px;margin-top:3px">${cnt(l.musicas.length)}</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:3px">${cnt(musicasPresentes(l).length)}</div>
       </div>
       ${I.chevR()}
     </div>`;

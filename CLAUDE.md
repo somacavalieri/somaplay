@@ -95,6 +95,16 @@ otherwise. And translated strings must be produced at render time — a module-l
 constant holding translated text is frozen at import and will not update when the
 language changes.
 
+**A list's `musicas` may hold ids with no song, so DOM position ≠ array index.** The ids
+are there on purpose: a filtered export carries every list whole, orphans included, so
+the missing songs heal themselves when the other source is imported later. The screen
+skips those rows, which means the *n*-th row on screen is not `l.musicas[n]`. Anything
+mapping between the two spaces must translate explicitly — `musicasPresentes(l)` for
+counts, `indicesPresentes(l)` for positions. Drag-to-reorder shipped without that
+translation and silently persisted the wrong show order: `listdrag.js` counts DOM rows
+while `moveItem` indexes the real array. Keep both the pointer and the keyboard path
+speaking **visible** positions, and translate in one place (`applyReorder`).
+
 **No third-party musical content in the repo** — no chord charts, lyrics, tablature or
 recordings you do not own. This applies to source code too: the demo songs once embedded
 full lyrics as string constants, and removing them was its own cleanup. The example song

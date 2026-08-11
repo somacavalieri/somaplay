@@ -1,6 +1,6 @@
 # Soma_play — Tablatura na cifra em texto — design
 
-**Data:** 2026-08-07 · **Estado:** especificado
+**Data:** 2026-08-07 · **Estado:** implementado e verificado (A/B no acervo + navegador headless; ver "Verificação" para o que ficou por conferir no aparelho)
 **Origem:** defeito relatado — a tab de "Força Estranha" (Caetano Veloso) quebra cada
 corda em duas linhas. As seis cordas viram doze, o bloco dobra de altura e a grade
 some.
@@ -8,6 +8,11 @@ some.
 Este design **revoga** a decisão registrada em
 `2026-07-30-reconhecimento-de-linha-de-acordes-design.md` §"Ainda fora do
 reconhecimento", que deixava linha de tablatura como texto de propósito.
+
+**Revisto em 2026-08-11.** Entre a escrita deste design e a implementação entrou o
+reflow do par acorde/letra (`fbf95a8`, spec `2026-08-10-reflow-da-cifra-texto-design.md`).
+Ele mudou a mecânica do defeito sem consertá-lo — ver "Como o reflow mudou o defeito"
+abaixo.
 
 ## Causa raiz
 
@@ -29,6 +34,38 @@ Cabem `720 / (0,6 × fontPx)` colunas, porque o avanço da JetBrains Mono é 0,6
 Com o zoom em 110% (`fontPx = 22`) cabem **54** colunas e a 55ª — o `|` de
 fechamento — desce sozinha. Em 100% caberiam 60 e nada quebraria: por isso o
 defeito só aparece com zoom ou em tela estreita, e por isso passou despercebido.
+
+### Como o reflow mudou o defeito (2026-08-11)
+
+`fbf95a8` trocou `.ly` de `pre-wrap` para `pre` e pôs `overflow-x:auto` na
+`.cifra-text`, então a quebra por CSS descrita acima **não acontece mais**. No lugar
+dela, `cifraTextHTML` passa toda linha por `wrapBlock` — inclusive as que só têm
+letra, que é o caso da tab. E como tab não tem espaço nenhum, não existe coluna
+válida de corte e o `wrapBlock` corta na largura medida:
+
+```
+wrapBlock('', 'E|-0---0----------0-----------------------------------|', 54)
+  → [0] E|-0---0----------0-----------------------------------|   (54 col)
+    [1] |                                                          (1 col)
+```
+
+Mesmo sintoma, mecanismo novo: o `|` de fechamento continua descendo sozinho e o
+bloco continua dobrando de altura. A correção também muda de lugar — em vez de mexer
+no `white-space`, o bloco de tab tem de **sair do `wrapBlock`**.
+
+### Reflow e encolher não se contradizem
+
+O spec do reflow descarta "encolher a fonte até caber" porque, para a cifra inteira,
+a linha mais larga da música passaria a ditar o tamanho de todas — num songbook de 90
+colunas a fonte fica ilegível. A objeção é correta e continua valendo.
+
+A regra aqui é outra porque o conteúdo é outro. **Par acorde/letra reflui; tab
+encolhe.** Cortar um par acorde/letra na coluna 54 e continuar embaixo é legível — é
+o que uma cifra impressa faz. Cortar uma tab na coluna 54 e empilhar o resto não é
+uma tab quebrada em duas: é uma tab destruída, porque a leitura depende de ver as
+seis cordas em paralelo, e metade delas passa a estar noutro sistema. Tab não reflui,
+então só resta encolher — e o custo do encolhimento é limitado, porque ele vale só
+para o bloco, não para a música.
 
 **Achado secundário:** a `jbmono-latin.woff2` embutida traz `liga` e `calt`, ativos
 por padrão no navegador. É o que faz `|-` sair como `├─` em vez do `|` limpo.
@@ -68,6 +105,68 @@ rejeitaria uma pauta legítima.
 
 Linha de técnica desconhecida cai no comportamento de hoje (vira letra e quebra).
 É degradação aceitável: conserta-se ampliando o alfabeto quando aparecer.
+
+### Âncora e corrida — o que o A/B obrigou a mudar (2026-08-11)
+
+A regra acima decide **por linha**, e o A/B contra o acervo mostrou que ela não pode:
+**uma linha só de traços é indistinguível de uma corda muda.** `-----------------` é
+divisor decorativo de seção numa música e é a corda Mi grave calada na outra. Nenhuma
+inspeção da linha isolada separa as duas.
+
+O A/B (199 `.somaplay`, 5.733 cifras, 393.892 linhas) promoveu 12.002 linhas a tab, com
+**40 falso positivo em 21 músicas**: 27 divisores decorativos, 11 linhas de diagrama de
+acorde ASCII (`+-+-+-+-+-+`), 1 marcador de repetição (`<---`) e — o único de custo
+real — `          D ------` em "Tô um Lixo", que é linha de acordes e perderia a cor de
+acento e o toque.
+
+Duas correções foram testadas contra as 12.002 linhas e **descartadas por derrubarem
+tab legítima**:
+
+- **Exigir a barra `|` ou `:`** — derruba 408 linhas. O acervo tem tab sem barra
+  nenhuma: `E---------------12-10---------`.
+- **Exigir o rótulo de corda grudado no corpo** — derruba 354. O acervo tem rótulo
+  separado por espaço (`E |--------0-|`) e tem bloco sem rótulo nenhum
+  (`-9-9----9-9-----9-----9---`).
+
+Também foi considerada e rejeitada a inversão de ordem — testar `isChordLine` antes de
+`isTabLine`. `isChordTok` aceita `-` e dígito depois da nota, então
+`E---------12-10---` casa como acorde, e centenas de linhas de tab legítima voltariam a
+ser linha de acordes.
+
+**A regra que fica: âncora por linha, decisão por corrida.**
+
+Uma linha de tab é **âncora** quando se decide sozinha:
+
+- tem **rótulo de corda seguido de barra**, com ou sem espaço — `E|`, `E |`, `e:`; ou
+- tem **rótulo de corda grudado num traço** — `E-------`; ou
+- contém **algum dígito** de casa **e não é linha de acordes**.
+
+A ressalva da terceira forma saiu da revisão final, e é estreita de propósito. Sem ela,
+o dígito da *extensão* do acorde vira âncora e o acorde some da grade "Acordes desta
+música":
+
+```
+D  ------    → linha de acordes, extractChords = ["D"]     (o `m` de Am7 já barrava
+Am7 -------- → linha de acordes, extractChords = ["Am7"]    esse caso por acaso)
+D7 ------    → sem a ressalva: bloco de tab, extractChords = []
+A7 -------   → sem a ressalva: bloco de tab, extractChords = []
+```
+
+A ressalva vale **só** para a forma por dígito. As duas formas por rótulo continuam
+incondicionais, e têm de continuar: `E---------12-10---------` é tab legítima e
+**também** casa em `isChordTok` (que aceita `-` e dígito depois da nota). Se a guarda
+valesse para elas, centenas de linhas de tab do acervo voltariam a ser linha de acordes
+— é a mesma razão pela qual inverter a ordem de `isChordLine` e `isTabLine` foi
+rejeitado acima.
+
+Uma linha que passa no alfabeto e na proporção mas não é âncora é **ambígua**. Ambígua
+só entra no bloco quando a corrida a que ela pertence tem **pelo menos uma âncora**.
+Corrida sem âncora nenhuma não é tablatura: é divisor, diagrama ou marcador, e segue
+como letra.
+
+A medição justifica o desenho: **11.786 das 12.002 linhas (98,2%) são âncora** e se
+decidem sozinhas. Só **216 (1,8%)** dependem da vizinhança — e é nesse resto que os 40
+falso positivo moram, todos em corrida sem âncora.
 
 ### Bloco de tablatura
 
@@ -114,10 +213,27 @@ Em 100% de zoom uma tab de 55 colunas fica nos 20px normais (caberiam 60). A par
 de ~110% ela para de crescer e passa a caber. Reflui sozinha em resize e rotação,
 sem medir nada em JS e sem ouvinte de evento.
 
-O `container-type` fica no `.tabwrap`, não no `.cifra-text`: `container-type` implica
-`contain: layout style inline-size`, e `contain:layout` cria bloco contentor para
-descendente `position:fixed` — no `.cifra-text` isso alcançaria o popover de acorde.
-No wrapper, que só contém a tab, é inócuo.
+O `container-type` fica no `.tabwrap`, não no `.cifra-text` — mas não pelo motivo que
+uma revisão anterior deste spec afirmou. Medido em Chrome headless com controle:
+
+```
+sem contenção              → filho fixed em 10,10
+container-type:inline-size → filho fixed em 10,10   (NÃO prende)
+contain:layout              → filho fixed em 59,535    (prende)
+```
+
+`container-type:inline-size` sozinho **não** cria bloco contentor para descendente
+`position:fixed` — a afirmação de que ele "implica `contain:layout`" e por isso
+alcançaria o popover é falsa; só `contain:layout` produz esse efeito, medido acima.
+Além disso `.chord-pop` é irmão de `.cifra-scroll`, não descendente do `.tabwrap` —
+está duplamente fora do alcance de qualquer contenção aqui, então mesmo que
+`container-type` prendesse `position:fixed`, o popover não seria afetado.
+
+O motivo real é escopo: o `.tabwrap` é o menor elemento que fornece o `100cqi` de que a
+conta do `min()` acima precisa. Pôr `container-type` na `.cifra-text` inteira seria
+instrumento grosso — criaria contexto de empilhamento, mexeria em colapso de margem, e
+envolveria justamente o elemento que `measureCifraCols()` mede para o reflow do
+par acorde/letra. No `.tabwrap`, que só contém a tab, nada disso se aplica.
 
 O `overflow-x:auto` é rede de segurança. Se a fonte cair para um fallback com avanço
 diferente de 0,6em (Consolas é 0,55), o excesso vira uma rolagem mínima em vez de
@@ -134,7 +250,9 @@ alinhamento acorde↔sílaba não se move; o que muda é `|-` deixar de parecer 
 
 ## O que não muda
 
-- **`.ly` continua `pre-wrap`.** Letra comum deve quebrar. Só tab ganha tratamento.
+- **Este trabalho não toca `.ly`.** O reflow (`fbf95a8`, anterior a este trabalho) já
+  trocou `.ly` de `pre-wrap` para `pre` — ver "Como o reflow mudou o defeito" acima. Só
+  tab ganha tratamento novo aqui.
 - **`esc()` continua imprimindo a linha byte a byte.** Nada de substituição de
   caractere dentro da tab.
 - **Modelo de dados e backup.** A cifra é guardada crua em `cifra.texto` e
@@ -162,13 +280,36 @@ alinhamento acorde↔sílaba não se move; o que muda é `|-` deixar de parecer 
   (`!---->`, `^^^`), letra com travessão, marca `%`. Mais o agrupamento: seis cordas
   num bloco só, linha em branco encerrando, linha de acordes anterior absorvida,
   `extractChords` seguindo enxergando o acorde.
-- **A/B contra o acervo** — parser antigo vs novo sobre as cifras dos backups e do
-  `samples.js`, contando linhas promovidas a tab e conferindo que nenhuma linha de
-  acordes ou de letra foi capturada. Mesmo método que pegou a regressão do design de
-  2026-07-30; vale manter para qualquer mexida nessa regra.
-- **No app** — "Força Estranha" nos zooms 80/100/110/150/200%, com e sem miniaturas,
-  em janela larga e estreita: seis cordas, seis linhas, `A` sobre a coluna certa,
-  `|` limpo, sem rolagem horizontal.
+- **A/B contra o acervo** — `isTabLine` rodado sobre **199 arquivos `.somaplay`,
+  5.739 cifras únicas, 394.034 linhas** (árvore inteira do repo local, deduplicada por
+  título+texto). Mesmo método que pegou a regressão do design de 2026-07-30, e que aqui
+  fez o mesmo serviço: **a primeira versão promoveu 12.002 linhas com 40 falso positivo
+  em 21 músicas**, o que obrigou a regra de âncora acima.
+
+  Depois da âncora: **2.154 blocos, 11.950 linhas, zero bloco sem âncora.** Os quatro
+  falso positivo nominais conferidos um a um — divisor decorativo, `+-+-+-+-+-+`,
+  `<---`, e `          D ------`, que voltou a ser linha de acordes com o `D` em
+  `extractChords`. As cinco formas legítimas seguem tab, inclusive a corrida mista com
+  corda muda entre duas cordas ancoradas.
+
+  **Vale manter o método para qualquer mexida nessa regra.** Nenhuma das duas correções
+  descartadas parecia errada lendo código; foi a medição que as derrubou.
+
+- **Desempenho** — a primeira versão da âncora reescaneava a corrida rejeitada a cada
+  linha, O(n²): 8.000 linhas de traço levavam 3,5 s, 20.000 levavam ~20,8 s, o que
+  travaria a thread principal ao abrir uma música colada de PDF mal convertido. A
+  fronteira `semAncoraAte` guarda o fim da última corrida rejeitada e a escaneia uma
+  vez só: 20.000 linhas em 11 ms.
+
+- **No app** — "Força Estranha" nos zooms 100/110/150/200%, conferido em Chrome
+  headless com o CSS real: seis cordas em **seis linhas** em todos eles, `A` sobre a
+  coluna 4, `|` limpo, sem rolagem lateral. Em 110% a fonte do bloco encolhe de 22px
+  para 21,82px e o conteúdo fica em 720px — exatamente a largura do container, porque
+  `720/(55 × 0,6) = 21,818`. De 150% em diante o bloco fica no teto e só a letra cresce.
+
+  **Fora do alcance do headless, fica com o usuário:** popover de acorde dentro do
+  bloco, miniaturas ligadas e desligadas, `ResizeObserver` na rotação do tablet, uma
+  música sem tab, e o reflow do par acorde/letra numa cifra longa.
 
 ## Fora de escopo (decidido)
 

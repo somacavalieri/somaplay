@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName, splitChordTok } from '../js/chords.js';
+import { parseCifraText, extractChords, isChordTok, layoutChordRow, chordLineSegs, chordName, splitChordTok, isTabLine } from '../js/chords.js';
 
 // Helper: só as linhas com acordes, na ordem
 const chordLines = (t) => parseCifraText(t).filter((l) => l.hasChords).map((l) => l.chords);
@@ -310,4 +310,207 @@ test('par acorde/letra clássico continua pareado', () => {
   const p = parseCifraText('C       G\nQuando eu vi');
   assert.equal(p.length, 1);
   assert.deepEqual([p[0].chords, p[0].lyric], ['C       G', 'Quando eu vi']);
+});
+
+test('linha de tablatura é reconhecida', () => {
+  assert.equal(isTabLine('E|-0---0----------0-----------------------------------|'), true);
+  assert.equal(isTabLine('A|-0--------------------------------------------------|'), true);
+  assert.equal(isTabLine('E|----------------------------------------------------|'), true);
+  // tab curta: corridas de dois traços, sem nenhum "---"
+  assert.equal(isTabLine('E|--0--2--3--|'), true);
+  // sem nome de corda, e com dois-pontos no lugar da barra
+  assert.equal(isTabLine('|---3---5---|'), true);
+  assert.equal(isTabLine('e:---3---5---|'), true);
+  // símbolos de técnica: hammer, pull, bend, slide
+  assert.equal(isTabLine('G|--5h7p5--7b9--5/7--|'), true);
+  // espaço à esquerda não atrapalha
+  assert.equal(isTabLine('  D|-2-----2-----2-----2--------------------------------|'), true);
+});
+
+test('o que não é tablatura continua não sendo', () => {
+  // linha de acordes com traço separando — maiúscula fora do nome da corda derruba
+  assert.equal(isTabLine('C ---- G'), false);
+  assert.equal(isTabLine('Am7  ----  D7'), false);
+  // ornamento e marca, que já são tratados por MARK
+  assert.equal(isTabLine('!---->'), false);
+  assert.equal(isTabLine('^^^^^^'), false);
+  assert.equal(isTabLine('%'), false);
+  // digitação inline: alfabeto bate, mas não tem traço nenhum
+  assert.equal(isTabLine('0221xx'), false);
+  // letra com travessão
+  assert.equal(isTabLine('Ela disse — vou embora'), false);
+  assert.equal(isTabLine('Ela disse: eu vou'), false);
+  // linha de acordes e vazio
+  assert.equal(isTabLine('   A'), false);
+  assert.equal(isTabLine(''), false);
+  assert.equal(isTabLine('   '), false);
+});
+
+test('linhas de tab consecutivas viram um bloco só', () => {
+  const p = parseCifraText([
+    'E|-0---0---|',
+    'B|-2---2---|',
+    'G|-2---2---|',
+  ].join('\n'));
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', 'B|-2---2---|', 'G|-2---2---|']);
+  assert.equal(p[0].hasLyric, false);
+});
+
+test('linha em branco encerra o bloco de tab', () => {
+  const p = parseCifraText('E|-0---0---|\n\nB|-2---2---|');
+  assert.equal(p.length, 3);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|']);
+  assert.equal(p[1].isTab, false);
+  assert.deepEqual(p[2].tab, ['B|-2---2---|']);
+});
+
+test('a linha de acordes logo acima entra no bloco de tab', () => {
+  const p = parseCifraText('   A\nE|-0---0---|\nB|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].hasChords, true);
+  assert.equal(p[0].chords, '   A');          // coluna preservada byte a byte
+  assert.equal(p[0].hasLyric, false);          // não vira par acorde/letra
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', 'B|-2---2---|']);
+});
+
+test('acorde acima da tab continua entrando na grade da música', () => {
+  assert.deepEqual(extractChords(parseCifraText('   A   C#m7\nE|-0---0---|')), ['A', 'C#m7']);
+});
+
+test('tab não atrapalha o par acorde/letra normal', () => {
+  const p = parseCifraText('[Tab]\nE|-0---0---|\n\n     C      G\nEla me disse assim');
+  assert.equal(p[0].isSection, true);
+  assert.equal(p[1].isTab, true);
+  assert.equal(p[3].hasChords, true);
+  assert.equal(p[3].chords, '     C      G');
+  assert.equal(p[3].lyric, 'Ela me disse assim');
+  assert.equal(p[3].isTab, false);
+});
+
+test('linha que não é tab segue com tab vazio', () => {
+  const p = parseCifraText('Ela me disse assim');
+  assert.equal(p[0].isTab, false);
+  assert.deepEqual(p[0].tab, []);
+});
+
+// --- Tarefa 5: âncora e contexto de corrida --------------------------------
+
+test('corrida sem âncora nenhuma não é tablatura', () => {
+  // divisor decorativo de seção: sem rótulo de corda e sem dígito
+  const p = parseCifraText('-----------------');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasLyric, true);
+  assert.equal(p[0].lyric, '-----------------');
+});
+
+test('acorde com traço de sustentação continua linha de acordes', () => {
+  // "Tô um Lixo": D sustentado, não tablatura
+  const p = parseCifraText('          D ------\nEu tô um lixo aah');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasChords, true);
+  assert.deepEqual(extractChords(p), ['D']);
+});
+
+test('diagrama de acorde ASCII não é tablatura', () => {
+  assert.equal(parseCifraText('+-+-+-+-+-+')[0].isTab, false);
+  assert.equal(parseCifraText('<---')[0].isTab, false);
+});
+
+test('corda muda entra no bloco porque a corrida tem âncora', () => {
+  // a 2a linha é só traço — ambígua sozinha, tab por vizinhança
+  const p = parseCifraText('E|-0---0---|\n-----------\nG|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', '-----------', 'G|-2---2---|']);
+});
+
+test('as três formas de âncora valem', () => {
+  assert.equal(parseCifraText('E|-0---0---|')[0].isTab, true);   // rótulo + barra
+  assert.equal(parseCifraText('E |-0---0---|')[0].isTab, true);  // rótulo + espaço + barra
+  assert.equal(parseCifraText('E---------12-10---')[0].isTab, true); // rótulo grudado no traço
+  assert.equal(parseCifraText('-9-9----9-9-----9--')[0].isTab, true); // sem rótulo, mas tem dígito
+});
+
+test('bloco sem rótulo nenhum vale se tiver dígito', () => {
+  const p = parseCifraText('-----3----|----0-----|\n-----0----|----2-----|');
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].tab.length, 2);
+});
+
+// --- Fix round 2: dígito de extensão não pode virar âncora de tab ----------
+
+test('acorde com extensão numérica e traço de sustentação não vira tab (defeito da revisão)', () => {
+  const pD7 = parseCifraText('D7 ------');
+  assert.equal(pD7[0].isTab, false);
+  assert.equal(pD7[0].hasChords, true);
+  assert.deepEqual(extractChords(pD7), ['D7']);
+
+  const pA7 = parseCifraText('A7 ---------------');
+  assert.equal(pA7[0].isTab, false);
+  assert.equal(pA7[0].hasChords, true);
+  assert.deepEqual(extractChords(pA7), ['A7']);
+});
+
+test('não-regressão: rótulo grudado no traço continua âncora mesmo sendo acorde válido', () => {
+  // "E---------12-10---------" TAMBÉM casa como acorde em isChordTok — a guarda
+  // do dígito não pode alcançar este caso, só a forma "dígito solto" alcança.
+  assert.equal(parseCifraText('E---------12-10---------')[0].isTab, true);
+});
+
+test('não-regressão: acorde simples com traço de sustentação segue como estava', () => {
+  const pD = parseCifraText('D ------');
+  assert.equal(pD[0].isTab, false);
+  assert.equal(pD[0].hasChords, true);
+  assert.deepEqual(extractChords(pD), ['D']);
+
+  const pAm7 = parseCifraText('Am7 ----------');
+  assert.equal(pAm7[0].isTab, false);
+  assert.equal(pAm7[0].hasChords, true);
+  assert.deepEqual(extractChords(pAm7), ['Am7']);
+});
+
+test('não-regressão: tab sem rótulo, ancorada só por dígito, continua tab', () => {
+  const p = parseCifraText('-----3----|----0-----|');
+  assert.equal(p[0].isTab, true);
+});
+
+// --- Fix round 1: corrida rejeitada não pode ser reescaneada linha a linha -
+
+test('corrida longa sem âncora sai linha a linha, na ordem, byte a byte, e um acorde no meio continua acorde', () => {
+  const traco = '-'.repeat(20); // sem dígito, sem rótulo — nunca ancora
+  // branco no meio corta a corrida em duas, então o acorde não pareia com a
+  // linha seguinte de traço (o par acorde/letra normal consumiria as duas).
+  const texto = [traco, traco, traco, traco, traco, '          D ------', '', traco, traco, traco].join('\n');
+  const p = parseCifraText(texto);
+  assert.equal(p.length, 10);
+  for (const k of [0, 1, 2, 3, 4]) {
+    assert.equal(p[k].isTab, false);
+    assert.equal(p[k].lyric, traco);
+  }
+  assert.equal(p[5].isTab, false);
+  assert.equal(p[5].hasChords, true);
+  assert.deepEqual(extractChords([p[5]]), ['D']);
+  assert.equal(p[6].isTab, false); // separador em branco entre as duas corridas
+  for (const k of [7, 8, 9]) {
+    assert.equal(p[k].isTab, false);
+    assert.equal(p[k].lyric, traco);
+  }
+});
+
+test('desempenho: 5000 linhas de traço sem âncora não voltam a ser O(n²)', () => {
+  // Guarda contra a regressão medida na revisão: sem o cache de corrida
+  // rejeitada, 5000 linhas levavam ~1,3s (curva quadrática). Com o cache, é
+  // varredura linear — a folga de 500ms é generosa para não ser frágil em CI
+  // lento, mas nem de perto alcança o tempo quadrático antigo.
+  const linhas = Array.from({ length: 5000 }, () => '-'.repeat(20));
+  const texto = linhas.join('\n');
+  const inicio = Date.now();
+  const p = parseCifraText(texto);
+  const duracao = Date.now() - inicio;
+  assert.equal(p.length, 5000);
+  assert.equal(p.every((l) => l.isTab === false), true);
+  assert.ok(duracao < 500, `esperava bem menos de 500ms, levou ${duracao}ms`);
 });

@@ -14,11 +14,25 @@
 
 - **Nada de dependência nova, nada de build.** O app é servido como está.
 - **Nunca alterar o texto da cifra do usuário.** `esc()` imprime a linha byte a byte. Nenhuma substituição de caractere dentro da tab — a coluna é a informação.
-- **Toda mudança em `app/css/` ou `app/js/` exige bump de `VERSION` em `app/sw.js:2`.** O `SHELL` **não** muda aqui: nenhum módulo novo.
+- **Toda mudança em `app/css/` ou `app/js/` exige bump de `VERSION` em `app/sw.js:2` antes do merge.** Neste plano o bump acontece **uma vez, na Tarefa 3** — não uma vez por tarefa. As Tarefas 1 e 2 mexem em `app/js/chords.js` sem bump de propósito: commit intermediário de branch não é publicado, e só o estado final do branch chega ao usuário. O `SHELL` **não** muda: nenhum módulo novo.
 - **Nada de `t()` em valor de `data-*`.** Não se aplica a este plano (não há `data-*` novo), mas vale se surgir.
 - **Verificar com `cd app && node --test` e `node --check`.** UI é verificação manual no navegador — não há harness de DOM, de propósito.
-- **Commitar apenas os arquivos listados em cada tarefa, nunca `git add -A`.** Há trabalho não relacionado sem rastrear em `docs/campo_armonico/`.
-- **Âncoras conferidas em `5a5c44b`** (2026-08-10): `isChordOrMark` em `chords.js:70`, `parseCifraText` em `chords.js:109-139`, `cifraTextHTML` em `play.js:148`, `.cifra-text` em `app.css:245`, `VERSION = 'somaplay-v20'` em `sw.js:2`. Suíte verde nessa base. Se algum número não bater, achar pelo nome — o conteúdo é que vale.
+- **Commitar apenas os arquivos listados em cada tarefa, nunca `git add -A`.** Há trabalho não relacionado na árvore: `pendencias.md` modificado e `docs/campo_armonico/` sem rastrear. Nenhum dos dois entra em commit nenhum deste plano.
+- **Âncoras conferidas em `4d3a4f7`** (2026-08-11): `isChordOrMark` em `chords.js:83`, `parseCifraText` em `chords.js:131-161`, `wrapBlock` em `chords.js:300`, `cifraTextHTML` em `play.js:180`, `.cifra-text` em `app.css:259`, `VERSION = 'somaplay-v27'` em `sw.js:2`. Suíte verde nessa base: 264 testes. Se algum número não bater, achar pelo nome — o conteúdo é que vale.
+
+## O reflow já está no branch — e é por isso que a tab precisa sair dele
+
+`fbf95a8` trouxe o **reflow do par acorde/letra**: `wrapBlock(chords, lyric, cols)` quebra as duas linhas na mesma coluna, e `cifraTextHTML` passa **toda** linha por ele — inclusive as que só têm letra. Uma linha de tab é uma linha só-de-letra, então hoje ela entra na quebra. E como tab não tem espaço nenhum, não existe coluna válida de corte e o `wrapBlock` corta na marra:
+
+```
+wrapBlock('', 'E|-0---0----------0-----------------------------------|', 54)
+  → [0] E|-0---0----------0-----------------------------------|   (54 col)
+    [1] |                                                          (1 col)
+```
+
+Esse `|` órfão é o defeito relatado. **A peça central deste plano é o desvio `if (ln.isTab) return tabBlockHTML(ln);` antes do laço do `wrapBlock`** — é ele que tira a tab do reflow.
+
+Os dois mecanismos não se contradizem, se dividem pelo tipo de conteúdo: par acorde/letra reflui (quebrar em duas linhas continua legível); tab encolhe (quebrar em duas destrói a grade — não há como ler seis cordas em paralelo se metade está embaixo). O spec do reflow descarta "encolher a fonte até caber" para a cifra inteira, com razão; aqui a regra vale só para o bloco de tab.
 
 ## Estrutura de arquivos
 
@@ -36,14 +50,14 @@
 ### Tarefa 1: reconhecer linha de tablatura
 
 **Arquivos:**
-- Modificar: `app/js/chords.js` (inserir logo depois de `isChordOrMark`, linha 70)
+- Modificar: `app/js/chords.js` (inserir logo depois de `isChordOrMark`, linha 83)
 - Testar: `app/test/cifraparse.test.js` (o import fica na linha 3, já com `splitChordTok`)
 
 **Interfaces:**
 - Consome: nada.
 - Produz: `export function isTabLine(line: string): boolean` — verdadeiro para a pauta de uma corda. Usada pela Tarefa 2.
 
-- [ ] **Passo 1: escrever os testes que falham**
+- [x] **Passo 1: escrever os testes que falham**
 
 Adicionar ao fim de `app/test/cifraparse.test.js`, e incluir `isTabLine` no import da linha 3:
 
@@ -83,7 +97,7 @@ test('o que não é tablatura continua não sendo', () => {
 });
 ```
 
-- [ ] **Passo 2: rodar e confirmar que falha**
+- [x] **Passo 2: rodar e confirmar que falha**
 
 ```bash
 cd app && node --test test/cifraparse.test.js
@@ -91,7 +105,7 @@ cd app && node --test test/cifraparse.test.js
 
 Esperado: FAIL — `SyntaxError` ou `The requested module '../js/chords.js' does not provide an export named 'isTabLine'`.
 
-- [ ] **Passo 3: implementar `isTabLine`**
+- [x] **Passo 3: implementar `isTabLine`**
 
 Em `app/js/chords.js`, logo depois da linha `const isChordOrMark = ...`:
 
@@ -118,7 +132,7 @@ export function isTabLine(line) {
 }
 ```
 
-- [ ] **Passo 4: rodar e confirmar que passa**
+- [x] **Passo 4: rodar e confirmar que passa**
 
 ```bash
 cd app && node --test test/cifraparse.test.js && node --check js/chords.js
@@ -126,7 +140,7 @@ cd app && node --test test/cifraparse.test.js && node --check js/chords.js
 
 Esperado: PASS, sem falha nova na suíte.
 
-- [ ] **Passo 5: commitar**
+- [x] **Passo 5: commitar**
 
 ```bash
 git add app/js/chords.js app/test/cifraparse.test.js
@@ -138,14 +152,14 @@ git commit -m "feat: recognize tablature lines in the cifra parser"
 ### Tarefa 2: agrupar tablatura em bloco
 
 **Arquivos:**
-- Modificar: `app/js/chords.js:109-139` (comentário de bloco + `parseCifraText`)
+- Modificar: `app/js/chords.js:131-161` (comentário de bloco + `parseCifraText`)
 - Testar: `app/test/cifraparse.test.js`
 
 **Interfaces:**
 - Consome: `isTabLine(line)` da Tarefa 1.
 - Produz: cada linha devolvida por `parseCifraText` ganha dois campos — `tab: string[]` (linhas cruas da pauta, vazio quando não é tab) e `isTab: boolean`. Um bloco de tab pode trazer `chords`/`hasChords` preenchidos: é a linha de acordes que estava logo acima. Consumido pela Tarefa 3.
 
-- [ ] **Passo 1: escrever os testes que falham**
+- [x] **Passo 1: escrever os testes que falham**
 
 Adicionar ao fim de `app/test/cifraparse.test.js`:
 
@@ -201,7 +215,7 @@ test('linha que não é tab segue com tab vazio', () => {
 });
 ```
 
-- [ ] **Passo 2: rodar e confirmar que falha**
+- [x] **Passo 2: rodar e confirmar que falha**
 
 ```bash
 cd app && node --test test/cifraparse.test.js
@@ -209,7 +223,7 @@ cd app && node --test test/cifraparse.test.js
 
 Esperado: FAIL — `p.length` 3 em vez de 1, e `p[0].isTab` `undefined`.
 
-- [ ] **Passo 3: reescrever `parseCifraText`**
+- [x] **Passo 3: reescrever `parseCifraText`**
 
 Substituir o corpo inteiro de `parseCifraText` em `app/js/chords.js` por:
 
@@ -269,7 +283,7 @@ export function parseCifraText(text) {
 }
 ```
 
-Atualizar também o comentário de bloco acima da função (linhas 109-110) para citar o novo formato:
+Atualizar também o comentário de bloco acima da função (linhas 131-132) para citar o novo formato:
 
 ```js
 // Parser de cifra colada (estilo CifraClub): [Seção] / linha de acordes / letra /
@@ -278,7 +292,7 @@ Atualizar também o comentário de bloco acima da função (linhas 109-110) para
 // { isSection, section, hasChords, chords, hasLyric, lyric, isTab, tab }
 ```
 
-- [ ] **Passo 4: rodar a suíte inteira**
+- [x] **Passo 4: rodar a suíte inteira**
 
 ```bash
 cd app && node --test && node --check js/chords.js
@@ -286,7 +300,7 @@ cd app && node --test && node --check js/chords.js
 
 Esperado: PASS em tudo. Atenção especial aos testes antigos de par acorde/letra — nenhum pode regredir.
 
-- [ ] **Passo 5: commitar**
+- [x] **Passo 5: commitar**
 
 ```bash
 git add app/js/chords.js app/test/cifraparse.test.js
@@ -298,23 +312,25 @@ git commit -m "feat: group consecutive tablature lines into a single block"
 ### Tarefa 3: renderizar o bloco encolhendo para caber
 
 **Arquivos:**
-- Modificar: `app/js/render/play.js` (nova `tabBlockHTML` antes de `cifraTextHTML`; desvio dentro de `cifraTextHTML:155-165`)
-- Modificar: `app/css/app.css:245` e `:248` (inserir depois)
+- Modificar: `app/js/render/play.js` (nova `tabBlockHTML` antes de `cifraTextHTML:180`; desvio na primeira linha do `parsed.map` em `:187`)
+- Modificar: `app/css/app.css:259` e `:262` (inserir depois)
 - Modificar: `app/sw.js:2`
 
 **Interfaces:**
 - Consome: `ln.isTab`, `ln.tab`, `ln.chords`, `ln.hasChords` da Tarefa 2; `chordLineHTML(chordLine)` e `esc()`, já existentes em `play.js`.
 - Produz: marcação `.tabwrap > .tab[style="--cols:N"]`, consumida pelo CSS desta mesma tarefa.
 
-- [ ] **Passo 1: adicionar o CSS**
+- [x] **Passo 1: adicionar o CSS**
 
-Em `app/css/app.css`, trocar a linha 245 por (acrescenta só o desligamento de ligadura):
+Em `app/css/app.css`, trocar a linha 259 por (acrescenta só o desligamento de ligadura; o `overflow-x:auto` já veio com o reflow e **fica**):
 
 ```css
-.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:0 auto;overflow-x:auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 ```
 
-E inserir logo depois da linha `.cifra-text .ly{...}`:
+`.cifra-text .ly` **não se toca**: o reflow já a deixou em `white-space:pre`, que é o correto.
+
+E inserir logo depois da linha `.cifra-text .ly{...}` (linha 262):
 
 ```css
 /* Tablatura: grade de largura fixa. Nunca quebra e nunca rola — encolhe.
@@ -329,9 +345,9 @@ E inserir logo depois da linha `.cifra-text .ly{...}`:
 .cifra-text .tab{white-space:pre;font-size:min(1em,calc(100cqi/(var(--cols) * .6)))}
 ```
 
-- [ ] **Passo 2: adicionar `tabBlockHTML` em `play.js`**
+- [x] **Passo 2: adicionar `tabBlockHTML` em `play.js`**
 
-Inserir logo antes de `function cifraTextHTML(song) {` (linha 148):
+Inserir logo antes de `function cifraTextHTML(song) {` (linha 180):
 
 ```js
 // Bloco de tablatura: uma corda por linha, sem quebra, com a linha de acordes de
@@ -347,25 +363,39 @@ function tabBlockHTML(ln) {
 }
 ```
 
-- [ ] **Passo 3: desviar em `cifraTextHTML`**
+- [x] **Passo 3: desviar em `cifraTextHTML`, antes do `wrapBlock`**
 
-Em `app/js/render/play.js`, trocar a primeira linha do `.map` do bloco `const lines = parsed.map((ln) => {`:
+Em `app/js/render/play.js:187`, o callback do `.map` hoje começa assim:
 
 ```js
   const lines = parsed.map((ln) => {
+    let h = '';
+    if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
+    // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
+    // cima da sílaba dele quando a linha não cabe na tela
+    for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
+                              ln.hasLyric ? ln.lyric : '', cifraCols)) {
+```
+
+Acrescentar **uma** linha, como primeira instrução do callback:
+
+```js
+  const lines = parsed.map((ln) => {
+    // Tab sai do reflow: quebrar a grade em duas destrói a leitura das seis cordas
+    // em paralelo. Ela encolhe para caber, no CSS, em vez de quebrar.
     if (ln.isTab) return tabBlockHTML(ln);
     let h = '';
 ```
 
-O resto do callback fica exatamente como está.
+O resto do callback — `isSection`, o laço do `wrapBlock`, as miniaturas — fica exatamente como está. Um bloco de tab nunca chega ao `wrapBlock`.
 
-- [ ] **Passo 4: bump do Service Worker**
+- [x] **Passo 4: bump do Service Worker**
 
-Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v20';` → `'somaplay-v21'`.
+Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v27';` → `'somaplay-v28'`.
 
-O `SHELL` não muda — nenhum módulo novo. (Se o working tree já estiver em `v20` por trabalho não commitado, `v21` continua correto: a versão só precisa ser monotônica.)
+O `SHELL` não muda — nenhum módulo novo. Se a linha já estiver numa versão maior que v27, subir um a partir dela: a versão só precisa ser monotônica.
 
-- [ ] **Passo 5: rodar a suíte e o check de sintaxe**
+- [x] **Passo 5: rodar a suíte e o check de sintaxe**
 
 ```bash
 cd app && node --test && node --check js/render/play.js
@@ -373,7 +403,14 @@ cd app && node --test && node --check js/render/play.js
 
 Esperado: PASS. `shell.test.js` continua verde (nenhum módulo novo).
 
-- [ ] **Passo 6: verificar no navegador — esta é a verificação que conta**
+- [~] **Passo 6: verificar no navegador — esta é a verificação que conta (PARCIAL — ver nota abaixo)**
+
+> **Quem faz:** este passo **não é do implementador** — ele não tem navegador nem a
+> biblioteca do usuário no IndexedDB. O implementador vai até o Passo 5, commita
+> (Passo 7) e reporta. A verificação abaixo fica com quem coordena, que roda o que dá
+> para rodar sem estado de usuário (Chrome headless numa página de diagnóstico com as
+> linhas reais da música) e entrega o resto ao usuário, dizendo explicitamente o que
+> conferiu e o que não conferiu.
 
 ```bash
 cd app && python3 -m http.server 8137
@@ -391,8 +428,16 @@ Importar `forca-estranha-cifraclub.somaplay` (Ajustes → Importar, modo merge) 
 8. **Janela estreita** (arrastar até ~400px) e **rotação** — o bloco reflui sozinho.
 9. **Popover de acorde** — clicar num acorde dentro e fora do bloco de tab: abre e posiciona certo (é o que o `container-type` no wrapper protege).
 10. **Uma música sem tab** — "Andança" ou o sample que acompanha o app: nada mudou.
+11. **O reflow continua intacto** — numa música de linha longa (lote do Songbook do Gil), o par acorde/letra segue quebrando junto, na mesma coluna, com o acorde sobre a sílaba certa. A tab sair do `wrapBlock` não pode ter mexido nisso.
+12. **`ResizeObserver` não entra em laço** — estreitar e alargar a janela várias vezes numa música com tab: a cifra reflui e estabiliza, sem piscar. O bloco de tab não participa da medição de colunas, mas divide a `.cifra-text` com quem participa.
 
-- [ ] **Passo 7: commitar**
+> **Resultado real (revisão final, 2026-08-11):** itens **1 a 6** e o **mecanismo** do
+> item **9** (posicionamento de `position:fixed` sob `container-type` vs.
+> `contain:layout` — ver "Verificação" no spec) foram conferidos em Chrome headless.
+> Itens **7, 8, 10, 11 e 12** dependem da biblioteca do usuário no aparelho (IndexedDB,
+> tablet real) e **continuam abertos** — não foram verificados.
+
+- [x] **Passo 7: commitar**
 
 ```bash
 git add app/js/render/play.js app/css/app.css app/sw.js
@@ -412,7 +457,7 @@ Mesmo método que pegou a regressão do design de 2026-07-30: rodar o parser nov
 - Consome: `parseCifraText` e `isTabLine` das Tarefas 1 e 2.
 - Produz: relatório no terminal. Nenhum artefato no repositório.
 
-- [ ] **Passo 1: escrever o script**
+- [x] **Passo 1: escrever o script**
 
 ```js
 // scripts/ab-tab.mjs — A/B do reconhecimento de tablatura contra o acervo.
@@ -462,26 +507,26 @@ for (const [k, linhas] of porMusica) {
 }
 ```
 
-- [ ] **Passo 2: rodar**
+- [x] **Passo 2: rodar**
 
 ```bash
 node scripts/ab-tab.mjs
 ```
 
-- [ ] **Passo 3: ler o relatório linha a linha**
+- [x] **Passo 3: ler o relatório linha a linha**
 
 Critério de aprovação: **toda** linha listada é pauta de tablatura de verdade. Uma única linha de acordes ou de letra na lista reprova — nesse caso, apertar `TAB_ALFABETO` ou a proporção de traços na Tarefa 1, adicionar o caso como teste de falso positivo, e rodar de novo.
 
 Se `SAMPLES` não for exportado com esse nome, ajustar o import olhando `app/js/samples.js` — o script é descartável, não vale inventar abstração para ele.
 
-- [ ] **Passo 4: apagar o script**
+- [x] **Passo 4: apagar o script**
 
 ```bash
 rm scripts/ab-tab.mjs
 git status --short   # confirmar que nada de scripts/ ficou para trás
 ```
 
-- [ ] **Passo 5: registrar o resultado no spec**
+- [x] **Passo 5: registrar o resultado no spec**
 
 Em `docs/superpowers/specs/2026-08-07-tablatura-na-cifra-design.md`, na seção "Verificação", trocar a descrição do A/B pelo número real (ex.: "A/B em 222 cifras: 312 linhas promovidas a tab, 0 falso positivo"), e trocar `**Estado:** especificado` por `**Estado:** implementado e verificado`.
 
@@ -518,3 +563,149 @@ git commit -m "docs: record the tablature A/B result against the library"
 **Nomes:** `isTabLine`, `TAB_ALFABETO`, `corridaTab`, `semRabo`, `tabBlockHTML`, `--cols`, `.tabwrap`, `.tab` — usados com a mesma grafia em todas as tarefas.
 
 **Sem placeholder:** todo passo de código traz o código.
+
+---
+
+### Tarefa 5: âncora e contexto de corrida
+
+Nasceu do A/B da Tarefa 4, que achou 40 falso positivo em 21 músicas. Ver a seção
+"Âncora e corrida" do spec para o porquê e para as duas correções que foram testadas e
+descartadas antes desta.
+
+**Arquivos:**
+- Modificar: `app/js/chords.js` — `isTabAnchor` nova (não exportada), e o agrupamento de corrida em `parseCifraText`
+- Testar: `app/test/cifraparse.test.js`
+
+**Interfaces:**
+- Consome: `isTabLine(line)` da Tarefa 1, sem alteração.
+- Produz: nada de novo para fora. `parseCifraText` continua devolvendo `tab` / `isTab`; só muda **quais** corridas viram bloco.
+
+- [x] **Passo 1: escrever os testes que falham**
+
+Adicionar ao fim de `app/test/cifraparse.test.js`:
+
+```js
+test('corrida sem âncora nenhuma não é tablatura', () => {
+  // divisor decorativo de seção: sem rótulo de corda e sem dígito
+  const p = parseCifraText('-----------------');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasLyric, true);
+  assert.equal(p[0].lyric, '-----------------');
+});
+
+test('acorde com traço de sustentação continua linha de acordes', () => {
+  // "Tô um Lixo": D sustentado, não tablatura
+  const p = parseCifraText('          D ------\nEu tô um lixo aah');
+  assert.equal(p[0].isTab, false);
+  assert.equal(p[0].hasChords, true);
+  assert.deepEqual(extractChords(p), ['D']);
+});
+
+test('diagrama de acorde ASCII não é tablatura', () => {
+  assert.equal(parseCifraText('+-+-+-+-+-+')[0].isTab, false);
+  assert.equal(parseCifraText('<---')[0].isTab, false);
+});
+
+test('corda muda entra no bloco porque a corrida tem âncora', () => {
+  // a 2a linha é só traço — ambígua sozinha, tab por vizinhança
+  const p = parseCifraText('E|-0---0---|\n-----------\nG|-2---2---|');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].isTab, true);
+  assert.deepEqual(p[0].tab, ['E|-0---0---|', '-----------', 'G|-2---2---|']);
+});
+
+test('as três formas de âncora valem', () => {
+  assert.equal(parseCifraText('E|-0---0---|')[0].isTab, true);   // rótulo + barra
+  assert.equal(parseCifraText('E |-0---0---|')[0].isTab, true);  // rótulo + espaço + barra
+  assert.equal(parseCifraText('E---------12-10---')[0].isTab, true); // rótulo grudado no traço
+  assert.equal(parseCifraText('-9-9----9-9-----9--')[0].isTab, true); // sem rótulo, mas tem dígito
+});
+
+test('bloco sem rótulo nenhum vale se tiver dígito', () => {
+  const p = parseCifraText('-----3----|----0-----|\n-----0----|----2-----|');
+  assert.equal(p[0].isTab, true);
+  assert.equal(p[0].tab.length, 2);
+});
+```
+
+- [x] **Passo 2: rodar e confirmar que falha**
+
+```bash
+cd app && node --test test/cifraparse.test.js
+```
+
+Esperado: FAIL nos testes de corrida sem âncora — hoje `-----------------` e `D ------` viram bloco de tab.
+
+- [x] **Passo 3: implementar**
+
+Em `app/js/chords.js`, logo depois de `isTabLine`:
+
+```js
+// Âncora: linha de tab que se decide sozinha. Rótulo de corda seguido de barra
+// (com ou sem espaço), rótulo grudado num traço, ou dígito de casa em qualquer
+// lugar. O A/B contra o acervo mediu 98,2% das linhas de tab nesta situação.
+const isTabAnchor = (line) => {
+  const s = String(line).trim();
+  return /^[A-Ga-g][#b]?(?:\s?[|:]|-)/.test(s) || /\d/.test(s);
+};
+```
+
+E em `parseCifraText`, a `corridaTab` passa a devolver corrida vazia quando não há
+âncora — o que faz os dois pontos de chamada caírem sozinhos no caminho antigo:
+
+```js
+  // Corrida de linhas de tab a partir de i. As cordas de um mesmo bloco têm de
+  // sair juntas: elas compartilham a fonte, e fonte diferente desalinha coluna.
+  // Corrida sem âncora nenhuma não é tablatura — uma linha só de traços é
+  // indistinguível de uma corda muda, e só a vizinhança separa as duas.
+  const corridaTab = (i) => {
+    const run = [];
+    while (i < lines.length && isTabLine(lines[i])) run.push(semRabo(lines[i++]));
+    return run.some(isTabAnchor) ? run : [];
+  };
+```
+
+E os dois pontos de chamada passam a conferir se a corrida veio vazia. No caminho do
+bloco solto:
+
+```js
+    if (isTabLine(raw)) {
+      const run = corridaTab(i);
+      if (run.length) { out.push({ tab: run }); i += run.length; continue; }
+      // corrida sem âncora: cai no fluxo normal, esta linha é letra
+    }
+```
+
+No caminho da linha de acordes com tab abaixo:
+
+```js
+      if (next !== undefined && isTabLine(next)) {
+        const run = corridaTab(i + 1);
+        if (run.length) {
+          out.push({ chords: semRabo(raw), tab: run });
+          i += 1 + run.length;
+          continue;
+        }
+        // corrida sem âncora: segue para o pareamento acorde/letra normal
+      }
+```
+
+Atenção: o `if (isTabLine(raw))` deixa de ter `continue` incondicional. Confira que a
+linha segue para `isChordLine` e daí para o `out.push({ lyric: ... })`, e que `i` avança
+em todos os caminhos.
+
+- [x] **Passo 4: rodar a suíte inteira**
+
+```bash
+cd app && node --test && node --check js/chords.js
+```
+
+Esperado: PASS em tudo, os 6 testes novos inclusive. Nenhum dos testes de tab das
+Tarefas 1 e 2 pode regredir.
+
+- [x] **Passo 5: commitar**
+
+```bash
+git add app/js/chords.js app/test/cifraparse.test.js
+git commit -m "fix: a run of tab lines needs an anchor to count as tablature"
+```

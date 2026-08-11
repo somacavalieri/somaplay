@@ -2,8 +2,8 @@
 import {
   S, audio, initState, applyTheme, saveSettings,
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
-  createList, listById, toggleSongInList, reorderInList, favList,
-  persistCurrentStems, applyVarToSongs,
+  createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
+  persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -17,7 +17,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary } from './backup.js';
+import { exportLibrary, importLibrary, nomeDoExport, stampDeHoje } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -562,9 +562,26 @@ const actions = {
     S.settings.chordNotationTouched = true;
     saveSettings(); update();
   },
+  toggleExportAll() {
+    // null = todas. Marcada, desmarca tudo; desmarcada ou parcial, marca tudo.
+    S.exportFontes = S.exportFontes === null ? [] : null;
+    update();
+  },
+  toggleExportFonte(d) {
+    const todas = fontesDaBiblioteca(S.songs).map((f) => f.nome);
+    const atual = S.exportFontes === null ? todas : S.exportFontes;
+    const prox = atual.includes(d.id) ? atual.filter((x) => x !== d.id) : [...atual, d.id];
+    // Remarcar tudo volta para o sentinela: sem isso "todas" teria duas
+    // representações, e o nome do arquivo não voltaria a ser somaplay-backup-*.
+    S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
+    update();
+  },
   async exportBackup() {
+    const fontes = S.exportFontes;
+    const sel = fontes?.length ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
+    const fileName = nomeDoExport(fontes, stampDeHoje(), t('settings.export.fileMulti'));
     toast(t('msg.backup.exporting'));
-    try { await exportLibrary(); toast(t('msg.backup.exported')); }
+    try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
@@ -614,13 +631,23 @@ const actions = {
   },
 };
 
-// Índice da alça que deve receber o foco depois do próximo render.
+// Posição VISÍVEL da alça que deve receber o foco depois do próximo render —
+// o mesmo espaço do data-idx que o seletor lá em cima procura.
 let pendingHandleIdx = null;
 function focusHandle(idx) { pendingHandleIdx = idx; }
 
 // Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
-function applyReorder(from, to) {
-  if (S.openListId === '__fav') return; // Favoritas: ordem automática
+// AMBOS falam em POSIÇÃO VISÍVEL, porque é isso que o usuário vê e move; a
+// tradução para o índice real de l.musicas — que pode ter id órfão, e aí os dois
+// espaços se separam — acontece aqui, num lugar só.
+function applyReorder(fromVis, toVis) {
+  if (S.openListId === '__fav') return; // Favoritas: ordem automática, nunca tem órfão
+  const l = listById(S.openListId);
+  if (!l) return;
+  const idx = indicesPresentes(l);
+  const from = idx[fromVis];
+  const to = idx[toVis];
+  if (from == null || to == null) return;
   reorderInList(S.openListId, from, to);
   update();
 }
@@ -692,6 +719,11 @@ function wireBackupInput() {
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
       const res = await importLibrary(f, { merge });
+      // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
+      // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
+      // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
+      // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
+      S.exportFontes = null;
       applyTheme();
       update();
       toast(merge
@@ -781,10 +813,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     const h = document.activeElement?.closest?.('.drag-handle');
     if (h) {
+      // data-idx é a posição VISÍVEL, igual à que o arraste entrega: o limite é
+      // o número de linhas na tela, não o tamanho de l.musicas.
       const from = +h.dataset.idx;
       const to = from + (e.key === 'ArrowUp' ? -1 : 1);
       const l = listById(S.openListId);
-      if (l && to >= 0 && to < l.musicas.length) {
+      if (l && to >= 0 && to < indicesPresentes(l).length) {
         e.preventDefault();
         focusHandle(to);
         applyReorder(from, to);

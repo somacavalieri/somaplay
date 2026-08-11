@@ -9,9 +9,50 @@ import { t } from './i18n.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
-export async function exportLibrary() {
+// O recorte de uma exportação. Não sabe o que é fonte: recebe conjuntos de ids
+// prontos, e por isso um eixo novo (artista, lista) entra sem mexer aqui.
+// null em qualquer campo significa "tudo" — e com null nos dois o resultado é
+// a biblioteca inteira, que é o caminho do backup completo de sempre.
+//
+// Artista sem música no recorte fica de fora: um artista vazio no destino é
+// lixo para o usuário apagar à mão. As listas, ao contrário, viajam inteiras —
+// são só ids, não pesam nada, e os que faltam se resolvem quando a outra fonte
+// for importada. Podá-las perderia dado: o merge substitui a lista pelo id.
+export function recorteParaExport(estado, sel) {
+  const { artists = [], songs = [], lists = [] } = estado || {};
+  const { songIds = null, listIds = null } = sel || {};
+  const songsOut = songIds ? songs.filter((s) => songIds.has(s.id)) : songs;
+  const comMusica = new Set(songsOut.map((s) => s.artistId));
+  const artistsOut = songIds ? artists.filter((a) => comMusica.has(a.id)) : artists;
+  const listsOut = listIds ? lists.filter((l) => listIds.has(l.id)) : lists;
+  return { artists: artistsOut, songs: songsOut, lists: listsOut };
+}
+
+export function stampDeHoje(d = new Date()) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// O nome diz o recorte. `fontes` é null ou vazio quando é tudo — aí o nome é o
+// de sempre, e um backup completo continua se chamando o que sempre se chamou.
+// `palavraFontes` chega de fora ("fontes"/"sources") para a função ficar pura:
+// nome de arquivo não é dado persistido, então traduzir aqui é seguro.
+export function nomeDoExport(fontes, stamp, palavraFontes) {
+  const slug = (parte) => String(parte)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tira acento
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const nome = () => {
+    if (!fontes || !fontes.length) return 'backup';
+    if (fontes.length === 1) return slug(fontes[0]) || 'backup';
+    return `${fontes.length}-${slug(palavraFontes)}`;
+  };
+  return `somaplay-${nome()}-${stamp}.somaplay`;
+}
+
+// Sem argumento, o comportamento é exatamente o de hoje: a biblioteca inteira.
+export async function exportLibrary({ songIds = null, listIds = null, fileName = null } = {}) {
+  const corte = recorteParaExport({ artists: S.artists, songs: S.songs, lists: S.lists }, { songIds, listIds });
   const blobIds = [];
-  S.songs.forEach((s) => {
+  corte.songs.forEach((s) => {
     (s.cifra?.imagens || []).forEach((im) => im.blobId && blobIds.push(im.blobId));
     (s.stems || []).forEach((st) => st.blobId && blobIds.push(st.blobId));
     (s.full || []).forEach((f) => f.blobId && blobIds.push(f.blobId));
@@ -24,12 +65,16 @@ export async function exportLibrary() {
     manifestBlobs.push({ id, size: b.size, type: b.type || 'application/octet-stream' });
     parts.push(b);
   }
+  // chordbook e settings não têm fonte: não passam pelo recorte. O chordbook é
+  // JSON pequeno, e sem ele uma cifra pode chegar sem a forma customizada do
+  // acorde. `version` continua 1 — um arquivo filtrado é um .somaplay legítimo,
+  // e uma versão antiga do app lê ele sem saber que houve filtro.
   const manifest = {
     version: 1,
     app: 'soma_play',
-    artists: S.artists,
-    songs: S.songs,
-    lists: S.lists,
+    artists: corte.artists,
+    songs: corte.songs,
+    lists: corte.lists,
     settings: S.settings,
     chordbook: chordbookRecords(),
     blobs: manifestBlobs,
@@ -39,9 +84,7 @@ export async function exportLibrary() {
   const blob = new Blob([header, ...parts], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  const d = new Date();
-  const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  a.download = `somaplay-backup-${stamp}.somaplay`;
+  a.download = fileName || nomeDoExport(null, stampDeHoje());
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
