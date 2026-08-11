@@ -9,6 +9,25 @@ import { t } from './i18n.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
+// O recorte de uma exportação. Não sabe o que é fonte: recebe conjuntos de ids
+// prontos, e por isso um eixo novo (artista, lista) entra sem mexer aqui.
+// null em qualquer campo significa "tudo" — e com null nos dois o resultado é
+// a biblioteca inteira, que é o caminho do backup completo de sempre.
+//
+// Artista sem música no recorte fica de fora: um artista vazio no destino é
+// lixo para o usuário apagar à mão. As listas, ao contrário, viajam inteiras —
+// são só ids, não pesam nada, e os que faltam se resolvem quando a outra fonte
+// for importada. Podá-las perderia dado: o merge substitui a lista pelo id.
+export function recorteParaExport(estado, sel) {
+  const { artists = [], songs = [], lists = [] } = estado || {};
+  const { songIds = null, listIds = null } = sel || {};
+  const songsOut = songIds ? songs.filter((s) => songIds.has(s.id)) : songs;
+  const comMusica = new Set(songsOut.map((s) => s.artistId));
+  const artistsOut = songIds ? artists.filter((a) => comMusica.has(a.id)) : artists;
+  const listsOut = listIds ? lists.filter((l) => listIds.has(l.id)) : lists;
+  return { artists: artistsOut, songs: songsOut, lists: listsOut };
+}
+
 export async function exportLibrary() {
   const blobIds = [];
   S.songs.forEach((s) => {
