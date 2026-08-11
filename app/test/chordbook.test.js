@@ -249,3 +249,29 @@ test('mergeRecords sobre uma lista: nomes novos entram, existentes se fundem', (
   assert.equal(out[1].name, 'G');
   assert.equal(out[1].vars.length, 1);
 });
+
+// --- nome canônico na busca (spec 2026-08-10-diminutos-no-catalogo) -------
+// A cifra escreve o diminuto de cinco jeitos; o catálogo guarda um só.
+
+test('shapesOf acha a forma por qualquer grafia do diminuto', () => {
+  const alvo = shapesOf('F°')[0].frets;
+  for (const n of ['Fº', 'Fo', 'Fdim', 'Fdim7']) {
+    assert.ok(shapesOf(n).length, `${n} ficou sem forma`);
+    assert.deepEqual(shapesOf(n)[0].frets, alvo, `${n} achou forma diferente de F°`);
+  }
+});
+
+test('shapesOf resolve a enarmonia (bemol acha a forma do sustenido)', () => {
+  assert.deepEqual(shapesOf('Bbo')[0].frets, shapesOf('A#°')[0].frets);
+  assert.deepEqual(shapesOf('Eb°')[0].frets, shapesOf('D#°')[0].frets);
+});
+
+test('a forma achada pelo canônico mantém o id do nome canônico', () => {
+  // assim a mesma forma tem o mesmo id em qualquer grafia, e as referências
+  // gravadas (lápides, digitações) param de depender de como a cifra escreveu
+  assert.equal(shapesOf('Fº')[0].id, shapesOf('F°')[0].id);
+});
+
+test('nome que não é acorde continua sem forma', () => {
+  assert.deepEqual(shapesOf('Xyz'), []);
+});

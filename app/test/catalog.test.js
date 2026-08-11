@@ -179,3 +179,37 @@ test('nenhuma forma CAGED estoura a janela de 4 casas do diagrama', () => {
     }
   }
 });
+
+// --- diminutos (spec 2026-08-10-diminutos-no-catalogo) --------------------
+// Lidos por pixel da tabela do usuário e conferidos pelas notas. O teste
+// RECALCULA as notas em vez de repetir os frets: repetir os números duplicaria
+// um eventual erro de digitação em vez de pegá-lo.
+const SEMI = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+const AFINACAO = [4, 9, 2, 7, 11, 4];   // Mi grave, Lá, Ré, Sol, Si, Mi agudo
+const RAIZES = Object.keys(SEMI);
+
+test('catálogo tem os 12 diminutos, e cada um soa o acorde certo', () => {
+  for (const raiz of RAIZES) {
+    const nome = `${raiz}°`;
+    const f = catalogDefault(nome);
+    assert.ok(f, `${nome} não está no catálogo`);
+    // diminuto de sétima: fundamental, 3ª menor, 5ª diminuta e 7ª diminuta
+    const alvo = new Set([0, 3, 6, 9].map((i) => (SEMI[raiz] + i) % 12));
+    const soa = new Set(f.frets.map((x, i) => (x < 0 ? null : (AFINACAO[i] + x) % 12)).filter((n) => n !== null));
+    assert.deepEqual([...soa].sort((a, b) => a - b), [...alvo].sort((a, b) => a - b),
+      `${nome} soa notas erradas em [${f.frets.join(', ')}]`);
+  }
+});
+
+test('o diminuto do catálogo tem a fundamental no baixo', () => {
+  for (const raiz of RAIZES) {
+    const f = catalogDefault(`${raiz}°`);
+    const i = f.frets.findIndex((x) => x >= 0);
+    assert.equal((AFINACAO[i] + f.frets[i]) % 12, SEMI[raiz], `${raiz}° não tem ${raiz} no baixo`);
+  }
+});
+
+test('C#° preserva a forma antiga no índice 0 (catálogo é append-only)', () => {
+  // o índice vira o id persistido `b:C#°:0`, gravado em lápides e digitações
+  assert.deepEqual(catalogShapes('C#°')[0].frets, [-1, 4, 5, 3, 5, 3]);
+});

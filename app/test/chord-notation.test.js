@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toIntl, toBr, display } from '../js/chord-notation.js';
+import { toIntl, toBr, canonico, display } from '../js/chord-notation.js';
 import { CATALOG } from '../js/chords-catalog.js';
 
 test('converte os sufixos maiores para notação internacional', () => {
@@ -90,4 +90,46 @@ test('cobre sufixos raros que o catálogo não exercita: (b13), (11), (9), (b9)'
 
   assert.equal(toIntl('C7(b9)'), 'C7b9');
   assert.equal(toBr('C7b9'), 'C7(b9)');
+});
+
+// --- diminuto com "o" e enarmonia (spec 2026-08-10-diminutos-no-catalogo) ---
+
+test('toIntl entende o diminuto escrito com "o" minúsculo', () => {
+  assert.equal(toIntl('Fo'), 'Fdim');
+  assert.equal(toIntl('Ebo'), 'Ebdim');
+  assert.equal(toBr(toIntl('Fo')), 'F°');
+});
+
+test('o "o" só vale no fim do corpo — palavra não vira acorde', () => {
+  // "Como" e "Bom" abrem com nota; se o 'o' valesse no meio, o nome se corromperia
+  assert.equal(toIntl('Como'), 'Como');
+  assert.equal(toIntl('Bom'), 'Bom');
+});
+
+test('o "o" no fim do corpo não afeta o baixo depois da barra', () => {
+  assert.equal(toIntl('Co/E'), 'Cdim/E');
+  assert.equal(toIntl('D/F#'), 'D/F#');
+});
+
+test('canonico unifica as grafias do diminuto', () => {
+  for (const n of ['F°', 'Fº', 'Fo', 'Fdim', 'Fdim7']) {
+    assert.equal(canonico(n), 'F°', `${n} deveria canonizar para F°`);
+  }
+});
+
+test('canonico troca bemol por sustenido, que é a convenção do catálogo', () => {
+  assert.equal(canonico('Bb°'), 'A#°');
+  assert.equal(canonico('Bbo'), 'A#°');
+  assert.equal(canonico('Ebdim'), 'D#°');
+  assert.equal(canonico('Gb°'), 'F#°');
+  assert.equal(canonico('Ab°'), 'G#°');
+  assert.equal(canonico('Db°'), 'C#°');
+});
+
+test('canonico também troca o bemol do baixo depois da barra', () => {
+  assert.equal(canonico('Cm6/Eb'), 'Cm6/D#');
+});
+
+test('canonico devolve inalterado o que já está canônico', () => {
+  ['C', 'Am7', 'F#m', 'G7M', 'A#°'].forEach((n) => assert.equal(canonico(n), n, n));
 });

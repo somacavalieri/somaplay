@@ -4,7 +4,7 @@
 // registro do usuário: { name, vars:[{id,frets,barre?,label}], hidden:[id], defaultId }
 import { CATALOG } from './chords-catalog.js';
 import { DB, uid } from './db.js';
-import { toIntl, toBr } from './chord-notation.js';
+import { toIntl, toBr, canonico } from './chord-notation.js';
 import { t } from './i18n.js';
 
 // Formas embutidas de um nome, com id sintético pela posição no catálogo.
@@ -107,7 +107,22 @@ export function chordbookRecords() { return [...BOOK.values()]; }
 
 export function shapesOf(name) {
   if (CACHE.has(name)) return CACHE.get(name);
-  const list = mergeShapes(builtinShapes(name), BOOK.get(name));
+  // A cifra escreve o mesmo acorde de vários jeitos — 'F°', 'Fº', 'Fo', 'Fdim',
+  // 'Fdim7' — e o bemol concorre com o sustenido ('Bb°' x 'A#°'). O catálogo
+  // guarda uma grafia só; quando o literal não tem forma, cai para o canônico.
+  // Isso vale para todo o catálogo, não só diminuto: 'Bbm7' acha 'A#m7'.
+  let builtins = builtinShapes(name);
+  if (!builtins.length) {
+    const alt = canonico(name);
+    // o id sai como `b:<canônico>:<i>`, e é isso que se quer: a mesma forma tem
+    // o mesmo id em qualquer grafia, então lápide e digitação gravadas param de
+    // depender de como a cifra escreveu o acorde
+    if (alt !== name) builtins = builtinShapes(alt);
+  }
+  // o delta do usuário continua sendo lido pelo nome LITERAL: quem editou 'Fº'
+  // gravou um registro 'Fº'. O mergeShapes casa por id, então override e lápide
+  // funcionam mesmo com o registro sob a grafia da cifra.
+  const list = mergeShapes(builtins, BOOK.get(name));
   CACHE.set(name, list);
   return list;
 }
