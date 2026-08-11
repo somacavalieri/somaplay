@@ -84,6 +84,13 @@ export function songById(id) { return S.songs.find((s) => s.id === id) || null; 
 export function musicasPresentes(l) {
   return ((l && l.musicas) || []).filter((id) => songById(id));
 }
+// Os índices REAIS das músicas que a tela mostra, na ordem em que aparecem: a
+// ponte entre a POSIÇÃO VISÍVEL — o que o dedo arrasta, o que data-idx carrega —
+// e o índice que moveItem move. Com um id órfão as duas coisas se separam, e sem
+// esta tradução o arraste reordena a música errada.
+export function indicesPresentes(l) {
+  return ((l && l.musicas) || []).map((id, i) => (songById(id) ? i : -1)).filter((i) => i >= 0);
+}
 export function songsOfArtist(artistId) {
   return S.songs.filter((s) => s.artistId === artistId)
     .sort((a, b) => a.title.localeCompare(b.title, 'pt'));

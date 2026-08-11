@@ -38,14 +38,18 @@ export function renderListScreen() {
 
   const canDrag = !l.sistema && total > 1;
 
-  // ATENÇÃO: o idx do map é o índice REAL em l.musicas, e é ele que data-idx
-  // carrega e que moveItem usa para reordenar. Filtrar o array aqui quebraria o
-  // arrastar em silêncio. Quem some é só o que se vê: `pos` numera o que aparece.
+  // ATENÇÃO: l.musicas pode ter id sem música — o export filtrado leva a lista
+  // inteira, e o que falta chega quando a outra fonte for importada. Essas linhas
+  // não são desenhadas, então POSIÇÃO NA TELA ≠ índice em l.musicas.
+  // data-idx carrega a posição VISÍVEL (`pos - 1`), o mesmo espaço em que o
+  // arraste conta as linhas; quem traduz para o índice real que moveItem usa é
+  // applyReorder(), via indicesPresentes(). `pos` numera 1..n sem buraco.
   let pos = 0;
-  const rows = l.musicas.map((id, idx) => {
+  const rows = l.musicas.map((id) => {
     const so = songById(id);
     if (!so) return '';
     pos += 1;
+    const idx = pos - 1;
     const handle = canDrag
       ? `<button class="drag-handle" data-idx="${idx}" title="${t('list.dragHandle')}"
           aria-label="${t('list.dragHandleAria', { title: esc(so.title), pos, total })}">${I.grip()}</button>`

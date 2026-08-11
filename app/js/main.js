@@ -2,7 +2,7 @@
 import {
   S, audio, initState, applyTheme, saveSettings,
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
-  createList, listById, toggleSongInList, reorderInList, favList,
+  createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
 } from './state.js';
 import { DB } from './db.js';
@@ -631,13 +631,23 @@ const actions = {
   },
 };
 
-// Índice da alça que deve receber o foco depois do próximo render.
+// Posição VISÍVEL da alça que deve receber o foco depois do próximo render —
+// o mesmo espaço do data-idx que o seletor lá em cima procura.
 let pendingHandleIdx = null;
 function focusHandle(idx) { pendingHandleIdx = idx; }
 
 // Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
-function applyReorder(from, to) {
-  if (S.openListId === '__fav') return; // Favoritas: ordem automática
+// AMBOS falam em POSIÇÃO VISÍVEL, porque é isso que o usuário vê e move; a
+// tradução para o índice real de l.musicas — que pode ter id órfão, e aí os dois
+// espaços se separam — acontece aqui, num lugar só.
+function applyReorder(fromVis, toVis) {
+  if (S.openListId === '__fav') return; // Favoritas: ordem automática, nunca tem órfão
+  const l = listById(S.openListId);
+  if (!l) return;
+  const idx = indicesPresentes(l);
+  const from = idx[fromVis];
+  const to = idx[toVis];
+  if (from == null || to == null) return;
   reorderInList(S.openListId, from, to);
   update();
 }
@@ -798,10 +808,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     const h = document.activeElement?.closest?.('.drag-handle');
     if (h) {
+      // data-idx é a posição VISÍVEL, igual à que o arraste entrega: o limite é
+      // o número de linhas na tela, não o tamanho de l.musicas.
       const from = +h.dataset.idx;
       const to = from + (e.key === 'ArrowUp' ? -1 : 1);
       const l = listById(S.openListId);
-      if (l && to >= 0 && to < l.musicas.length) {
+      if (l && to >= 0 && to < indicesPresentes(l).length) {
         e.preventDefault();
         focusHandle(to);
         applyReorder(from, to);
