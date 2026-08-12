@@ -1,8 +1,17 @@
 // render/listscreen.js — tela de uma lista (ordem manual, tocar, remover, renomear...)
-import { S, listById, favList, songById, artistName, modesOf, musicasPresentes } from '../state.js';
+import { S, listById, favList, songById, artistName, modesOf, musicasPresentes, qualificadorDe, SEM_FONTE } from '../state.js';
 import { I, esc } from '../icons.js';
 import { offlineBadge } from './home.js';
 import { t } from '../i18n.js';
+
+// Numa lista de show a ambiguidade é pior que na biblioteca: o usuário monta a
+// ordem antes de subir no palco e não pode abrir cada música para conferir.
+function qualLista(so) {
+  const q = qualificadorDe(so, S.songs);
+  if (!q) return '';
+  const rotulo = q === SEM_FONTE ? t('home.fonte.none') : q;
+  return ` <em style="font-style:normal;font-weight:500;font-size:.7em;color:var(--muted)">${esc(rotulo)}</em>`;
+}
 
 export function renderListScreen() {
   const isFav = S.openListId === '__fav';
@@ -59,7 +68,7 @@ export function renderListScreen() {
       <div class="pos-num">${pos}</div>
       <button class="btn-icon sm play-tint" data-a="openSong" data-id="${so.id}" data-from="list" title="${t('list.play')}">${I.play()}</button>
       <div style="flex:1;min-width:0;cursor:pointer" data-a="openSong" data-id="${so.id}" data-from="list">
-        <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(so.title)}</div>
+        <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(so.title)}${qualLista(so)}</div>
         <div style="color:var(--muted);font-size:13px;margin-top:2px">${esc(artistName(so))} ${t('list.opensIn', { mode: modeLabel(so) })}</div>
       </div>
       <button class="btn-icon sm ${so.favorita ? 'fav' : 'muted'}" data-a="toggleFav" data-id="${so.id}" title="${t('common.favorite')}">${I.heart(so.favorita)}</button>

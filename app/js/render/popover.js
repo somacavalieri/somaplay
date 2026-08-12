@@ -1,7 +1,15 @@
 // render/popover.js — popover "Adicionar à lista" (checkbox por lista + nova lista)
-import { S, songById, artistName, musicasPresentes } from '../state.js';
+import { S, songById, artistName, musicasPresentes, qualificadorDe, SEM_FONTE } from '../state.js';
 import { I, esc } from '../icons.js';
 import { t } from '../i18n.js';
+
+// Mesma regra da listagem: qualificador só em colisão, em elemento próprio.
+function qualPopover(song) {
+  const q = qualificadorDe(song, S.songs);
+  if (!q) return '';
+  const rotulo = q === SEM_FONTE ? t('home.fonte.none') : q;
+  return ` <em style="font-style:normal;font-weight:500;font-size:.82em;color:var(--muted)">${esc(rotulo)}</em>`;
+}
 
 export function renderPopover() {
   const song = songById(S.popoverSongId);
@@ -26,7 +34,7 @@ export function renderPopover() {
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
           <button class="btn-icon sm ${song.favorita ? 'fav' : 'muted'}" data-a="toggleFav" data-id="${song.id}">${I.heart(song.favorita)}</button>
           <div style="min-width:0">
-            <div style="font-family:var(--f-title);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(song.title)}</div>
+            <div style="font-family:var(--f-title);font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(song.title)}${qualPopover(song)}</div>
             <div style="color:var(--muted);font-size:13px">${esc(artistName(song))} · ${song.favorita ? t('popover.inFavorites', { name: t('list.favoritesName') }) : t('popover.tapHeartHint')}</div>
           </div>
         </div>
