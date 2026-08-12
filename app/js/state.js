@@ -1,5 +1,5 @@
 // state.js — estado central + operações da biblioteca (write-through pro IndexedDB)
-import { DB, uid } from './db.js';
+import { DB, uid, normalizaCifra } from './db.js';
 import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
@@ -279,9 +279,10 @@ export async function upsertArtist(name) {
 }
 
 export async function saveSong(song) {
-  const i = S.songs.findIndex((s) => s.id === song.id);
-  if (i >= 0) S.songs[i] = song; else S.songs.push(song);
-  await DB.putSong(song);
+  const normalized = normalizaCifra(song);
+  const i = S.songs.findIndex((s) => s.id === normalized.id);
+  if (i >= 0) S.songs[i] = normalized; else S.songs.push(normalized);
+  await DB.putSong(normalized);
 }
 
 export async function deleteSong(songId) {

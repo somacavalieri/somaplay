@@ -42,7 +42,7 @@ export async function importSamples() {
     await saveSong({
       id: uid(), artistId: demo.id, title: DEMO_TITLE, tom: 'Am', favorita: false,
       createdAt: Date.now(),
-      cifra: { fonte: 'texto', texto: DEMO_CIFRA, digitacoes: null, acordes: ['Am', 'F', 'C', 'G'] },
+      cifra: { tipo: 'texto', texto: DEMO_CIFRA, digitacoes: null, acordes: ['Am', 'F', 'C', 'G'] },
       letra: DEMO_LETRA, stems: [], full: [],
     });
     done.push(t('msg.samples.demoDescription', { title: DEMO_TITLE, artist: DEMO_ARTIST }));

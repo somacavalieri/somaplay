@@ -9,8 +9,18 @@ import assert from 'node:assert/strict';
 import { normalizaCifra } from '../js/db.js';
 
 test('registro antigo com cifra.fonte vira cifra.tipo', () => {
-  const s = normalizaCifra({ id: 'a', cifra: { fonte: 'imagem', imagens: ['x'], texto: '' } });
+  const original = { id: 'a', cifra: { fonte: 'imagem', imagens: ['x'], texto: '', acordes: ['Am'], digitacoes: { Am: {} } } };
+  const s = normalizaCifra(original);
   assert.equal(s.cifra.tipo, 'imagem');
+  // os outros campos de cifra sobrevivem intactos à normalização
+  assert.deepEqual(s.cifra.imagens, ['x']);
+  assert.deepEqual(s.cifra.acordes, ['Am']);
+  assert.deepEqual(s.cifra.digitacoes, { Am: {} });
+  // a chave antiga não sobrevive — o registro normalizado só tem tipo
+  assert.equal(s.cifra.fonte, undefined);
+  // normalizaCifra não muta o objeto recebido
+  assert.equal(original.cifra.fonte, 'imagem');
+  assert.equal(original.cifra.tipo, undefined);
 });
 
 test('registro novo com cifra.tipo passa intacto', () => {
