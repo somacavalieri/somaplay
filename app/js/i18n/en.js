@@ -81,6 +81,7 @@ export const EN = {
   'home.song.playingNow': 'Playing now',
   'home.song.hasKaraoke': 'Has karaoke',
   'home.song.addToList': 'Add to list',
+  'home.song.sourceQualifier': 'Source: {fonte}',
   'home.sort.title': 'Title (A–Z)',
   'home.sort.artist': 'Artist (A–Z)',
   'home.sort.recent': 'Recently added',

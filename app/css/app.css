@@ -159,6 +159,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .song-row:hover{border-color:var(--border2);background:var(--surface-hover)}
 .song-row .titles{flex:1;min-width:0}
 .song-row .t{font-family:var(--f-title);font-weight:600;font-size:18px}
+/* Qualificador de colisão: presente só quando duas músicas do mesmo artista
+   têm o mesmo título. Secundário de propósito — o título continua sendo o
+   protagonista da linha. */
+.song-row .titles .t .src-qual{
+  font-style:normal; font-weight:500; font-size:.82em;
+  color:var(--muted); white-space:nowrap;
+}
 .song-row .a{color:var(--muted);font-size:13px;margin-top:2px}
 .song-row .now{color:var(--teal);font-size:12px;font-weight:600;margin-top:3px}
 .row-actions{display:flex;align-items:center;gap:8px}

@@ -81,6 +81,7 @@ export const PT = {
   'home.song.playingNow': 'Tocando agora',
   'home.song.hasKaraoke': 'Tem karaokê',
   'home.song.addToList': 'Adicionar à lista',
+  'home.song.sourceQualifier': 'Fonte: {fonte}',
   'home.sort.title': 'Título (A–Z)',
   'home.sort.artist': 'Artista (A–Z)',
   'home.sort.recent': 'Recém-adicionadas',

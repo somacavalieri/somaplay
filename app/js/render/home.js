@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
@@ -64,13 +64,23 @@ function estiloCards() {
   }).join('') + `</div>`;
 }
 
+// O qualificador de colisão fica num <em> irmão do texto do título, nunca
+// concatenado dentro dele: busca e ordenação leem s.title, e não podem passar a
+// enxergar a fonte. Vazio na esmagadora maioria das linhas.
+function qualificadorHTML(s) {
+  const q = qualificadorDe(s, S.songs);
+  if (!q) return '';
+  const rotulo = q === SEM_FONTE ? t('home.fonte.none') : q;
+  return ` <em class="src-qual" title="${t('home.song.sourceQualifier', { fonte: esc(rotulo) })}">${esc(rotulo)}</em>`;
+}
+
 function songRow(s, { showArtist = true, from = 'home' } = {}) {
   const modes = modesOf(s);
   const isCur = S.currentSongId === s.id && S.transportPlaying;
   return `<div class="song-row" data-a="openSong" data-id="${s.id}" data-from="${from}">
     ${isCur ? eqBars() : `<div class="play-glyph">${I.play()}</div>`}
     <div class="titles">
-      <div class="t">${esc(s.title)}</div>
+      <div class="t">${esc(s.title)}${qualificadorHTML(s)}</div>
       ${showArtist ? `<div class="a">${esc(artistName(s))}</div>` : (isCur ? `<div class="now">${t('home.song.playingNow')}</div>` : '')}
     </div>
     <div class="row-actions">
