@@ -178,6 +178,45 @@ export function songIdsDasFontes(songs, fontes) {
   return out;
 }
 
+// Duas músicas do mesmo artista com o mesmo título são indistinguíveis na
+// listagem. A fonte é o que as separa — mas mostrar fonte em toda linha polui a
+// biblioteca inteira, que é majoritariamente de títulos únicos. Então ela
+// aparece SÓ na colisão: fora dela o qualificador é '' e a linha não muda.
+//
+// O separador U+0001 impede que ('gil','x y') e ('gil x','y') virem a mesma chave.
+export function chaveDeColisao(song) {
+  const artista = (song && song.artistId) || '';
+  const titulo = ((song && song.title) || '').trim().toLowerCase();
+  return `${artista}\u0001${titulo}`;
+}
+
+// O qualificador de exibição. Nunca é concatenado ao título: quem renderiza põe
+// num elemento separado, senão a busca e a ordenação passariam a enxergar a
+// fonte — que é exatamente o defeito do sufixo '(v2)' que isto substitui.
+//
+// Três saídas possíveis dentro de uma colisão:
+//   'CifraClub'  → a fonte, o caso normal;
+//   SEM_FONTE    → esta não tem fonte mas alguma colidida tem (biblioteca antiga);
+//   '1','2',…    → NENHUMA das colididas tem fonte. Feio de propósito: é um
+//                  convite a preencher a fonte, e o único caso em que o usuário
+//                  não tem outra forma de distinguir as duas.
+export function qualificadorDe(song, songs) {
+  if (!song) return '';
+  const chave = chaveDeColisao(song);
+  const colididas = (songs || []).filter((s) => chaveDeColisao(s) === chave);
+  if (colididas.length < 2) return '';
+
+  const minha = fonteOf(song);
+  if (minha) return minha;
+  if (colididas.some((s) => fonteOf(s))) return SEM_FONTE;
+
+  // Ordem estável: createdAt e, no empate, id — para o número nunca dançar
+  // entre dois renders.
+  const ordenadas = colididas.slice().sort((a, b) =>
+    (a.createdAt || 0) - (b.createdAt || 0) || String(a.id).localeCompare(String(b.id)));
+  return String(ordenadas.findIndex((s) => s.id === song.id) + 1);
+}
+
 // Modos disponíveis de uma música (T1 = sempre; T2 = tem áudio; T3 = tem letra)
 export function modesOf(s) {
   const m = ['T1'];
