@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, corDaFonte } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
 
@@ -74,6 +74,36 @@ function qualificadorHTML(s) {
   return ` <em class="src-qual" title="${t('home.song.sourceQualifier', { fonte: esc(rotulo) })}">${esc(rotulo)}</em>`;
 }
 
+// A linha compacta tem badge de fonte em TODA linha, então o qualificador
+// inline fica só para o caso ordinal — colisão em que NENHUMA das músicas tem
+// fonte, o único em que não há badge para distinguir. Nos demais casos o
+// badge (ou a ausência dele) já separa (spec 2026-08-12-lista-compacta).
+function ordinalHTML(s) {
+  const q = qualificadorDe(s, S.songs);
+  if (!q || q === SEM_FONTE || fonteOf(s)) return '';
+  return ` <em class="src-qual">${esc(q)}</em>`;
+}
+
+function fonteBadge(s) {
+  const nome = fonteOf(s);
+  if (!nome) return ''; // sem fonte: sem badge — a ausência é informação
+  return `<span class="src-badge f${corDaFonte(nome)}" title="${t('home.song.sourceQualifier', { fonte: esc(nome) })}">${esc(nome)}</span>`;
+}
+
+// Linha compacta da aba Músicas: uma linha só, em grade responsiva
+// (.songs-grid). Artista e Estilo seguem com songRow — decisão da spec.
+function songLine(s) {
+  const isCur = S.currentSongId === s.id && S.transportPlaying;
+  return `<div class="song-line" data-a="openSong" data-id="${s.id}" data-from="home">
+    ${isCur ? eqBars() : `<div class="pg">${I.play(16)}</div>`}
+    <div class="tt"><span class="t">${esc(s.title)}${ordinalHTML(s)}</span><span class="a">${esc(artistName(s))}</span></div>
+    ${fonteBadge(s)}
+    ${modesOf(s).includes('T3') ? `<span class="mic" title="${t('home.song.hasKaraoke')}">${I.mic(15)}</span>` : ''}
+    <button class="ib ${s.favorita ? 'fav' : ''}" data-a="toggleFav" data-id="${s.id}" title="${t('common.favorite')}">${I.heart(s.favorita, 19)}</button>
+    <button class="ib" data-a="openPopover" data-id="${s.id}" title="${t('home.song.addToList')}">${I.addList(19)}</button>
+  </div>`;
+}
+
 function songRow(s, { showArtist = true, from = 'home' } = {}) {
   const modes = modesOf(s);
   const isCur = S.currentSongId === s.id && S.transportPlaying;
@@ -107,14 +137,14 @@ function songsTab() {
     + (lensAtiva() ? t('home.songs.filterSuffix', { filter: esc(filtroAtivoLabel()) }) : '');
 
   const rows = flat.length
-    ? flat.map((s) => songRow(s)).join('')
+    ? flat.map((s) => songLine(s)).join('')
     : `<div class="empty"><div class="t">${t('home.songs.emptyTitle')}</div><div class="s">${t('home.songs.emptySub')}</div></div>`;
 
   return `<div class="songs-toolbar"><div style="flex:1"></div>
       <div class="sort-wrap"><button class="sort-btn" data-a="toggleSortMenu">${I.sort()} ${sortLabels[S.sort]} ${I.chevD()}</button>${menu}</div>
     </div>
     <div class="count-lbl">${count}</div>
-    <div class="rows">${rows}</div>`;
+    <div class="songs-grid">${rows}</div>`;
 }
 
 function listsTab() {
