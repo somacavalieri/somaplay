@@ -41,7 +41,7 @@ export const EN = {
   'settings.export.nothing': 'No source selected',
   'settings.export.fileMulti': 'sources',
   'settings.import.heading': 'Import',
-  'settings.import.merge': 'Add / update',
+  'settings.import.merge': 'Import / update',
   'settings.import.mergeSub': 'Merges the file into your library. Nothing you already have is deleted.',
   'settings.import.replace': 'Replace everything',
   'settings.import.replaceSub': "Wipes this device's library and puts the file's in its place.",

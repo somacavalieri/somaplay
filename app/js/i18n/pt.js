@@ -41,7 +41,7 @@ export const PT = {
   'settings.export.nothing': 'Nenhuma fonte marcada',
   'settings.export.fileMulti': 'fontes',
   'settings.import.heading': 'Importar',
-  'settings.import.merge': 'Adicionar / atualizar',
+  'settings.import.merge': 'Importar / atualizar',
   'settings.import.mergeSub': 'Junta o arquivo à sua biblioteca. Nada do que você já tem é apagado.',
   'settings.import.replace': 'Substituir tudo',
   'settings.import.replaceSub': 'Apaga a biblioteca deste aparelho e põe a do arquivo no lugar.',
