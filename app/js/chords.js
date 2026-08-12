@@ -382,14 +382,24 @@ export function chordSVG(name, small, dict) {
 // destrói isso. Aqui as duas quebram JUNTAS, na mesma coluna, e só onde nenhuma das
 // duas está no meio de um token.
 export function wrapBlock(chords, lyric, cols, cabe) {
-  const c = String(chords == null ? '' : chords).replace(/\s+$/, '');
-  const l = String(lyric == null ? '' : lyric).replace(/\s+$/, '');
-  const end = Math.max(c.length, l.length);
-  const n = Math.floor(cols);
+  const c0 = String(chords == null ? '' : chords).replace(/\s+$/, '');
+  const l0 = String(lyric == null ? '' : lyric).replace(/\s+$/, '');
 
   // corte válido: além do fim da linha, ou com espaço encostado de um dos lados
   const ok = (s, i) => i >= s.length || s[i - 1] === ' ' || s[i] === ' ';
   const lead = (s) => s.length - s.replace(/^ +/, '').length;
+
+  // Tira o recuo comum ANTES de medir. `peca()` já o removia na hora de montar o
+  // pedaço, mas a largura era conferida na string CRUA — então um sistema que
+  // cabia depois de aparado era quebrado assim mesmo, e a sobra ia para uma
+  // fileira sozinha ("A7" em Oriente, 2026-08-12: 57 colunas cruas, 49 de
+  // conteúdo, numa tela de 55). Recuar as DUAS linhas do mesmo tanto não mexe no
+  // alinhamento: acorde e sílaba andam juntos.
+  const pad0 = (c0 && l0) ? Math.min(lead(c0), lead(l0)) : (c0 ? lead(c0) : lead(l0));
+  const c = c0.slice(pad0);
+  const l = l0.slice(pad0);
+  const end = Math.max(c.length, l.length);
+  const n = Math.floor(cols);
 
   // O pedaço COMO ELE VAI SER DESENHADO: aparado à direita e sem o recuo comum
   // às duas linhas. É isso que `cabe` precisa julgar — espaço que ninguém
