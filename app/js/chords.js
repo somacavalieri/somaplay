@@ -268,12 +268,17 @@ export function chordLineSegs(line) {
 
 // Layout da fileira de miniaturas (spec 2026-07-20): tokens da linha de acordes
 // → posição x (px) na coluna do caractere (fonte mono), colisões empurram para
-// a direita e o empurrão se propaga. blockWidth(tok, isChord) → largura px.
+// a direita e o empurrão se propaga. blockWidth(tok, isChord, isRepeat) → largura px.
 // Rótulo entre colchetes conta como um token só: "[Frase 1]" tem espaço dentro e
 // partido em dois viraria "[Frase    1]" depois que a miniatura empurra o resto.
-export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
+// `dedup` (spec 2026-08-12, linha só-de-acorde): só a 1ª ocorrência de cada nome
+// NESSA linha carrega `isRepeat:false` (desenha o diagrama); da 2ª em diante marca
+// `isRepeat:true` — quem desenha decide o que fazer (repetir com letra é fiel ao
+// CifraClub; sem letra, o vamp inteiro virava parede de diagramas iguais).
+export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6, dedup = false) {
   const out = [];
   let cursor = 0;
+  const vistos = dedup ? new Set() : null;
   const re = /\[[^\]]*\]|\S+/g;
   let m;
   while ((m = re.exec(chordLine))) {
@@ -285,9 +290,11 @@ export function layoutChordRow(chordLine, chPx, blockWidth, gap = 6) {
       ? pedacos.map((p) => { const parte = { tok: p, name: p, isChord: true, col }; col += p.length; return parte; })
       : [{ tok, name: chordName(tok), isChord: isChordTok(chordName(tok)), col }];
     partes.forEach((p) => {
+      const isRepeat = !!(dedup && p.isChord && vistos.has(p.name));
+      if (dedup && p.isChord) vistos.add(p.name);
       const x = Math.max(p.col * chPx, cursor);
-      out.push({ tok: p.tok, name: p.name, isChord: p.isChord, x });
-      cursor = x + blockWidth(p.tok, p.isChord) + gap;
+      out.push({ tok: p.tok, name: p.name, isChord: p.isChord, x, isRepeat });
+      cursor = x + blockWidth(p.tok, p.isChord, isRepeat) + gap;
     });
   }
   return out;
@@ -401,6 +408,28 @@ export function wrapBlock(chords, lyric, cols, cabe) {
   // do que a que vai ser desenhada.
   if (end <= n && (!cabe || cabe(c))) return [{ chords: c, lyric: l }];
 
+  // Migalha: sobra tão pouco depois do corte guloso que a última fileira do
+  // bloco fica com uma palavra sozinha ("Mesmo" em Meditação, 2026-08-11) —
+  // acontece sempre que o texto passa de `n` por pouco. Em vez de recuar até o
+  // primeiro corte válido (que só passa uma palavra e ainda deixa migalha),
+  // mira o corte mais perto do MEIO do que sobra — as duas fileiras finais
+  // saem parecidas, nenhuma passa de `n`.
+  const MIGALHA = Math.min(12, Math.floor(n * 0.25));
+  const semMigalha = (pos, cut) => {
+    if (cut >= end) return cut;
+    const resto = end - cut;
+    if (resto > MIGALHA || resto > n) return cut;
+    const alvo = pos + Math.ceil((cut - pos + resto) / 2);
+    const piso = Math.max(pos + 1, end - n);
+    let melhor = cut, dist = Infinity;
+    for (let k2 = cut - 1; k2 >= piso; k2--) {
+      if (!(ok(c, k2) && ok(l, k2) && serve(pos, k2))) continue;
+      const d = Math.abs(k2 - alvo);
+      if (d < dist) { melhor = k2; dist = d; }
+    }
+    return (end - melhor > resto) ? melhor : cut;
+  };
+
   const out = [];
   for (let pos = 0; pos < end;) {
     const lim = Math.min(pos + n, end);
@@ -411,7 +440,7 @@ export function wrapBlock(chords, lyric, cols, cabe) {
     // Não deu para recuar: corta na largura mesmo, para não travar. É a mesma
     // escapatória de sempre — token único mais largo que a tela, ou dois
     // acordes colados na mesma sílaba.
-    const cut = k > pos + 1 ? k : lim;
+    const cut = semMigalha(pos, k > pos + 1 ? k : lim);
     const p = peca(pos, cut);
     if (p.chords || p.lyric) out.push(p);
     pos = cut;

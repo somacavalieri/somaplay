@@ -127,14 +127,19 @@ function rowMeasurers(cifraFontPx) {
   };
 }
 
-// Fileira nome+diagrama no lugar da linha de acordes (só linhas com letra).
-// `blockWidth` vem de fora: é a MESMA que o predicado do wrap usa. Duas medidas
-// para a mesma coisa divergiriam no dia em que uma mudasse, e a fileira voltaria
-// a vazar sem ninguém entender por quê.
-function chordDiagRowHTML(chordLine, dict, meas, blockWidth) {
-  const items = layoutChordRow(chordLine, meas.chPx, blockWidth);
+// Fileira nome+diagrama no lugar da linha de acordes. `blockWidth` vem de fora:
+// é a MESMA que o predicado do wrap usa. Duas medidas para a mesma coisa
+// divergiriam no dia em que uma mudasse, e a fileira voltaria a vazar sem
+// ninguém entender por quê.
+// `dedup` (spec 2026-08-12): linha só-de-acorde (introdução, vamp instrumental)
+// também vira fileira de diagrama, mas só a 1ª ocorrência de cada nome desenha
+// o SVG — da 2ª em diante mostra só o nome, senão um vamp tipo "G7 G7 C/G Gm
+// C/G Gm G7…" vira parede de diagramas repetidos. Linha com letra continua
+// desenhando toda ocorrência (fiel ao CifraClub, spec 2026-07-20).
+function chordDiagRowHTML(chordLine, dict, meas, blockWidth, dedup = false) {
+  const items = layoutChordRow(chordLine, meas.chPx, blockWidth, 6, dedup);
   const inner = items.map((it) => (it.isChord
-    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="${t('play.chordDiagRow.viewChord')}"><span class="nm">${esc(it.tok)}</span>${chordSVG(it.name, true, dict)}</button>`
+    ? `<button class="ch-diag" style="left:${Math.round(it.x)}px" data-a="openChordPop" data-id="${esc(it.name)}" title="${t('play.chordDiagRow.viewChord')}"><span class="nm">${esc(it.tok)}</span>${it.isRepeat ? '' : chordSVG(it.name, true, dict)}</button>`
     : `<span class="ch-tok" style="left:${Math.round(it.x)}px">${esc(it.tok)}</span>`)).join('');
   return `<div class="ch-diag-row">${inner}</div>`;
 }
@@ -205,18 +210,23 @@ function cifraTextHTML(song) {
   const meas = mini ? rowMeasurers(fontPx) : null;
 
   // A largura de um bloco da fileira. Uma só, para o desenho e para o predicado.
-  const blockWidth = !mini ? null : (tok, isChord) => (isChord
-    ? Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok))
+  // `isRepeat` (spec 2026-08-12): 2ª+ ocorrência numa linha só-de-acorde reserva
+  // só a largura do nome — sem isso o vão da repetição ficaria do tamanho do
+  // diagrama que não é mais desenhado.
+  const blockWidth = !mini ? null : (tok, isChord, isRepeat) => (isChord
+    ? (isRepeat ? meas.label(tok) : Math.max(chordDiagWidth(chordName(tok), true, dict), meas.label(tok)))
     : meas.tok(tok));
 
   // "Este trecho, montado como fileira, cabe na caixa?" Só o modo miniatura
   // pergunta — no modo texto a coluna do caractere é a régua certa. Sem medição
-  // ainda (cifraBoxPx = 0), não pergunta nada e o wrap é o de sempre.
-  const cabe = (!mini || !cifraBoxPx) ? undefined : (trecho) => {
-    const itens = layoutChordRow(trecho, meas.chPx, blockWidth);
+  // ainda (cifraBoxPx = 0), não pergunta nada e o wrap é o de sempre. `dedup`
+  // espelha o desenho real (chordDiagRowHTML): sem isso o predicado julgaria
+  // pela largura do diagrama cheio e cortaria mais cedo do que o necessário.
+  const cabe = (!mini || !cifraBoxPx) ? undefined : (trecho, dedup) => {
+    const itens = layoutChordRow(trecho, meas.chPx, blockWidth, 6, dedup);
     if (!itens.length) return true;
     const u = itens[itens.length - 1];
-    return u.x + blockWidth(u.tok, u.isChord) <= cifraBoxPx;
+    return u.x + blockWidth(u.tok, u.isChord, u.isRepeat) <= cifraBoxPx;
   };
 
   const lines = parsed.map((ln) => {
@@ -225,14 +235,17 @@ function cifraTextHTML(song) {
     if (ln.isTab) return tabBlockHTML(ln);
     let h = '';
     if (ln.isSection) h += `<div class="sec">${esc(ln.section)}</div>`;
+    // Linha só-de-acorde (introdução, vamp) também vira fileira de diagrama —
+    // com dedup, senão repete o mesmo desenho por todo o vamp (2026-08-12).
+    const dedup = !ln.hasLyric;
     // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
     // cima da sílaba dele quando a linha não cabe na tela
     for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
                               ln.hasLyric ? ln.lyric : '', cifraCols,
-                              (mini && ln.hasLyric) ? cabe : undefined)) {
+                              mini ? (trecho) => cabe(trecho, dedup) : undefined)) {
       if (ln.hasChords && p.chords) {
-        h += (mini && ln.hasLyric)
-          ? chordDiagRowHTML(p.chords, dict, meas, blockWidth)
+        h += mini
+          ? chordDiagRowHTML(p.chords, dict, meas, blockWidth, dedup)
           : `<div class="ch">${chordLineHTML(p.chords)}</div>`;
       }
       if (ln.hasLyric) h += `<div class="ly">${esc(p.lyric)}</div>`;
