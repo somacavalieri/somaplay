@@ -105,6 +105,11 @@ mostra a fonte sempre, e fica como está.
 - **Mostrar a fonte em toda linha, sempre.** Polui a listagem inteira — a biblioteca é
   majoritariamente de títulos únicos — e rouba largura do título num tablet em pé na
   estante.
+  *Revisado em 2026-08-12* (`2026-08-12-lista-compacta-em-colunas-design.md`): na
+  **aba Músicas**, a linha compacta em colunas mostra a fonte como badge em toda
+  linha — lá o badge não compete com o título, e o qualificador inline fica só para o
+  caso ordinal. A análise acima segue valendo para o card largo das telas Artista e
+  Estilo, onde o qualificador continua integral.
 - **Deduplicar na importação.** Não dá: as duas versões são conteúdo diferente e o
   usuário quer justamente comparar antes de escolher.
 
