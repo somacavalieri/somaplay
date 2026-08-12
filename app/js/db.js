@@ -1,6 +1,6 @@
 // db.js — persistência: IndexedDB (metadados) + OPFS (arquivos grandes; fallback IDB)
 // Modelo (v1): artists { id, name, av } · songs { id, artistId, title, tom, favorita,
-//   createdAt, cifra{fonte,imagens[],texto,acordes[],digitacoes{}}, letra, stems[], full[] }
+//   createdAt, cifra{tipo,imagens[],texto,acordes[],digitacoes{}}, letra, stems[], full[] }
 //   lists { id, nome, fixada, musicas[] } · settings { key:'main', ... }
 
 import { t } from './i18n.js';
@@ -79,7 +79,7 @@ export const DB = {
   // ---------- metadados ----------
   loadAll() {
     return Promise.all([reqAll('artists'), reqAll('songs'), reqAll('lists')])
-      .then(([artists, songs, lists]) => ({ artists, songs, lists }));
+      .then(([artists, songs, lists]) => ({ artists, songs: songs.map(normalizaCifra), lists }));
   },
   putArtist(a) { return tx('artists', 'readwrite', (s) => s.put(a)); },
   deleteArtist(id) { return tx('artists', 'readwrite', (s) => s.delete(id)); },
@@ -166,6 +166,16 @@ export const DB = {
     return { usage: 0, quota: 0 };
   },
 };
+
+// O tipo da cifra ('imagem' | 'texto') morava em cifra.fonte, nome que colidia
+// com song.fonte — a procedência ('CifraClub', 'VJ'). Passou a ser cifra.tipo.
+// A leitura aceita os dois: biblioteca gravada antes da mudança e arquivo
+// .somaplay antigo precisam continuar abrindo. Nenhum VALOR muda de grafia.
+export function normalizaCifra(song) {
+  if (!song || !song.cifra) return song;
+  const { fonte, ...resto } = song.cifra;
+  return { ...song, cifra: { ...resto, tipo: song.cifra.tipo ?? fonte ?? null } };
+}
 
 export function uid() {
   return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2));

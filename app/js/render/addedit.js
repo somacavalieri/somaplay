@@ -16,7 +16,7 @@ export function newDraft(song) {
       title: song.title, tom: song.tom || '',
       fonte: song.fonte || '',
       estilo: song.estilo || '',
-      cifraFonte: song.cifra?.fonte || (song.cifra?.imagens?.length ? 'imagem' : 'texto'),
+      cifraFonte: song.cifra?.tipo || (song.cifra?.imagens?.length ? 'imagem' : 'texto'),
       imagens: (song.cifra?.imagens || []).map((im) => ({ ...im })),
       cifraTexto: song.cifra?.texto || '',
       acordes: (song.cifra?.acordes || []).join(' '),
@@ -293,8 +293,8 @@ export async function commitDraft() {
     favorita: existing ? existing.favorita : false,
     createdAt: existing ? existing.createdAt : Date.now(),
     cifra: d.cifraFonte === 'imagem'
-      ? { fonte: imagens.length ? 'imagem' : null, imagens, texto: '', acordes: d.acordes.trim() ? d.acordes.trim().split(/\s+/) : [], digitacoes: dig }
-      : { fonte: d.cifraTexto.trim() ? 'texto' : null, imagens: [], texto: d.cifraTexto, acordes: [], digitacoes: dig },
+      ? { tipo: imagens.length ? 'imagem' : null, imagens, texto: '', acordes: d.acordes.trim() ? d.acordes.trim().split(/\s+/) : [], digitacoes: dig }
+      : { tipo: d.cifraTexto.trim() ? 'texto' : null, imagens: [], texto: d.cifraTexto, acordes: [], digitacoes: dig },
     letra: d.letra || '',
     stems, full,
   };

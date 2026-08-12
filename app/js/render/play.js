@@ -380,14 +380,14 @@ function chordPickerHTML(song) {
 export function renderPlay() {
   const song = currentSong();
   if (!song) { S.screen = 'home'; return '<div></div>'; }
-  const isImg = S.viewMode === 'cifra' && song.cifra?.fonte === 'imagem';
-  const isTextCifra = song.cifra?.fonte !== 'imagem';
+  const isImg = S.viewMode === 'cifra' && song.cifra?.tipo === 'imagem';
+  const isTextCifra = song.cifra?.tipo !== 'imagem';
   const isKar = S.viewMode === 'karaoke';
   const hasKaraoke = !!(song.letra && song.letra.trim());
   const hasMixer = (song.stems || []).length > 0 || (song.full || []).length > 0;
   const imgs = song.cifra?.imagens || [];
   const variantEnabled = imgs.some((i) => i.tipo === 'aberta') && imgs.some((i) => i.tipo === 'fechada');
-  const chordNames = song.cifra?.fonte === 'imagem'
+  const chordNames = song.cifra?.tipo === 'imagem'
     ? (song.cifra?.acordes || [])
     : (song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsedCifra(song)));
 
