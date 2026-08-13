@@ -21,12 +21,33 @@ RAIZ_PADRAO = AQUI.parent.parent / "chords"
 
 
 def varre(raiz):
-    """acervo -> [Documento]. An acervo is any directory directly under raiz."""
+    """acervo -> [Documento]. An acervo is any directory directly under raiz.
+
+    Paths on the returned documents are relative to raiz's parent, so the
+    generated tables read `chords/…/INDICE.md` instead of a 120-char absolute
+    path that wraps in every terminal.
+    """
+    raiz = Path(raiz)
     por_acervo = {}
-    for pasta in sorted(p for p in Path(raiz).iterdir() if p.is_dir()):
-        docs = [read_indice(p) for p in sorted(pasta.rglob("INDICE*.md"))]
+    for pasta in sorted(p for p in raiz.iterdir() if p.is_dir()):
+        docs = []
+        for caminho in sorted(pasta.rglob("INDICE*.md")):
+            doc = read_indice(caminho)
+            doc.caminho = caminho.relative_to(raiz.parent)
+            docs.append(doc)
         por_acervo[pasta.name] = docs
     return por_acervo
+
+
+def _acervos_do_dashboard(raiz, por_acervo):
+    """Only folders that opted in by having a PROGRESSO.md.
+
+    chords/ also holds material that is not an extraction front — the chord
+    dictionary, the Notion export, the .somaplay outputs. They have no
+    progress file and must not show up as 0%% fronts.
+    """
+    return {nome: docs for nome, docs in por_acervo.items()
+            if (Path(raiz) / nome / "PROGRESSO.md").exists()}
 
 
 def _grava(caminho, novo, check):
@@ -58,7 +79,8 @@ def atualiza(raiz=RAIZ_PADRAO, check=False, acervo=None):
 
     dash = raiz / "PROGRESSO.md"
     if dash.exists() and not acervo:
-        r = _grava(dash, bloco_dashboard(varre(raiz)), check)
+        dados = _acervos_do_dashboard(raiz, varre(raiz))
+        r = _grava(dash, bloco_dashboard(dados), check)
         if r:
             mudou.append(r)
     return mudou

@@ -65,6 +65,17 @@ class TestVarre(unittest.TestCase):
             self.assertEqual(varre(raiz / "chords")["_a-identificar"], [])
 
 
+    def test_caminho_do_documento_e_relativo(self):
+        """Caminho absoluto do Drive tem 120 caracteres e quebra a tabela."""
+        with tempfile.TemporaryDirectory() as d:
+            raiz = Path(d)
+            acervo_falso(raiz, "-new-songbook", "Bossa Nova 1", ["⬜"])
+            doc = varre(raiz / "chords")["-new-songbook"][0]
+            self.assertEqual(
+                str(doc.caminho),
+                "chords/-new-songbook/Bossa Nova 1/INDICE.md")
+
+
 class TestAtualiza(unittest.TestCase):
     def _monta(self, d):
         raiz = Path(d)
@@ -117,6 +128,14 @@ class TestAtualiza(unittest.TestCase):
             raiz, _ = self._monta(d)
             atualiza(raiz / "chords")
             self.assertEqual(atualiza(raiz / "chords", check=True), [])
+
+    def test_pasta_sem_progresso_md_fica_fora_do_dashboard(self):
+        """-dicionario, -notion e -soma-play não são frentes de extração."""
+        with tempfile.TemporaryDirectory() as d:
+            raiz, dash = self._monta(d)
+            (raiz / "chords" / "-dicionario").mkdir()
+            atualiza(raiz / "chords")
+            self.assertNotIn("-dicionario", dash.read_text(encoding="utf-8"))
 
     def test_progresso_sem_marcador_vira_erro_e_nao_apaga(self):
         with tempfile.TemporaryDirectory() as d:

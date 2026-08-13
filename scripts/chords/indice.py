@@ -85,8 +85,11 @@ def count_status(text):
         if all(set(c) <= set("-: ") for c in celulas):   # separator row
             continue
         if col is None:
+            # startswith, not ==: the Rodrigo Vianna index heads the column
+            # "Status / obs", and an exact match silently skips the whole book.
             col = next(
-                (i for i, c in enumerate(celulas) if c.lower() == "status"),
+                (i for i, c in enumerate(celulas)
+                 if c.lower().lstrip("*_` ").startswith("status")),
                 None,
             )
             if col is None:

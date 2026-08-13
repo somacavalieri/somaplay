@@ -14,7 +14,11 @@ def barra(conferidas, feitas, extraiveis, largura=10):
     if extraiveis <= 0:
         return VAZIO * largura
     n_feitas = min(int(round(largura * feitas / extraiveis)), largura)
+    if feitas and not n_feitas:
+        n_feitas = 1          # 2 de 62 arredonda a zero; começado ≠ intocado
     n_conf = min(int(round(largura * conferidas / extraiveis)), n_feitas)
+    if conferidas and not n_conf and n_feitas:
+        n_conf = 1            # nunca acima de n_feitas, ou a barra estoura
     return CHEIO * n_conf + MEIO * (n_feitas - n_conf) + VAZIO * (largura - n_feitas)
 
 

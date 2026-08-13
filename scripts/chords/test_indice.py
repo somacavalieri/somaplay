@@ -95,6 +95,11 @@ class TestContagem(unittest.TestCase):
         self.assertEqual(count_status(cabecalho + com_vs)["pendencia"], 1)
         self.assertEqual(count_status(cabecalho + sem_vs)["pendencia"], 1)
 
+    def test_coluna_status_com_sufixo_no_cabecalho(self):
+        """O índice do Rodrigo Vianna encabeça a coluna como `Status / obs`."""
+        t = "| Música | Status / obs |\n|---|---|\n| M | 🔲 gerada |\n"
+        self.assertEqual(count_status(t).get("gerada"), 1)
+
     def test_negrito_nao_esconde_o_status(self):
         """As linhas do Bossa Nova 1 vêm como `**🔲 gerada, falta conferir**`."""
         cabecalho = "| Música | Status |\n|---|---|\n"

@@ -35,6 +35,11 @@ class TestBarra(unittest.TestCase):
     def test_denominador_zero_nao_divide_por_zero(self):
         self.assertEqual(barra(0, 0, 0), "░░░░░░░░░░")
 
+    def test_progresso_pequeno_ainda_aparece(self):
+        """2 de 62 arredonda a zero bloco; começado tem que diferir de intocado."""
+        self.assertEqual(barra(0, 2, 62), "▓░░░░░░░░░")
+        self.assertNotEqual(barra(0, 2, 62), barra(0, 0, 62))
+
     def test_sempre_tem_a_largura_pedida(self):
         for feitas in range(0, 63):
             self.assertEqual(len(barra(1, feitas, 62)), 10)
