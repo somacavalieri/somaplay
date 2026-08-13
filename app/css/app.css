@@ -125,7 +125,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .fonte-pill .lbl span{font-family:var(--f-title);font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fonte-pill .x{padding:0 12px 0 6px;opacity:.75}
 .fonte-pill .x:hover{opacity:1}
-.fonte-menu{position:absolute;left:0;top:50px;width:252px;max-height:60vh;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:30;box-shadow:var(--shadow)}
+/* Ancorado à DIREITA: a .lens vive num margin-left:auto, então o gatilho fica a
+   ~132px da borda da tela e um menu de 252px em left:0 sai pela direita. No
+   breakpoint de 900px a .lens vira uma linha inteira alinhada à esquerda e a
+   âncora tem que voltar para left — o override está junto da regra da .lens. */
+.fonte-menu{position:absolute;right:0;top:50px;width:252px;max-height:60vh;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:30;box-shadow:var(--shadow)}
 .fonte-menu button{width:100%;text-align:left;min-height:44px;padding:0 14px;border:none;border-radius:9px;background:transparent;color:var(--text);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .fonte-menu button.on{background:var(--accent-tint);color:var(--accent);font-weight:700}
 .fonte-menu .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -504,6 +508,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .segtab{flex:1 1 100%;overflow-x:auto;scrollbar-width:none}
   .tabsub{display:none}
   .lens{margin-left:0;flex:1 1 100%;justify-content:flex-start}
+  .fonte-menu{left:0;right:auto}
   .artist-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .content-scroll{padding-left:14px;padding-right:14px}
   .play-head{padding-left:14px;padding-right:14px;gap:10px}
