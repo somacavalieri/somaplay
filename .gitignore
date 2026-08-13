@@ -1,5 +1,7 @@
-# Biblioteca de assets (PDFs de songbooks + imagens de cifras) — ~1.8 GB, fica só local
-chords/
+# Biblioteca de assets (PDFs de songbooks + imagens de cifras) — ~1.8 GB, fica só local.
+# A barra inicial é necessária: sem ela o padrão casa com qualquer pasta chamada
+# "chords" em qualquer profundidade, e engolia scripts/chords/ (ferramenta nossa).
+/chords/
 
 # Backups da biblioteca. São dados do usuário, podem passar de 30 MB, e podem conter
 # cifras e letras de terceiros — nada disso entra num repositório público.
