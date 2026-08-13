@@ -79,8 +79,9 @@ function qualificadorHTML(s) {
 // fonte, o único em que não há badge para distinguir. Nos demais casos o
 // badge (ou a ausência dele) já separa (spec 2026-08-12-lista-compacta).
 function ordinalHTML(s) {
+  if (fonteOf(s)) return ''; // o badge distingue — e evita o scan O(n) da colisão
   const q = qualificadorDe(s, S.songs);
-  if (!q || q === SEM_FONTE || fonteOf(s)) return '';
+  if (!q || q === SEM_FONTE) return '';
   return ` <em class="src-qual">${esc(q)}</em>`;
 }
 
