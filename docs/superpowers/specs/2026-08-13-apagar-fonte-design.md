@@ -150,8 +150,15 @@ deleteArtists(ids)
 putLists(ls)
 ```
 
-É daqui que vem a diferença entre 5.523 transações e uma. `deleteSong`, `deleteArtist` e
-`putList` continuam existindo — o resto do app os usa.
+É daqui que vem a diferença entre 5.523 transações e uma.
+
+As três singulares continuam existindo, mas por motivos diferentes, e vale registrar qual é
+qual: `putList` tem seis chamadores espalhados por `main.js`, `state.js` e `backup.js`;
+`deleteList` é usada ao apagar uma lista. Já **`deleteSong` e `deleteArtist` ficam sem
+chamador nenhum** depois desta mudança, porque o único caminho que as usava agora passa
+pelo lote. Ficam mesmo assim: `db.js` é a camada de persistência, e a superfície dela
+espelha os stores — remover duas de seis deixaria `putSong` sem o `deleteSong` par, e a
+próxima feature que apagar uma música sozinha reescreve as duas linhas.
 
 Blob continua sendo `deleteBlob` um a um: `removeEntry` do OPFS não tem versão em lote.
 Não é problema onde dói mais — VJ é cifra de texto e não tem blob nenhum; o custo real
