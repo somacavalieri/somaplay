@@ -40,6 +40,7 @@ export const EN = {
   'settings.export.action': 'Export {count} {song}',
   'settings.export.nothing': 'No source selected',
   'settings.export.fileMulti': 'sources',
+  'settings.export.delFonte': 'Delete the songs from the source {name}',
   'settings.import.heading': 'Import',
   'settings.import.merge': 'Import / update',
   'settings.import.mergeSub': 'Merges the file into your library. Nothing you already have is deleted.',

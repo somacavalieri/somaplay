@@ -117,28 +117,43 @@ export async function fillStorageInfo() {
 // "Sem fonte" por último. O data-id carrega a GRAFIA SALVA da fonte, nunca
 // traduzida: ela é conteúdo do usuário. Só o balde usa o sentinela, com o
 // rótulo traduzido no que se vê.
+//
+// Cada linha tem dois botões: marcar (seleção do export) e a lixeira (apagar
+// aquelas músicas). São ações opostas na mesma linha, e o que as separa é o
+// confirm(), que nomeia a fonte e a contagem.
 function blocoExportar() {
   const fontes = fontesDaBiblioteca(S.songs);
   const sel = S.exportFontes;                        // null = todas
   const marcada = (nome) => sel === null || sel.includes(nome);
   const n = sel === null ? S.songs.length : songIdsDasFontes(S.songs, sel).size;
+  const rotulo = (f) => (f.nome === SEM_FONTE ? t('home.fonte.none') : f.nome);
 
-  // Menos de duas fontes: biblioteca nova não merece uma caixinha solitária.
-  const linhas = fontes.length < 2 ? '' : `
+  // A linha mestra só existe com duas fontes ou mais: com uma só ela seria uma
+  // cópia da linha de baixo. As LINHAS, ao contrário, aparecem a partir de uma
+  // — senão uma biblioteca de teste com fonte única ficaria sem lixeira
+  // nenhuma, que é justamente o caso que motivou o recurso.
+  const mestra = fontes.length < 2 ? '' : `
     <button class="check-row" data-a="toggleExportAll">
       <span class="checkbox ${sel === null ? 'on' : ''}">${sel === null ? I.check(15) : ''}</span>
       <span class="nm">${t('home.fonte.all')}</span>
       <span class="ct">${S.songs.length}</span>
     </button>
-    <div style="height:1px;background:var(--border);margin:4px 12px"></div>
-    ${fontes.map((f) => `
-      <button class="check-row" data-a="toggleExportFonte" data-id="${esc(f.nome)}">
-        <span class="checkbox ${marcada(f.nome) ? 'on' : ''}">${marcada(f.nome) ? I.check(15) : ''}</span>
-        <span class="nm">${f.nome === SEM_FONTE ? t('home.fonte.none') : esc(f.nome)}</span>
-        <span class="ct">${f.n}</span>
-      </button>`).join('')}`;
+    <div style="height:1px;background:var(--border);margin:4px 12px"></div>`;
 
-  const rotulo = n
+  const linhas = mestra + fontes.map((f) => {
+    const del = esc(t('settings.export.delFonte', { name: rotulo(f) }));
+    return `
+    <div class="check-row has-del">
+      <button class="check-main" data-a="toggleExportFonte" data-id="${esc(f.nome)}">
+        <span class="checkbox ${marcada(f.nome) ? 'on' : ''}">${marcada(f.nome) ? I.check(15) : ''}</span>
+        <span class="nm">${esc(rotulo(f))}</span>
+        <span class="ct">${f.n}</span>
+      </button>
+      <button class="del" data-a="deleteFonteAsk" data-id="${esc(f.nome)}" title="${del}" aria-label="${del}">${I.trash(16)}</button>
+    </div>`;
+  }).join('');
+
+  const acao = n
     ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
     : t('settings.export.nothing');
 
@@ -146,7 +161,7 @@ function blocoExportar() {
     <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
     <div style="color:var(--muted);font-size:13px;margin-bottom:10px">${t('settings.export.sub')}</div>
     ${linhas}
-    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n ? '' : 'disabled'}>${I.download()}${rotulo}</button>
+    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n ? '' : 'disabled'}>${I.download()}${acao}</button>
   </div>`;
 }
 

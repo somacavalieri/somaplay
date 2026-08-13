@@ -40,6 +40,7 @@ export const PT = {
   'settings.export.action': 'Exportar {count} {song}',
   'settings.export.nothing': 'Nenhuma fonte marcada',
   'settings.export.fileMulti': 'fontes',
+  'settings.export.delFonte': 'Excluir as músicas da fonte {name}',
   'settings.import.heading': 'Importar',
   'settings.import.merge': 'Importar / atualizar',
   'settings.import.mergeSub': 'Junta o arquivo à sua biblioteca. Nada do que você já tem é apagado.',
