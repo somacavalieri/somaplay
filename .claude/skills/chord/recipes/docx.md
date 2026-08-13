@@ -1,11 +1,28 @@
 # Recipe: `docx` — acervo em `.doc` / `.docx`
 
-O acervo do Vitor (`chords/-pasta-vitor/`, fonte **`VJ`**): ~197 pastas de
-artista, cada uma com arquivos `.doc` de uma música. Sem OCR, sem medição de
+O acervo do Vitor (`chords/-pasta-vitor/`, fonte **`VJ`**): 170 pastas de
+artista com arquivos `.doc`, uma música por arquivo. Sem OCR, sem medição de
 pixel — o texto está lá. O trabalho é de identificação e limpeza, não de leitura.
 
 **Um documento = uma pasta de artista.** O `INDICE.md` vai dentro dela, e cada
 linha da tabela é uma música.
+
+## Quando o acervo já foi extraído, o lote é a fonte de verdade
+
+Foi o caso aqui, e é o que mais confunde: sobraram **1.361 arquivos `.doc`** nas
+pastas para **5.523 músicas** geradas. Os `.doc` foram saindo conforme a extração
+avançou — pasta vazia significa artista **extraído**, não o contrário.
+
+Ao indexar um acervo nesse estado, **levantar a tabela do `.somaplay`**, não dos
+arquivos que sobraram: leia o lote com `read_somaplay` de
+`scripts/somaplay_edit.py` (o formato tem cabeçalho `SOMAPLAY1` + 10 dígitos de
+tamanho antes do JSON, então `json.load` direto falha). Todas entram **🔲** —
+geradas, ainda não conferidas no app.
+
+Vale medir o lote na mesma passada, porque é barato e acha defeito que ninguém
+veria: cifra em branco, título que não sobreviveu à conversão, título repetido
+dentro do mesmo artista. Nas 5.523 apareceram duas — uma cifra vazia e um título
+que virou `,,` com o nome real na primeira linha da cifra.
 
 ## Converter
 

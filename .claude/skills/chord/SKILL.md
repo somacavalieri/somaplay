@@ -35,6 +35,17 @@ python3 scripts/chords/progresso.py -new-songbook   # limita a um acervo
 **Nunca edite nada entre `<!-- chord:auto -->` e `<!-- /chord:auto -->`.** Vai ser
 sobrescrito. Para mudar um número, mude o status no `INDICE.md` e rode o script.
 
+Há ainda uma lista plana por acervo, para procurar uma música sem abrir os
+índices um a um:
+
+```bash
+python3 scripts/chords/musicas.py -pasta-vitor   # escreve <acervo>/MUSICAS.md
+```
+
+Também é gerada a partir dos `INDICE.md`. **O nome não é `INDICE*.md` de
+propósito** — `progresso.py` faz glob desse padrão dentro do acervo, e um arquivo
+assim ali contaria todas as músicas duas vezes.
+
 Uma pasta entra no dashboard **tendo um `PROGRESSO.md`**. É assim que
 `-dicionario`, `-notion` e `-soma-play` ficam de fora: não são frentes de
 extração.
