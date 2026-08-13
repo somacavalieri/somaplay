@@ -68,36 +68,44 @@ def _status_da_celula(celula):
     return "desconhecido" if texto else None
 
 
-def count_status(text):
-    """Count status glyphs, reading only tables that have a Status column.
+def linhas_de_status(text):
+    """Yield (campos, status) for each data row of a table with a Status column.
+
+    `campos` maps the lowercased header to the cell; `status` is the internal
+    name, or None when the cell is empty.
 
     Two traps this guards against, both of which produced wrong numbers by
     hand: the legend lists the same glyphs as bullets (not table rows), and
     other tables in the file (page maps) have no Status column at all.
     """
-    contagem = {}
-    col = None
+    cab, col = None, None
     for linha in text.splitlines():
         if not linha.lstrip().startswith("|"):
-            col = None                                   # table ended
+            cab, col = None, None                        # table ended
             continue
         celulas = _celulas(linha)
         if all(set(c) <= set("-: ") for c in celulas):   # separator row
             continue
         if col is None:
+            cab = celulas
             # startswith, not ==: the Rodrigo Vianna index heads the column
             # "Status / obs", and an exact match silently skips the whole book.
             col = next(
                 (i for i, c in enumerate(celulas)
                  if c.lower().lstrip("*_` ").startswith("status")),
-                None,
+                -1,                                      # table without status
             )
-            if col is None:
-                col = -1                                 # table without status
             continue
         if col == -1 or col >= len(celulas):
             continue
-        nome = _status_da_celula(celulas[col])
+        campos = {c.lower().strip(): v
+                  for c, v in zip(cab, celulas)}
+        yield campos, _status_da_celula(celulas[col])
+
+
+def count_status(text):
+    contagem = {}
+    for _, nome in linhas_de_status(text):
         if nome:
             contagem[nome] = contagem.get(nome, 0) + 1
     return contagem

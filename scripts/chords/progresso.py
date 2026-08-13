@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from blocos import bloco_atual, substitui
+from cli import normaliza_argv
 from indice import read_indice
 from render import bloco_acervo, bloco_dashboard
 
@@ -92,7 +93,8 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true",
                     help="não escreve; sai 1 se algo está fora de sync")
     ap.add_argument("--raiz", default=str(RAIZ_PADRAO))
-    args = ap.parse_args(argv)
+    args = ap.parse_args(
+        normaliza_argv(sys.argv[1:] if argv is None else argv))
 
     mudou = atualiza(Path(args.raiz), check=args.check, acervo=args.acervo)
     if args.check:
