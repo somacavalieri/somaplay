@@ -88,6 +88,13 @@ export const DB = {
   putList(l) { return tx('lists', 'readwrite', (s) => s.put(l)); },
   deleteList(id) { return tx('lists', 'readwrite', (s) => s.delete(id)); },
 
+  // Lote: uma transação para o conjunto inteiro. Apagar as 5.523 músicas de uma
+  // fonte chamando deleteSong() seriam 5.523 transações — dezenas de segundos
+  // com a tela travada. Aceitam Set ou array.
+  deleteSongs(ids) { return tx('songs', 'readwrite', (s) => { for (const id of ids) s.delete(id); }); },
+  deleteArtists(ids) { return tx('artists', 'readwrite', (s) => { for (const id of ids) s.delete(id); }); },
+  putLists(ls) { return tx('lists', 'readwrite', (s) => { for (const l of ls) s.put(l); }); },
+
   loadChordbook() { return reqAll('chordbook'); },
   putChordName(rec) { return tx('chordbook', 'readwrite', (s) => s.put(rec)); },
   clearChordbook() { return tx('chordbook', 'readwrite', (s) => s.clear()); },

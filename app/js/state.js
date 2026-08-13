@@ -311,31 +311,51 @@ export async function saveSong(song) {
   await DB.putSong(normalized);
 }
 
-export async function deleteSong(songId) {
-  const song = songById(songId);
-  if (!song) return;
-  // apaga blobs
-  const blobIds = [];
-  (song.cifra?.imagens || []).forEach((im) => blobIds.push(im.blobId));
-  (song.stems || []).forEach((st) => blobIds.push(st.blobId));
-  (song.full || []).forEach((f) => blobIds.push(f.blobId));
-  for (const id of blobIds.filter(Boolean)) await DB.deleteBlob(id);
-  // remove de todas as listas (§7)
-  for (const l of S.lists) {
-    if (l.musicas.includes(songId)) {
-      l.musicas = l.musicas.filter((x) => x !== songId);
-      await DB.putList(l);
-    }
+// Apaga um conjunto de músicas de uma vez. O motor NÃO sabe o que é fonte:
+// quem chama traduz o eixo dele para ids — songIdsDasFontes, para o eixo fonte.
+//
+// A ordem é deliberada: metadados primeiro, arquivos depois. A operação não é
+// atômica (são várias transações mais um removeEntry por arquivo no OPFS), e se
+// o navegador morrer no meio, o pior caso desta ordem é byte órfão ocupando
+// espaço — invisível e recuperável. Na ordem inversa o pior caso seria música
+// na biblioteca apontando para imagem e áudio que não existem mais.
+//
+// manterEmListas: os ids continuam nas listas, sem aparecer, e reimportar
+// aquela fonte cura o repertório sozinho. É o modo do apagar-por-fonte. O
+// padrão (false) poda, que é o que apagar uma música avulsa sempre fez: ali
+// você matou AQUELA música, e ela não deve voltar sozinha.
+export async function deleteSongs(ids, { manterEmListas = false } = {}) {
+  const alvo = ids instanceof Set ? ids : new Set(ids || []);
+  if (!alvo.size) return;
+  const vitimas = S.songs.filter((s) => alvo.has(s.id));
+  if (!vitimas.length) return;
+
+  const blobs = blobIdsDasMusicas(vitimas);
+  const orfaos = artistasOrfaos(S.songs, alvo);   // antes de mexer em S.songs
+
+  if (!manterEmListas) {
+    const mudadas = S.lists.filter((l) => l.musicas.some((id) => alvo.has(id)));
+    for (const l of mudadas) l.musicas = l.musicas.filter((id) => !alvo.has(id));
+    if (mudadas.length) await DB.putLists(mudadas);
   }
-  S.songs = S.songs.filter((s) => s.id !== songId);
-  await DB.deleteSong(songId);
-  // artista sem músicas some da biblioteca
-  const remaining = S.songs.some((s) => s.artistId === song.artistId);
-  if (!remaining) {
-    S.artists = S.artists.filter((a) => a.id !== song.artistId);
-    await DB.deleteArtist(song.artistId);
+
+  S.songs = S.songs.filter((s) => !alvo.has(s.id));
+  await DB.deleteSongs(alvo);
+
+  // Artista sem música nenhuma some da biblioteca: artista vazio é lixo para o
+  // usuário apagar à mão.
+  if (orfaos.length) {
+    const fora = new Set(orfaos);
+    S.artists = S.artists.filter((a) => !fora.has(a.id));
+    await DB.deleteArtists(orfaos);
   }
+
+  if (S.currentSongId && alvo.has(S.currentSongId)) S.currentSongId = null;
+
+  for (const id of blobs) await DB.deleteBlob(id);
 }
+
+export function deleteSong(songId) { return deleteSongs([songId]); }
 
 export function toggleFav(songId) {
   const s = songById(songId);
