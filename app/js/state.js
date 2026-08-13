@@ -134,6 +134,19 @@ export function fontesSugeridas(songs, limit = 8) {
 export const SEM_FONTE = '__sem_fonte';
 export function fonteOf(s) { return ((s && s.fonte) || '').trim(); }
 
+// Cor do badge de fonte (spec 2026-08-12-lista-compacta): índice 0–4 estável
+// por NOME — não por ranking de uso, que dançaria a cada import. Hash do
+// lowercase porque "cifraclub" e "CifraClub" são a mesma fonte pela regra de
+// dedupe. djb2 (h*33+c), e não djb2a (h*33^c): é a variante que separa os
+// três nomes reais do acervo — cifraclub→1 (âmbar), songbook→2 (teal),
+// vj→4 (neutro), exatamente as cores do mockup. Paleta em .src-badge.f0–.f4.
+export function corDaFonte(nome) {
+  const s = (nome || '').trim().toLowerCase();
+  let h = 5381;
+  for (const c of s) h = ((h * 33) + c.codePointAt(0)) >>> 0;
+  return h % 5;
+}
+
 // As fontes que a biblioteca realmente usa, mais usadas primeiro, desempate
 // alfabético — determinístico, e portanto testável. Sem fontes fixas, ao
 // contrário de fontesSugeridas: um filtro que não casa com nada só entrega uma
