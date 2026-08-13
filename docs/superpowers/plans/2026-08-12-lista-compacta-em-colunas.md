@@ -24,7 +24,7 @@
 
 ### Task 1: `corDaFonte` em `state.js`
 
-A cor do badge é função pura do nome da fonte: hash djb2a do nome `trim().toLowerCase()`, módulo 5. djb2a (`h*33 + c`) e não djb2 (`h*33 ^ c`): foi testado com os nomes reais do acervo e é a variante que separa `cifraclub → 1`, `songbook → 2`, `vj → 4` — que, com a paleta `f0..f4 = [verde, âmbar, teal, dourado, neutro]`, reproduz exatamente as cores do mockup.
+A cor do badge é função pura do nome da fonte: hash djb2 do nome `trim().toLowerCase()`, módulo 5. djb2 (`h*33 + c`) e não djb2a (`h*33 ^ c`): foi testado com os nomes reais do acervo e é a variante que separa `cifraclub → 1`, `songbook → 2`, `vj → 4` — que, com a paleta `f0..f4 = [verde, âmbar, teal, dourado, neutro]`, reproduz exatamente as cores do mockup.
 
 **Files:**
 - Modify: `app/js/state.js` (inserir após `fonteOf`, ~linha 135)
@@ -85,7 +85,7 @@ Em `app/js/state.js`, logo após a linha `export function fonteOf(s) { … }` (~
 // Cor do badge de fonte (spec 2026-08-12-lista-compacta): índice 0–4 estável
 // por NOME — não por ranking de uso, que dançaria a cada import. Hash do
 // lowercase porque "cifraclub" e "CifraClub" são a mesma fonte pela regra de
-// dedupe. djb2a (h*33+c), e não djb2 (h*33^c): é a variante que separa os
+// dedupe. djb2 (h*33+c), e não djb2a (h*33^c): é a variante que separa os
 // três nomes reais do acervo — cifraclub→1 (âmbar), songbook→2 (teal),
 // vj→4 (neutro), exatamente as cores do mockup. Paleta em .src-badge.f0–.f4.
 export function corDaFonte(nome) {

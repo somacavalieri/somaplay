@@ -94,6 +94,11 @@ Músicas o `src-qual` renderiza **só o caso ordinal** (`'1'`, `'2'` — nenhuma
 das colididas tem fonte, logo nenhuma tem badge, e o número é a única
 distinção). Colisão com fontes distintas já é distinguível pelos badges;
 colisão em que só uma tem fonte é distinguível pela presença/ausência do badge.
+Fica um canto sem cobrir, aceito como está: numa colisão com duas ou mais
+músicas sem fonte ao lado de uma com fonte, as músicas sem fonte continuam
+indistinguíveis entre si — `qualificadorDe` devolve `SEM_FONTE` para todas
+elas e a linha compacta não renderiza nada —, a mesma lacuna que o card antigo
+já tinha (as duas mostravam o mesmo rótulo "Sem fonte").
 A função pura `qualificadorDe` **não muda** — quem filtra é o render. Nas
 telas Artista e Estilo (`songRow` clássica, sem badge) o qualificador continua
 integral, senão a desambiguação sumiria de lá.
@@ -106,7 +111,7 @@ O badge:
   (reusa a chave `home.song.sourceQualifier` — nenhuma chave i18n nova);
 - música sem fonte: **sem badge** — a ausência é informação;
 - **cor determinística por nome**: `corDaFonte(nome)` em `state.js`, junto das
-  demais funções do eixo fonte. Hash djb2a do nome `trim().toLowerCase()`,
+  demais funções do eixo fonte. Hash djb2 do nome `trim().toLowerCase()`,
   módulo 5, indexando a paleta `[verde, âmbar, teal, dourado, neutro]` — cinco
   classes CSS (`f0`–`f4`) sobre tints que já existem nos tokens (tema claro
   incluído).
@@ -117,7 +122,7 @@ Por que assim:
   muda, e as cores dançariam a cada import;
 - **hash do lowercase** — "cifraclub" e "CifraClub" são a mesma fonte pela
   regra de dedupe da biblioteca, então recebem a mesma cor;
-- **djb2a e não djb2/fnv1a/sdbm** — testado com os nomes reais: djb2a é a
+- **djb2 e não djb2a/fnv1a/sdbm** — testado com os nomes reais: djb2 é a
   variante que separa `cifraclub → âmbar`, `songbook → teal`, `vj → neutro` em
   baldes distintos, que são **exatamente as cores do mockup**. Fontes futuras
   podem colidir de cor entre si — aceitável: o texto identifica, a cor reforça;

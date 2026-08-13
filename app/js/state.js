@@ -137,7 +137,7 @@ export function fonteOf(s) { return ((s && s.fonte) || '').trim(); }
 // Cor do badge de fonte (spec 2026-08-12-lista-compacta): índice 0–4 estável
 // por NOME — não por ranking de uso, que dançaria a cada import. Hash do
 // lowercase porque "cifraclub" e "CifraClub" são a mesma fonte pela regra de
-// dedupe. djb2a (h*33+c), e não djb2 (h*33^c): é a variante que separa os
+// dedupe. djb2 (h*33+c), e não djb2a (h*33^c): é a variante que separa os
 // três nomes reais do acervo — cifraclub→1 (âmbar), songbook→2 (teal),
 // vj→4 (neutro), exatamente as cores do mockup. Paleta em .src-badge.f0–.f4.
 export function corDaFonte(nome) {
