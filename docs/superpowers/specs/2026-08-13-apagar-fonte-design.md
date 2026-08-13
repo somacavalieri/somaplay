@@ -135,7 +135,8 @@ memória → **só então** apaga os blobs, um a um.
 `manterEmListas: false` (o padrão) poda os ids de todas as listas afetadas e grava só as
 que mudaram. `true` não toca em lista nenhuma.
 
-**`deleteSong(songId)` vira `deleteSongs(new Set([songId]))`.** O caminho de apagar uma
+**`deleteSong(songId)` vira `deleteSongs([songId])`** — `deleteSongs` normaliza array ou
+`Set` na entrada, para quem chama não precisar saber. O caminho de apagar uma
 música avulsa passa a ser um caso do lote, e não um segundo código para manter em pé —
 inclusive porque é ele que já define o comportamento correto de listas e de artista vazio.
 
@@ -256,6 +257,12 @@ Chaves novas nas **duas** tabelas — o teste de paridade cobra:
 | `msg.fonte.confirmDelete` | Excluir as {count} {song} da fonte "{name}" deste aparelho? As cifras, os áudios e as imagens vão junto, e não dá para desfazer. Exporte antes se quiser guardar. | Delete the {count} {song} from the source "{name}" on this device? Charts, audio and images go with them, and there is no undo. Export first if you want to keep them. |
 | `msg.fonte.deleting` | Excluindo... | Deleting... |
 | `msg.fonte.deleted` | Fonte excluída: {name} · {count} {song} | Source deleted: {name} · {count} {song} |
+| `msg.fonte.deleteFailed` | Falha ao excluir: {error} | Delete failed: {error} |
+
+O `deleteFailed` é o único acréscimo à lista original, e existe porque apagar 5 mil
+músicas falhar **em silêncio** é pior que falhar: o usuário não teria como saber se o
+espaço foi liberado. `deleteSongAsk`, a exclusão avulsa, não tem esse tratamento hoje —
+uma inconsistência conhecida, pequena demais para consertar junto.
 
 `common.song` / `common.songs` fazem o plural, como em `msg.backup.confirmReplace`.
 `home.fonte.none` ("Sem fonte" / "No source") é reaproveitada como `{name}` do balde — a
