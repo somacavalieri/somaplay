@@ -596,8 +596,8 @@ const actions = {
     const song = t(n === 1 ? 'common.song' : 'common.songs');
     if (!confirm(t('msg.fonte.confirmDelete', { count: n, song, name }))) return;
     apagandoFonte = true;
-    toast(t('msg.fonte.deleting'));
     try {
+      toast(t('msg.fonte.deleting'));
       await deleteSongs(ids, { manterEmListas: true });
       // Os ids ficam nas listas de propósito: reimportar esta fonte depois cura
       // o repertório sozinho, que é o principal motivo de apagar por fonte.

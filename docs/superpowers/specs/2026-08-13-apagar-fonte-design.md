@@ -202,8 +202,11 @@ Três regras de exibição:
   ("biblioteca nova não merece uma caixinha solitária para marcar") abriria um buraco bem
   no caso que motivou o recurso: importou uma biblioteca de teste num aparelho vazio → uma
   fonte só → nenhuma lixeira, nenhuma saída. Com uma fonte só, **some a linha mestra**,
-  que seria uma cópia da única linha; `S.exportFontes` permanece `null` e o export sai
-  pelo caminho completo de sempre.
+  que seria uma cópia da única linha — mas a linha continua clicável como qualquer outra:
+  desmarcá-la põe `S.exportFontes = []`, que desabilita o botão Exportar sem a linha
+  mestra ali para restaurar a seleção de um toque só. Um toque na própria linha resolve,
+  então o estado nunca fica preso — só não é a garantia de sair sempre pelo caminho
+  completo que uma fonte só parece prometer.
 - Biblioteca vazia (`fontes.length === 0`) continua sem lista nenhuma.
 
 ### `css/app.css` — quatro linhas
@@ -251,7 +254,7 @@ fala de id de música é do `deleteSongs`, porque vale para qualquer exclusão.
 | estado | quem | o que fazer | por quê |
 |---|---|---|---|
 | `S.exportFontes` | ação | volta para `null` | guarda **grafias**, e a biblioteca mudou por baixo dela. Mesmo motivo e mesmo remédio do import (`wireBackupInput`) |
-| `S.fonteFilter` | ação | zera se `fonteCasa` casar com a fonte apagada | senão você volta para a home vazia sem entender por quê |
+| `S.fonteFilter` | ação | zera se **nenhuma música sobrevivente** casa com ela (`!S.songs.some(matchesFonte)`) | mais robusto que comparar com a fonte apagada — também zera uma lente presa numa grafia que já não existe por outro motivo; senão você volta para a home vazia sem entender por quê |
 | `S.currentSongId` | `deleteSongs` | zera se a música apagada era ela | evita reabrir uma música morta ao voltar |
 
 ### `js/i18n/pt.js` e `js/i18n/en.js`
