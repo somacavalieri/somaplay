@@ -25,3 +25,8 @@ untitled folder/
 # Ferramenta de conversão do songbook do Gil. Os módulos em songs/ carregam a letra
 # transcrita das músicas — conteúdo de terceiros, não entra no repositório público.
 scripts/gil_songbook/
+
+# Mesma razão, no pipeline novo: os módulos por livro em books/ carregam a letra
+# transcrita. A FERRAMENTA em scripts/new_songbook/ continua pública — é código
+# nosso; o que sai é só o conteúdo dos livros.
+scripts/new_songbook/books/
