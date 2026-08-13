@@ -40,11 +40,16 @@ function idb() {
 
 function tx(store, mode, fn) {
   return idb().then((d) => new Promise((resolve, reject) => {
-    const t = d.transaction(store, mode);
-    const s = t.objectStore(store);
+    const trx = d.transaction(store, mode);
+    const s = trx.objectStore(store);
     const out = fn(s);
-    t.oncomplete = () => resolve(out && out._result !== undefined ? out._result : out);
-    t.onerror = () => reject(t.error);
+    trx.oncomplete = () => resolve(out && out._result !== undefined ? out._result : out);
+    trx.onerror = () => reject(trx.error);
+    // Sem isto uma transação abortada sem erro no request — cota estourada, ou a
+    // conexão fechada pelo onversionchange quando outra aba faz upgrade — deixa
+    // esta Promise pendurada pra sempre: nenhum toast, e o finally de quem chamou
+    // nunca roda, então a guarda de reentrância (ex.: apagandoFonte) trava até recarregar.
+    trx.onabort = () => reject(trx.error || new Error(t('msg.db.transactionAborted')));
   }));
 }
 

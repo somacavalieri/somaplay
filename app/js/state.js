@@ -348,19 +348,25 @@ export async function deleteSongs(ids, { manterEmListas = false } = {}) {
 
   if (!manterEmListas) {
     const mudadas = S.lists.filter((l) => l.musicas.some((id) => alvo.has(id)));
-    for (const l of mudadas) l.musicas = l.musicas.filter((id) => !alvo.has(id));
-    if (mudadas.length) await DB.putLists(mudadas);
+    if (mudadas.length) {
+      // Grava as cópias podadas ANTES de mexer na memória. Se a escrita falhar,
+      // a tela continua contando a verdade do disco em vez de mostrar as
+      // músicas já fora da lista com um toast dizendo que deu errado.
+      const podadas = mudadas.map((l) => ({ ...l, musicas: l.musicas.filter((id) => !alvo.has(id)) }));
+      await DB.putLists(podadas);
+      mudadas.forEach((l, i) => { l.musicas = podadas[i].musicas; });
+    }
   }
 
-  S.songs = S.songs.filter((s) => !alvo.has(s.id));
   await DB.deleteSongs(alvo);
+  S.songs = S.songs.filter((s) => !alvo.has(s.id));
 
   // Artista sem música nenhuma some da biblioteca: artista vazio é lixo para o
   // usuário apagar à mão.
   if (orfaos.length) {
+    await DB.deleteArtists(orfaos);
     const fora = new Set(orfaos);
     S.artists = S.artists.filter((a) => !fora.has(a.id));
-    await DB.deleteArtists(orfaos);
   }
 
   if (S.currentSongId && alvo.has(S.currentSongId)) S.currentSongId = null;
