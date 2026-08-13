@@ -2,7 +2,7 @@
 // Formato: "SOMAPLAY1\n" + tamanho do JSON (10 dígitos) + "\n" + JSON + bytes dos blobs
 // concatenados na ordem do manifest. Sem base64 — leitura por slice (memória ok).
 import { DB } from './db.js';
-import { S } from './state.js';
+import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
@@ -51,12 +51,7 @@ export function nomeDoExport(fontes, stamp, palavraFontes) {
 // Sem argumento, o comportamento é exatamente o de hoje: a biblioteca inteira.
 export async function exportLibrary({ songIds = null, listIds = null, fileName = null } = {}) {
   const corte = recorteParaExport({ artists: S.artists, songs: S.songs, lists: S.lists }, { songIds, listIds });
-  const blobIds = [];
-  corte.songs.forEach((s) => {
-    (s.cifra?.imagens || []).forEach((im) => im.blobId && blobIds.push(im.blobId));
-    (s.stems || []).forEach((st) => st.blobId && blobIds.push(st.blobId));
-    (s.full || []).forEach((f) => f.blobId && blobIds.push(f.blobId));
-  });
+  const blobIds = blobIdsDasMusicas(corte.songs);
   const parts = [];
   const manifestBlobs = [];
   for (const id of blobIds) {

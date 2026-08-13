@@ -191,6 +191,32 @@ export function songIdsDasFontes(songs, fontes) {
   return out;
 }
 
+// Os arquivos que estas músicas levam junto quando somem. Também é o que o
+// export precisa saber para montar o pacote — uma definição só de "quais blobs
+// são desta música", para nenhuma das duas esquecer um campo novo de mídia.
+export function blobIdsDasMusicas(songs) {
+  const out = [];
+  for (const s of songs) {
+    (s.cifra?.imagens || []).forEach((im) => im && im.blobId && out.push(im.blobId));
+    (s.stems || []).forEach((st) => st && st.blobId && out.push(st.blobId));
+    (s.full || []).forEach((f) => f && f.blobId && out.push(f.blobId));
+  }
+  return out;
+}
+
+// Quem fica sem NENHUMA música depois de apagar `ids` (um Set). Uma passada
+// sobre a biblioteca inteira, e não um `S.songs.some()` por música apagada:
+// com 5 mil ids a segunda forma é O(n²) e trava o app.
+export function artistasOrfaos(songs, ids) {
+  const vivos = new Set();
+  const tocados = new Set();
+  for (const s of songs) {
+    if (!s.artistId) continue;
+    if (ids.has(s.id)) tocados.add(s.artistId); else vivos.add(s.artistId);
+  }
+  return [...tocados].filter((a) => !vivos.has(a));
+}
+
 // Duas músicas do mesmo artista com o mesmo título são indistinguíveis na
 // listagem. A fonte é o que as separa — mas mostrar fonte em toda linha polui a
 // biblioteca inteira, que é majoritariamente de títulos únicos. Então ela
