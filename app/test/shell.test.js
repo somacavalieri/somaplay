@@ -42,8 +42,8 @@ test('o SHELL não tem entradas duplicadas', () => {
   assert.deepEqual(dup, [], `duplicados no SHELL: ${dup.join(', ')}`);
 });
 
-test('VERSION segue o formato somaplay-vN', () => {
+test('VERSION segue o formato somaplay-X.Y.Z', () => {
   const m = SW.match(/const VERSION = '([^']+)'/);
   assert.ok(m, 'VERSION não encontrado em sw.js');
-  assert.match(m[1], /^somaplay-v\d+$/, `VERSION fora do formato: ${m[1]}`);
+  assert.match(m[1], /^somaplay-\d+\.\d+\.\d+$/, `VERSION fora do formato: ${m[1]}`);
 });
