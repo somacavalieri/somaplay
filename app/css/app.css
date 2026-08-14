@@ -304,7 +304,16 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .star-btn.on{color:var(--accent)}
 
 .cifra-scroll{flex:1;min-height:0;overflow-y:auto;padding:30px 56px 96px}
-.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:720px;margin:16px auto 0;overflow-x:auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+/* Sem trava de largura: o wrapBlock quebra pela largura REAL desta caixa
+   (play.js mede o clientWidth dela), então um max-width fixo aqui decide quantas
+   fileiras cada sistema ocupa. Com 720px cabiam ~52 colunas, e um sistema de
+   songbook Chediak tem 124-131 — o livro imprime a frase inteira numa linha de
+   página cheia. Davam 3 fileiras, a última quase vazia, e a quebra caía no meio
+   da frase ("não creia," partido em duas). Deixando a caixa acompanhar a coluna,
+   a frase fica na linha o máximo que a tela permitir, que é como o impresso se
+   lê. Cifra estreita não muda de aparência: linha curta continua curta.
+   Medido em 1175px: 720px -> 52 colunas -> 23 fileiras; 100% -> 79 -> 15. */
+.cifra-text{font-family:var(--f-mono);font-size:20px;line-height:1.5;max-width:100%;margin:16px auto 0;overflow-x:auto;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 .cifra-text .sec{color:var(--accent);font-weight:700;margin:20px 0 6px;font-size:15px;letter-spacing:.5px}
 .cifra-text .ch{color:var(--accent);font-weight:700;white-space:pre;min-height:6px}
 .cifra-text .ly{color:var(--text);white-space:pre;margin-bottom:5px}
