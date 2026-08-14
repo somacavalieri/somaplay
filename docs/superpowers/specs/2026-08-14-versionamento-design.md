@@ -100,11 +100,15 @@ que o app já fazia e o `Added` do número visível.
 
 Duas regras sustentam o resto:
 
-- **Toda publicação que toca o `SHELL` é no mínimo um PATCH.** É o que garante
-  que não existe deploy sem chave de cache nova — o esquecimento continua possível — nada
-  impede publicar um arquivo do `SHELL` sem subir o número —, mas passa a ter **sintoma
-  visível**: o número na tela não muda, e é justamente ele que se olha quando se desconfia
-  de cache velho.
+- **Toda publicação que muda um arquivo listado no `SHELL` é no mínimo um PATCH** —
+  na prática, qualquer mudança dentro de `app/`. Não é "editar o array": é mudar
+  qualquer coisa que o array pré-cacheia. A leitura estreita é como o bug volta — um
+  conserto só de CSS, publicado sem bump, fica sendo servido do cache velho para
+  sempre, que é o primeiro incidente narrado lá em cima. Vale também para mexer na
+  lógica do próprio `sw.js`, que não está no `SHELL` mas é servido junto.
+  O esquecimento continua possível: nada impede publicar sem subir o número. O que
+  muda é que ele passa a ter **sintoma visível** — o número na tela não muda, e é
+  justamente ele que se olha quando se desconfia de cache velho.
 - **Mudança que não é do app não mexe na versão.** `docs/`, specs, planos,
   `scripts/chords/`, `scripts/new_songbook/`. Sem essa regra o número giraria
   durante o trabalho de extração do acervo, que é a maior parte dos commits.
