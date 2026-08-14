@@ -4,6 +4,7 @@ import { I, esc } from '../icons.js';
 import { DB } from '../db.js';
 import { SCROLL_MIN, SCROLL_MAX } from '../scroll-speed.js';
 import { t, getLang } from '../i18n.js';
+import { VERSION } from '../version.js';
 
 export function renderSettings() {
   const st = S.settings;
@@ -90,6 +91,16 @@ export function renderSettings() {
           <div class="info"><div class="t title">${t('settings.samples.title')}</div><div class="s">${t('settings.samples.sub')}</div></div>
           ${I.chevR()}
         </button>
+
+        <div class="setting-row">
+          <div class="info">
+            <div class="t">${t('settings.about.title')}</div>
+            <div class="s">soma_play · ${t('settings.about.version')} ${VERSION}</div>
+          </div>
+          <a class="btn-ghost" style="height:38px;padding:0 14px;display:inline-flex;align-items:center;text-decoration:none"
+             href="https://github.com/somacavalieri/somaplay/blob/main/CHANGELOG.md"
+             target="_blank" rel="noopener">${t('settings.about.changelog')}</a>
+        </div>
 
       </div>
     </div>
