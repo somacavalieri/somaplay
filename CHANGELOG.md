@@ -40,3 +40,9 @@ PT/EN interface, and full offline operation as an installable PWA.
 
 - Version number in Settings, under **About**.
 - This changelog.
+
+### Changed
+
+- The service worker cache key is now the product version (`somaplay-0.9.0`)
+  instead of an ad-hoc counter (`somaplay-v39`). One number, one meaning: a
+  release cannot ship without a new cache.

@@ -73,10 +73,14 @@ Hard-won. None of these are obvious from reading the code.
 it makes the app open an empty database — every user's library disappears. The name is
 invisible to users; there is no reason to touch it.
 
-**Changing the `SHELL` array in `app/sw.js` requires bumping `VERSION` on line 2.** The
+**Changing the `SHELL` array in `app/sw.js` requires bumping the version.** The
 install step calls `cache.addAll(SHELL)`, which fails entirely if any path is missing,
-and without a version bump installed clients keep the old list. **Every new module under
-`app/js/` must be added to `SHELL`**, or the app breaks offline.
+and without a new cache key installed clients keep the old list. Since 0.9.0 the cache
+key *is* the product version (`somaplay-0.9.0`), declared in two places — `app/js/version.js`
+and line 2 of `app/sw.js` — and kept in sync by `app/test/version.test.js`. So any
+release that touches `SHELL` is at least a PATCH, and the number on the Settings screen
+is proof of which cache is being served. **Every new module under `app/js/` must be added
+to `SHELL`**, or the app breaks offline; `app/test/shell.test.js` catches that one.
 
 **Never translate or renotate the user's chart.** A text chart aligns chords over lyrics
 by character column — `A7M` is 3 characters, `Amaj7` is 5. Any substitution inside chart
