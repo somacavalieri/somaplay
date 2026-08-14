@@ -138,3 +138,13 @@ chords/_a-identificar/        ← songs whose artist isn't identified yet
 
 Captured cifra images are often low-resolution (~595px wide) and blur on a tablet —
 prefer ~2× sources.
+
+**Extraction progress is tracked in three levels, and only the bottom one is written
+by hand.** `chords/<acervo>/<documento>/INDICE.md` is the single source of truth —
+front matter plus a table whose `Status` column holds one of six emoji. Above it,
+`chords/<acervo>/PROGRESSO.md` and the `chords/PROGRESSO.md` dashboard are generated
+by `python3 scripts/chords/progresso.py`, which rewrites only the region between
+`<!-- chord:auto -->` markers and never touches an `INDICE.md`. Everything outside
+those markers is hand-written prose — measured page maps, scan state, decisions — and
+losing it would cost months. The **`/chord` skill** (`.claude/skills/chord/`) drives
+all of this, with one recipe per material type.
