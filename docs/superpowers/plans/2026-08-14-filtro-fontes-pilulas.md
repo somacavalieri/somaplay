@@ -23,7 +23,7 @@ gerenciador de pacotes. Testes com `node --test` (Node ≥ 20). CSS num arquivo 
 - **Rodar os testes:** `cd app && node --test`. Sintaxe de um módulo: `cd app && node --check js/<arquivo>.js`.
 - **Servidor manual:** `cd app && python3 -m http.server 8137` → http://localhost:8137. `file://` não funciona (Service Worker, OPFS, ES modules).
 - **Todo módulo novo em `app/js/` PRECISA entrar no array `SHELL` de `app/sw.js`**, ou o app quebra offline. `app/test/shell.test.js` reprova se faltar.
-- **Mexeu no `SHELL` → suba `VERSION` na linha 2 de `app/sw.js`.** Hoje: `somaplay-v38`. Este plano deixa em `somaplay-v39`.
+- **A versão do app é um número X.Y.Z que vive em TRÊS lugares em sincronia**, cobrados por `app/test/version.test.js`: `export const VERSION` em `app/js/version.js`, `const VERSION = 'somaplay-<versão>'` na linha 2 de `app/sw.js`, e uma seção `## [<versão>]` em `CHANGELOG.md`. Hoje: `0.9.0`. **Este plano sobe para `0.10.0` — MINOR, porque muda o que o app faz — e o bump acontece de uma vez só na Task 5**, junto da entrada do CHANGELOG que descreve a funcionalidade pronta. Nenhuma task anterior mexe na versão; `version.test.js` só verifica sincronia entre os três literais, e `0.9.0` segue consistente até lá.
 - **Chave de tradução nova entra nas DUAS tabelas** (`app/js/i18n/pt.js` e `app/js/i18n/en.js`), senão `app/test/i18n.test.js` reprova por paridade.
 - **`t()` não escapa parâmetro.** Nome de fonte é conteúdo do usuário: `esc()` antes de passar para `t()`.
 - **Nunca traduzir um valor de `data-*`.** `data-id` carrega a grafia salva da fonte; só o rótulo visível passa por `t()`.
@@ -181,8 +181,17 @@ test('a lente de modos reduz as contagens', () => {
 test('SEM_FONTE entra por último, com a contagem das músicas sem fonte', () => {
   const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', '  ')];
   const { itens, total } = contagensPorFonte(songs, { nomeDoArtista: nomeFixo });
-  assert.deepEqual(itens, [{ nome: SEM_FONTE, n: 2 }, { nome: 'RV', n: 1 }]);
+  assert.deepEqual(itens, [{ nome: 'RV', n: 1 }, { nome: SEM_FONTE, n: 2 }]);
   assert.equal(total, 3);
+});
+
+// O caso que prende a ordem: nenhum outro teste cruza a fronteira entre busca
+// vazia e busca preenchida no mesmo conjunto de músicas, que é onde uma ordem
+// dependente do filtro apareceria.
+test('a ordem das pílulas não muda quando a busca entra', () => {
+  const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', ''), m('Retiros', '')];
+  const nomes = (opts) => contagensPorFonte(songs, { nomeDoArtista: nomeFixo, ...opts }).itens.map((i) => i.nome);
+  assert.deepEqual(nomes({}), nomes({ query: 'dr' }));
 });
 
 test('o total é sempre a soma dos itens', () => {
@@ -198,10 +207,17 @@ test('grafias divergentes da mesma fonte somam na mesma pílula', () => {
 });
 ```
 
-Duas coisas para não estranhar na leitura: `nomeDoArtista` é injetado porque `artistName`
-lê `S.artists`, e um teste puro não pode depender do estado global; e `SEM_FONTE` aparece
-antes de `RV` no penúltimo caso porque `fontesDaBiblioteca` ordena por contagem (2 antes
-de 1) e só empurra o balde para o fim quando empata.
+Duas coisas para não estranhar na leitura. `nomeDoArtista` é injetado porque `artistName`
+lê `S.artists`, e um teste puro não pode depender do estado global. E `SEM_FONTE` vem
+depois de `RV` mesmo tendo mais músicas: `fontesDaBiblioteca` faz `out.push()` do balde
+**depois** do `.sort()`, então ele é sempre o último, com qualquer contagem — o teste
+pré-existente `'as músicas sem fonte viram um balde no fim da lista'` já prova isso, com o
+balde em 4 contra `Songbook` em 1.
+
+Daí a regra que o último teste prende: a ordem sai de `fontesDaBiblioteca(songs)` e **nunca**
+depende de `query` ou `modeFilter`. Ordenar os itens por contagem filtrada, ainda que só
+quando não há filtro, faz as pílulas trocarem de lugar na primeira tecla digitada — que é
+o defeito que a decisão 3 da função existe para impedir.
 
 - [ ] **Step 2: Rodar e ver falhar**
 
@@ -322,7 +338,7 @@ módulo de fora — o teste passa a cobrar assim que o arquivo existe.
 
 **Files:**
 - Create: `app/js/render/fontestrip.js`
-- Modify: `app/sw.js:2` (VERSION) e o array `SHELL`
+- Modify: `app/sw.js` — **só o array `SHELL`**. Não tocar na linha 2 (`VERSION`): o bump é da Task 5.
 - Test: `app/test/fontestrip.test.js` (novo)
 
 **Interfaces:**
@@ -463,21 +479,23 @@ export function fonteStripHTML(desligada = false) {
 As chaves de tradução usadas aqui entram na Task 3, Step 4. Até lá `t()` devolve a própria
 chave em vez de quebrar — e o módulo ainda não é chamado por ninguém.
 
-- [ ] **Step 4: Registrar no `SHELL` e subir a versão**
+- [ ] **Step 4: Registrar no `SHELL`**
 
-Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v38';` → `const VERSION = 'somaplay-v39';`
-
-E no array `SHELL`, junto das outras entradas de `./js/render/`:
+No array `SHELL` de `app/sw.js`, junto das outras entradas de `./js/render/`:
 
 ```js
   './js/render/fontestrip.js',
 ```
 
+**Não tocar na linha 2 (`const VERSION`).** A versão é artefato de release e sobe uma vez
+só, na Task 5, junto da entrada do CHANGELOG. `version.test.js` cobra sincronia entre os
+três literais, não que eles tenham mudado — `0.9.0` continua consistente aqui.
+
 - [ ] **Step 5: Rodar tudo e ver passar**
 
 Run: `cd app && node --test`
-Expected: PASS. Em particular `fontestrip.test.js` e os quatro testes de `shell.test.js` —
-"todo módulo JS do app está registrado no SHELL" é o que cobra o passo anterior.
+Expected: PASS. Em particular `fontestrip.test.js` e o teste de `shell.test.js` "todo
+módulo JS do app está registrado no SHELL", que é o que cobra o passo anterior.
 
 Run: `cd app && node --check js/render/fontestrip.js`
 Expected: sem saída.
@@ -648,23 +666,14 @@ apelido evita confundi-la com a ação de mesmo nome — e a poda:
   toggleFonte as calcToggleFonte, podaFontes,
 ```
 
-Junto das outras variáveis de módulo do topo (perto de `let pendingHandleIdx`):
-
-```js
-let pendingFonte = null;
-```
-
 Trocar as três ações de fonte (~linhas 235-237) por estas duas:
 
 ```js
   // setFonte (mais abaixo) já é dos atalhos do formulário — esta é a da lente.
-  // pendingFonte devolve o foco à pílula depois do re-render: update() reescreve
-  // o app inteiro, e sem isso a navegação por teclado morre no primeiro clique.
   toggleFonte(d) {
     S.fonteFilter = calcToggleFonte(S.fonteFilter, d.id, fontesDaBiblioteca(S.songs));
     S.settings.fonteFilter = S.fonteFilter;
     saveSettings();
-    pendingFonte = d.id;
     update();
   },
   clearFonte() {
@@ -903,6 +912,22 @@ No topo de `main.js`:
 import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
 ```
 
+Junto das outras variáveis de módulo do topo (perto de `let pendingHandleIdx`):
+
+```js
+let pendingFonte = null;
+```
+
+E na ação `toggleFonte` que a Task 3 criou, acrescentar a marcação antes do `update()`:
+
+```js
+    pendingFonte = d.id;
+    update();
+```
+
+Declaração, atribuição e leitura entram juntas nesta task de propósito: separadas, a Task 3
+entregaria uma variável que ninguém lê.
+
 Em `afterRender()` (~linha 92), junto do bloco do `pendingHandleIdx`:
 
 ```js
@@ -977,10 +1002,13 @@ git commit -m "feat(fontes): overflow, foco e contagens vivas da faixa"
 
 ---
 
-### Task 5: Responsivo e limpeza
+### Task 5: Responsivo, limpeza e release 0.10.0
 
 **Files:**
 - Modify: `app/css/app.css` (os `@media`)
+- Modify: `app/js/version.js` (a constante `VERSION`)
+- Modify: `app/sw.js:2` (a chave de cache)
+- Modify: `CHANGELOG.md` (entrada da versão nova)
 
 **Interfaces:**
 - Consumes: as classes `.fonte-strip` e `.fpill` das Tasks 3 e 4.
@@ -1024,19 +1052,74 @@ Em http://localhost:8137, com o DevTools aberto e a janela redimensionada:
 - Em emulação de toque (ponteiro grosso): as pílulas têm 44px de altura e dá para acertar uma com o dedo; a faixa rola por arrasto.
 - Em nenhuma largura o cabeçalho cresce a ponto de comer a lista.
 
-- [ ] **Step 4: Rodar tudo uma última vez**
+- [ ] **Step 4: Varrer o que sobrou do dropdown e commitar o CSS**
+
+Run: `cd app && grep -rn "fonteMenuOpen\|fonte-wrap\|fonte-menu\|setFonteFilter\|fonteControl\|home.fonte.clear" js css`
+Expected: nenhuma saída. É a varredura que confirma que o dropdown antigo saiu inteiro. Se
+sobrar qualquer ocorrência, apagar antes de seguir.
 
 Run: `cd app && node --test`
 Expected: PASS.
 
-Run: `cd app && grep -rn "fonteMenuOpen\|fonte-wrap\|fonte-menu\|setFonteFilter\|fonteControl\|home.fonte.clear" js css`
-Expected: nenhuma saída. É a varredura que confirma que o dropdown antigo saiu inteiro.
-
-- [ ] **Step 5: Commit**
-
 ```bash
 git add app/css/app.css
 git commit -m "feat(fontes): quebra da faixa em telas estreitas e alvos de toque"
+```
+
+- [ ] **Step 5: Subir a versão nos três lugares**
+
+A versão é ao mesmo tempo o que o usuário lê em Ajustes e a chave do cache do Service
+Worker, e `app/test/version.test.js` reprova se os três literais divergirem. **MINOR**
+(`0.9.0` → `0.10.0`), pela regra do `CHANGELOG.md`: "a change to what the app *does*".
+
+Em `app/js/version.js`:
+
+```js
+export const VERSION = '0.10.0';
+```
+
+Em `app/sw.js`, linha 2:
+
+```js
+const VERSION = 'somaplay-0.10.0';
+```
+
+Em `CHANGELOG.md`, uma seção nova **acima** de `## [0.9.0]`, e a seção `## [Unreleased]`
+volta a ser `Nothing yet.`:
+
+```markdown
+## [0.10.0] - 2026-08-14
+
+### Changed
+
+- The source filter is now a strip of pills that is always visible, in the same row
+  as the tabs, instead of a dropdown behind a tag icon. The filter state and every
+  source's song count are readable without a click.
+- Sources combine: the first click on a source isolates it, further clicks add and
+  remove. Removing the last one — or selecting every source — returns to **All**.
+- The selection persists between sessions. On startup it is pruned against the
+  sources the library actually has, so a source deleted or missing from a restored
+  backup cannot leave the library looking empty with nothing on screen to explain it.
+- Each source carries a fixed colour, derived from its name so it stays the same
+  across devices.
+
+### Removed
+
+- The source dropdown and its tag button in the top bar.
+```
+
+- [ ] **Step 6: Rodar os testes de versão e commitar o release**
+
+Run: `cd app && node --test test/version.test.js`
+Expected: PASS nos três — formato X.Y.Z, chave de cache `somaplay-0.10.0`, e entrada
+`## [0.10.0]` no CHANGELOG.
+
+Run: `cd app && node --test`
+Expected: PASS.
+
+```bash
+git add app/js/version.js app/sw.js CHANGELOG.md
+git commit -m "chore(release): 0.10.0 — filtro de fontes em pílulas"
 ```
 
 ---
