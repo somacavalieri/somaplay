@@ -115,7 +115,9 @@ function afterRender() {
   // querySelector. preventScroll porque o foco arrastaria a faixa e desfaria o
   // scrollLeft que o restoreUI acabou de devolver.
   if (pendingFonte != null) {
-    const alvo = [...document.querySelectorAll('.fpill')].find((el) => el.dataset.id === pendingFonte);
+    const alvo = pendingFonte === PENDING_TODAS
+      ? [...document.querySelectorAll('.fpill')].find((el) => el.classList.contains('todas'))
+      : [...document.querySelectorAll('.fpill')].find((el) => el.dataset.id === pendingFonte);
     alvo?.focus({ preventScroll: true });
     pendingFonte = null;
   }
@@ -270,6 +272,7 @@ const actions = {
     S.fonteFilter = [];
     S.settings.fonteFilter = [];
     saveSettings();
+    pendingFonte = PENDING_TODAS;
     update();
   },
   fonteScrollNext() {
@@ -718,8 +721,11 @@ let pendingHandleIdx = null;
 function focusHandle(idx) { pendingHandleIdx = idx; }
 
 // Id da fonte cuja pílula deve receber o foco depois do próximo render —
-// mesmo padrão do pendingHandleIdx acima.
+// mesmo padrão do pendingHandleIdx acima. A pílula "Todas" não tem data-id (não
+// é uma fonte de verdade), então usa este sentinela em vez de uma grafia — um
+// Symbol nunca colide com o que dataset.id devolve, que é sempre string.
 let pendingFonte = null;
+const PENDING_TODAS = Symbol('todas');
 
 // Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
 // AMBOS falam em POSIÇÃO VISÍVEL, porque é isso que o usuário vê e move; a

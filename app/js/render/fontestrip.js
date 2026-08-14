@@ -43,21 +43,25 @@ export function fonteStripHTML(desligada = false) {
   const todas = !marcadas.length;
   const estaMarcada = (nome) => marcadas.some((f) => f.trim().toLowerCase() === nome.trim().toLowerCase());
 
+  // O substantivo já vem pluralizado — home.fonte.tip* não embutem "músicas"
+  // fixo, senão uma fonte com exatamente uma música mostraria "1 músicas".
+  const musicasDe = (num) => t(num === 1 ? 'common.song' : 'common.songs');
+
   const pilulas = itens.map(({ nome, n }) => {
     const ativa = estaMarcada(nome);
     // O sentinela é traduzido só no que se vê; o data-id leva a grafia salva.
     const rotulo = nome === SEM_FONTE ? t('home.fonte.none') : nome;
-    const p = { fonte: esc(rotulo), n };
+    const p = { fonte: esc(rotulo), n, song: musicasDe(n) };
     const dica = ativa ? t('home.fonte.tipRemove', p)
       : todas ? t('home.fonte.tipOnly', p)
       : t('home.fonte.tipInclude', p);
     return `<button class="fpill${n ? '' : ' zero'}" data-a="toggleFonte" data-id="${esc(nome)}" aria-pressed="${ativa}" style="--fc:${corDaFonte(nome)}" title="${dica}"><span class="dot"></span><span class="nm">${esc(rotulo)}</span><em>${n}</em></button>`;
   }).join('');
 
-  return `<div class="fonte-strip ${desligada ? 'off' : ''}" id="fonte-strip" role="group" aria-label="${t('home.fonte.hint')}">
+  return `<div class="fonte-strip${desligada ? ' off' : ''}" id="fonte-strip" role="group" aria-label="${t('home.fonte.hint')}">
     <span class="tagico">${I.tag(15)}</span>
     <div class="fonte-scroll" data-hscroll>
-      <button class="fpill todas" data-a="clearFonte" aria-pressed="${todas}" title="${t('home.fonte.tipAll', { n: total })}"><span class="nm">${t('home.fonte.all')}</span><em>${total}</em></button>
+      <button class="fpill todas" data-a="clearFonte" aria-pressed="${todas}" title="${t('home.fonte.tipAll', { n: total, song: musicasDe(total) })}"><span class="nm">${t('home.fonte.all')}</span><em>${total}</em></button>
       <span class="sep"></span>
       ${pilulas}
     </div>
