@@ -4,7 +4,8 @@ import {
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, deleteSongs, saveSong,
   createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
-  SEM_FONTE, matchesFonte,
+  SEM_FONTE,
+  toggleFonte as calcToggleFonte, podaFontes,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -215,7 +216,7 @@ let apagandoFonte = false;
 
 const actions = {
   // navegação
-  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
+  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
   openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
@@ -229,7 +230,7 @@ const actions = {
     else { S.screen = 'home'; }
     update();
   },
-  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
+  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
       ? S.modeFilter.filter((x) => x !== d.id)
@@ -238,10 +239,19 @@ const actions = {
   },
   toggleSortMenu() { S.sortMenuOpen = !S.sortMenuOpen; update(); },
   setSort(d) { S.sort = d.id; S.sortMenuOpen = false; update(); },
-  // setFonte (mais abaixo) já é dos atalhos do formulário — este é o da lente
-  toggleFonteMenu() { S.fonteMenuOpen = !S.fonteMenuOpen; update(); },
-  setFonteFilter(d) { S.fonteFilter = d.id; S.fonteMenuOpen = false; update(); },
-  clearFonte() { S.fonteFilter = null; S.fonteMenuOpen = false; update(); },
+  // setFonte (mais abaixo) já é dos atalhos do formulário — esta é a da lente.
+  toggleFonte(d) {
+    S.fonteFilter = calcToggleFonte(S.fonteFilter, d.id, fontesDaBiblioteca(S.songs));
+    S.settings.fonteFilter = S.fonteFilter;
+    saveSettings();
+    update();
+  },
+  clearFonte() {
+    S.fonteFilter = [];
+    S.settings.fonteFilter = [];
+    saveSettings();
+    update();
+  },
 
   // favoritos / popover de listas
   toggleFav(d) { toggleFav(d.id); update(); },
@@ -604,9 +614,12 @@ const actions = {
       //
       // Duas coisas guardam GRAFIA de fonte e podem estar apontando para a que
       // acabou de sumir. A seleção do export volta para "todas", como no
-      // import; a lente da home só cai se não sobrou música nenhuma para ela.
+      // import; a seleção da lente é podada — a mesma regra do boot e do
+      // import, aqui a biblioteca é quem mudou por baixo dela.
       S.exportFontes = null;
-      if (S.fonteFilter !== null && !S.songs.some(matchesFonte)) S.fonteFilter = null;
+      S.fonteFilter = podaFontes(S.fonteFilter, fontesDaBiblioteca(S.songs));
+      S.settings.fonteFilter = S.fonteFilter;
+      saveSettings();
       update();
       toast(t('msg.fonte.deleted', { name, count: n, song }));
     } catch (e) {
@@ -764,6 +777,9 @@ function wireBackupInput() {
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
       // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
       S.exportFontes = null;
+      S.fonteFilter = podaFontes(S.fonteFilter, fontesDaBiblioteca(S.songs));
+      S.settings.fonteFilter = S.fonteFilter;
+      saveSettings();
       applyTheme();
       update();
       toast(merge
@@ -795,7 +811,6 @@ document.addEventListener('click', (e) => {
   }
   // clique fora fecha menus abertos
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
-  if (S.fonteMenuOpen && !e.target.closest('.fonte-wrap')) { S.fonteMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
@@ -847,8 +862,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.fonteMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.fonteMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
       update();
     }
   }

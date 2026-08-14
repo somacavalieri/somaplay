@@ -14,8 +14,7 @@ export const S = {
   sort: 'title',           // title | artist | recent
   sortMenuOpen: false,
   modeFilter: [],          // lente global: subset de ['T2','T3']
-  fonteFilter: null,       // lente por fonte: a grafia exibida | SEM_FONTE | null
-  fonteMenuOpen: false,
+  fonteFilter: [],         // lente por fonte: grafias marcadas; [] = todas
   artistId: null,
   estiloId: null,          // estilo aberto (o nome do estilo é a chave)
   openListId: null,        // id da lista aberta ('__fav' = Favoritas)
@@ -67,6 +66,7 @@ export const S = {
   settings: {
     theme: 'dark', awake: true, cifraZoom: 110, defaultSpeed: 3, masterVol: 80,
     cifraMiniaturas: false,
+    fonteFilter: [],               // persiste entre sessões; podado no boot
     lang: null,                    // null = ainda não resolvido; boot() detecta
     chordNotation: null,           // null = segue o idioma
     chordNotationTouched: false,   // true depois que o usuário mexe na notação
@@ -128,24 +128,12 @@ export function fontesSugeridas(songs, limit = 8) {
   return [...FONTES_FIXAS, ...resto].slice(0, limit);
 }
 
-// Filtro por fonte — o segundo eixo da lente global. O sentinela agrupa as
-// músicas sem fonte; ele nunca colide com uma fonte de verdade, porque nome de
-// fonte é o que o usuário digitou e passa por trim().
+// Filtro por fonte — o segundo eixo da lente global. Multisseleção: um
+// conjunto de grafias marcadas, vazio = todas. O sentinela agrupa as músicas
+// sem fonte; ele nunca colide com uma fonte de verdade, porque nome de fonte é
+// o que o usuário digitou e passa por trim().
 export const SEM_FONTE = '__sem_fonte';
 export function fonteOf(s) { return ((s && s.fonte) || '').trim(); }
-
-// Cor do badge de fonte (spec 2026-08-12-lista-compacta): índice 0–4 estável
-// por NOME — não por ranking de uso, que dançaria a cada import. Hash do
-// lowercase porque "cifraclub" e "CifraClub" são a mesma fonte pela regra de
-// dedupe. djb2 (h*33+c), e não djb2a (h*33^c): é a variante que separa os
-// três nomes reais do acervo — cifraclub→1 (âmbar), songbook→2 (teal),
-// vj→4 (neutro), exatamente as cores do mockup. Paleta em .src-badge.f0–.f4.
-export function corDaFonte(nome) {
-  const s = (nome || '').trim().toLowerCase();
-  let h = 5381;
-  for (const c of s) h = ((h * 33) + c.codePointAt(0)) >>> 0;
-  return h % 5;
-}
 
 // As fontes que a biblioteca realmente usa, mais usadas primeiro, desempate
 // alfabético — determinístico, e portanto testável. Sem fontes fixas, ao
@@ -175,7 +163,7 @@ export function fonteCasa(fonteDaMusica, filtro) {
   if (filtro === SEM_FONTE) return !nome;
   return nome.toLowerCase() === filtro.trim().toLowerCase();
 }
-export function matchesFonte(s) { return fonteCasa(fonteOf(s), S.fonteFilter); }
+export function matchesFonte(s) { return fonteCasaAlguma(fonteOf(s), S.fonteFilter); }
 
 // A grafia normalizada — a mesma regra de fonteCasa e de fontesSugeridas, isolada
 // porque agora quatro funções dependem dela.
@@ -353,7 +341,7 @@ export function matchesLens(s) {
 }
 // Há algum eixo da lente ligado? Os contadores usam isto para decidir se
 // explicam o recorte.
-export function lensAtiva() { return S.modeFilter.length > 0 || S.fonteFilter !== null; }
+export function lensAtiva() { return S.modeFilter.length > 0 || S.fonteFilter.length > 0; }
 export function bestLabel(s) {
   return modesOf(s).includes('T2') ? 'Cifra + acompanhamento' : 'Cifra';
 }
@@ -368,6 +356,11 @@ export async function initState() {
   await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
+  // A seleção salva guarda grafias, e a biblioteca pode ter mudado desde a última
+  // sessão — uma fonte apagada em lote, um backup restaurado sem ela. Sem a poda o
+  // app abriria numa biblioteca vazia sem nenhuma pílula explicando o porquê.
+  S.fonteFilter = podaFontes(S.settings.fonteFilter, fontesDaBiblioteca(S.songs));
+  S.settings.fonteFilter = S.fonteFilter;
   // a escala da rolagem tinha 10 níveis; um valor antigo acima do topo vira o topo
   S.settings.defaultSpeed = clampSpeed(S.settings.defaultSpeed);
   if (!S.settings.lang) S.settings.lang = detectLang(navigator.language);

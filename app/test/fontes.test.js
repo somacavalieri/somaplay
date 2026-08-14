@@ -9,7 +9,6 @@ import {
   fontesSugeridas, FONTES_FIXAS,
   fontesDaBiblioteca, fonteCasa, fonteOf, SEM_FONTE, songIdsDasFontes,
   fonteCasaAlguma, toggleFonte, podaFontes, contagensPorFonte,
-  corDaFonte,
 } from '../js/state.js';
 
 const song = (fonte) => ({ fonte });
@@ -163,28 +162,6 @@ test('devolve um Set, não um array', () => {
 
 test('tolera biblioteca e seleção ausentes', () => {
   assert.equal(songIdsDasFontes(null, null).size, 0);
-});
-
-// corDaFonte: a cor do badge é função do NOME, não do ranking de uso — uso
-// muda a cada import e a cor não pode dançar. Hash do lowercase: grafias da
-// mesma fonte (regra de dedupe da biblioteca) recebem a mesma cor.
-test('corDaFonte é determinística e ignora caixa e espaços', () => {
-  assert.equal(corDaFonte('CifraClub'), corDaFonte('cifraclub'));
-  assert.equal(corDaFonte('  Songbook  '), corDaFonte('songbook'));
-  assert.equal(corDaFonte('VJ'), corDaFonte('vj'));
-});
-
-test('os três nomes reais do acervo caem nas cores do mockup', () => {
-  assert.equal(corDaFonte('CifraClub'), 1); // f1 = âmbar
-  assert.equal(corDaFonte('Songbook'), 2);  // f2 = teal
-  assert.equal(corDaFonte('VJ'), 4);        // f4 = neutro
-});
-
-test('corDaFonte devolve sempre um índice inteiro 0–4', () => {
-  for (const nome of ['', 'Real Book', 'YouTube', 'Ouvido', 'x', 'Bossa Nova 1 - Almir Chediak']) {
-    const i = corDaFonte(nome);
-    assert.ok(Number.isInteger(i) && i >= 0 && i <= 4, `${nome} → ${i}`);
-  }
 });
 
 // ---------- multisseleção: casamento com um conjunto de fontes ----------
