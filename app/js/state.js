@@ -177,6 +177,90 @@ export function fonteCasa(fonteDaMusica, filtro) {
 }
 export function matchesFonte(s) { return fonteCasa(fonteOf(s), S.fonteFilter); }
 
+// A grafia normalizada — a mesma regra de fonteCasa e de fontesSugeridas, isolada
+// porque agora quatro funções dependem dela.
+const chaveFonte = (nome) => String(nome || '').trim().toLowerCase();
+
+// A versão de conjunto do fonteCasa. Deliberadamente uma função nova, e não um
+// parâmetro a mais no fonteCasa: aquele serve o export filtrado e o apagar em
+// lote, que passam UMA fonte e têm testes próprios contando com isso.
+// Conjunto vazio = todas as fontes, e é isso que faz uma fonte importada amanhã
+// entrar no resultado sem ninguém ir marcá-la.
+export function fonteCasaAlguma(fonteDaMusica, filtros) {
+  if (!filtros || !filtros.length) return true;
+  return filtros.some((f) => fonteCasa(fonteDaMusica, f));
+}
+
+// A regra de clique da faixa de pílulas, pura para poder ser testada sem DOM.
+// O primeiro clique a partir de "todas" ISOLA a fonte — é o gesto mais comum, e
+// era o comportamento inteiro do filtro antigo. Daí em diante soma e remove.
+// Dois caminhos voltam para "todas" (o array vazio): tirar a última marcada, e
+// marcar todas as fontes que existem. O segundo importa porque "estas seis"
+// envelheceria a cada import, e o array vazio não.
+export function toggleFonte(atual, nome, daBiblioteca) {
+  const marcadas = atual || [];
+  const k = chaveFonte(nome);
+  if (!marcadas.length) return [nome];
+  const jaTem = marcadas.some((f) => chaveFonte(f) === k);
+  const prox = jaTem ? marcadas.filter((f) => chaveFonte(f) !== k) : [...marcadas, nome];
+  if (!prox.length) return [];
+  const todas = (daBiblioteca || []).map((f) => chaveFonte(f.nome));
+  const agora = new Set(prox.map(chaveFonte));
+  if (todas.length && todas.every((f) => agora.has(f))) return [];
+  return prox;
+}
+
+// A seleção salva guarda GRAFIAS, e a biblioteca muda debaixo dela — a fonte pode
+// ter sido apagada em lote, ou o backup restaurado pode não trazê-la. Sem a poda,
+// o app abriria numa biblioteca vazia sem pílula nenhuma explicando o porquê.
+// Devolve as grafias DA BIBLIOTECA, não as salvas: assim uma fonte que mudou de
+// grafia entre um import e outro se auto-corrige em vez de sumir.
+export function podaFontes(salvas, daBiblioteca) {
+  const porChave = new Map((daBiblioteca || []).map((f) => [chaveFonte(f.nome), f.nome]));
+  const out = [];
+  for (const s of salvas || []) {
+    const nome = porChave.get(chaveFonte(s));
+    if (nome && !out.includes(nome)) out.push(nome);
+  }
+  return out;
+}
+
+// Quantas músicas cada pílula representa. Três decisões moram aqui:
+//
+//   1. conta MÚSICAS mesmo na aba Artistas, onde os cards contam artistas — a
+//      pílula tem que querer dizer a mesma coisa em toda aba;
+//   2. aplica busca e lente de modos, mas NUNCA o próprio filtro de fonte: se
+//      aplicasse, toda pílula não marcada mostraria zero;
+//   3. o conjunto e a ordem saem de fontesDaBiblioteca(songs) — biblioteca
+//      inteira, sem busca. Só o número reage ao que se digita, e é por isso que
+//      dá para atualizar a faixa escrevendo só os contadores.
+//
+// nomeDoArtista é injetável porque artistName() lê S.artists, e o teste não pode.
+export function contagensPorFonte(songs, opts = {}) {
+  const { query = '', modeFilter = [], nomeDoArtista = artistName } = opts;
+  const q = query.trim().toLowerCase();
+  const conta = new Map();
+  let total = 0;
+  for (const s of songs || []) {
+    if (q && !(s.title || '').toLowerCase().includes(q)
+          && !nomeDoArtista(s).toLowerCase().includes(q)) continue;
+    if (modeFilter.length) {
+      const modos = modesOf(s);
+      if (!modeFilter.every((f) => modos.includes(f))) continue;
+    }
+    total++;
+    const k = fonteOf(s) ? chaveFonte(fonteOf(s)) : SEM_FONTE;
+    conta.set(k, (conta.get(k) || 0) + 1);
+  }
+  const itens = fontesDaBiblioteca(songs)
+    .map(({ nome }) => ({ nome, n: conta.get(chaveFonte(nome)) || 0 }));
+  // Sem filtros, ordena por contagem. Com filtros, mantém a ordem da biblioteca.
+  if (!q && !modeFilter.length) {
+    itens.sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome, 'pt'));
+  }
+  return { itens, total };
+}
+
 // O motor de exportação não sabe o que é fonte: ele recebe um conjunto de ids
 // de música. Esta é a função que traduz o eixo "fonte" nesse conjunto, e é o
 // lugar onde um eixo novo (artista, lista) entraria sem tocar em backup.js.
