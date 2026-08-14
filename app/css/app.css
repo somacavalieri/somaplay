@@ -530,6 +530,16 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .count-lbl{color:var(--muted);font-size:13px;margin-bottom:14px}
 
 /* ============ Responsivo (tablet / celular) ============ */
+/* O subtítulo "N artistas na biblioteca" some cedo: é o que libera espaço para a
+   faixa antes de ela precisar descer de linha. */
+@media (max-width:1280px){ .tabsub{display:none} }
+/* Abaixo daqui a faixa desce para uma segunda linha da própria .tabrow, em vez
+   de espremer as abas. A .lens fica na primeira linha, onde já cabe sem o .tabsub. */
+@media (max-width:1180px){
+  .tabrow{flex-wrap:wrap}
+  .fonte-strip{flex-basis:100%;order:5}
+}
+
 @media (max-width:900px){
   .badge-offline{display:none}
   .topbar{padding-left:14px;padding-right:14px}
@@ -537,8 +547,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .topbar.home .searchbox{order:5;flex-basis:100%;max-width:none}
   .tabrow{flex-wrap:wrap;padding:11px 14px;row-gap:10px;column-gap:10px}
   .segtab{flex:1 1 100%;overflow-x:auto;scrollbar-width:none}
-  .tabsub{display:none}
-  .lens{margin-left:0;flex:1 1 100%;justify-content:flex-start}
+  .lens{margin-left:0;flex:1 1 100%;justify-content:flex-start;order:6}
   .artist-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .content-scroll{padding-left:14px;padding-right:14px}
   .play-head{padding-left:14px;padding-right:14px;gap:10px}
