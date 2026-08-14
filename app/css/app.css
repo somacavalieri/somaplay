@@ -121,7 +121,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .fonte-strip{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0}
 .fonte-strip.off{opacity:.32;pointer-events:none}
 .fonte-strip .tagico{display:flex;color:var(--muted);flex-shrink:0}
-.fonte-scroll{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none;scroll-behavior:smooth}
+.fonte-scroll{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none}
 .fonte-scroll::-webkit-scrollbar{display:none}
 .fonte-scroll .sep{width:1px;height:22px;margin:0 2px;background:var(--border);flex-shrink:0}
 .fpill{display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;flex-shrink:0;cursor:pointer;
@@ -139,9 +139,14 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .fpill[aria-pressed="true"] .dot{background:rgba(14,14,17,.5)}
 .fpill[aria-pressed="true"] em{color:rgba(14,14,17,.6)}
 /* Zero resultados fica apagada, mas continua clicável: "o VJ não tem nada que
-   case com o que você digitou" é informação, e a pílula sumindo é a ausência dela. */
-.fpill.zero{background:var(--deep);border-color:var(--border);color:var(--muted2)}
-.fpill.zero .dot{background:var(--muted2);opacity:.55}
+   case com o que você digitou" é informação, e a pílula sumindo é a ausência dela.
+   :not([aria-pressed="true"]) porque .zero e [aria-pressed="true"] têm a MESMA
+   especificidade (0,2,0) — sem a exclusão, quem vier depois na cascata vence, e
+   uma pílula marcada que zera (isolar uma fonte, digitar algo que ela não tem)
+   perderia a aparência de selecionada, ficando indistinguível de "nenhuma
+   marcada" com a biblioteca vazia. */
+.fpill.zero:not([aria-pressed="true"]){background:var(--deep);border-color:var(--border);color:var(--muted2)}
+.fpill.zero:not([aria-pressed="true"]) .dot{background:var(--muted2);opacity:.55}
 .fscroll-next{display:none;width:30px;height:30px;border-radius:999px;flex-shrink:0;align-items:center;justify-content:center;
   background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer}
 /* Duas afordâncias quando há fonte fora da vista: o fade na borda direita e a
