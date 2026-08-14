@@ -144,6 +144,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .fpill.zero .dot{background:var(--muted2);opacity:.55}
 .fscroll-next{display:none;width:30px;height:30px;border-radius:999px;flex-shrink:0;align-items:center;justify-content:center;
   background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer}
+/* Duas afordâncias quando há fonte fora da vista: o fade na borda direita e a
+   seta. Ambas presas à mesma classe, que o medirOverflow() liga e desliga. */
+.fonte-strip.ov .fonte-scroll{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 34px),transparent)}
+.fonte-strip.ov .fscroll-next{display:flex}
 @media (pointer:coarse){.fpill{height:44px}.fscroll-next{width:44px;height:44px}}
 
 .content-scroll{flex:1;overflow-y:auto;padding:24px 28px 110px}

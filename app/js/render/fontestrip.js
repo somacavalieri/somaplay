@@ -64,3 +64,66 @@ export function fonteStripHTML(desligada = false) {
     <button class="fscroll-next" data-a="fonteScrollNext" title="${t('home.fonte.next')}">${I.chevR(18)}</button>
   </div>`;
 }
+
+// O ResizeObserver guardado em módulo: update() troca o nó da faixa a cada
+// render, e um observer novo por render, apontando para nós já descartados,
+// vazaria memória num app que fica aberto o ensaio inteiro.
+let ro = null;
+
+// Há conteúdo à direita fora da vista? É isso que acende o fade e a seta. Some
+// ao chegar no fim: nada mais à direita, nada a anunciar.
+function medirOverflow(strip) {
+  const sc = strip.querySelector('.fonte-scroll');
+  if (!sc) return;
+  const max = sc.scrollWidth - sc.clientWidth;
+  strip.classList.toggle('ov', max > 1 && sc.scrollLeft < max - 1);
+}
+
+export function wireFonteStrip() {
+  const strip = document.getElementById('fonte-strip');
+  ro?.disconnect();
+  ro = null;
+  if (!strip) return;
+  const sc = strip.querySelector('.fonte-scroll');
+  if (!sc) return;
+
+  // Roda do mouse rola a faixa na horizontal, sem exigir shift. O
+  // preventDefault() só sai enquanto há para onde rolar NAQUELE sentido: nas
+  // pontas o evento passa adiante e a página volta a rolar, que é o que o dedo
+  // e a roda esperam.
+  sc.addEventListener('wheel', (e) => {
+    const d = e.deltaY || e.deltaX;
+    if (!d) return;
+    const max = sc.scrollWidth - sc.clientWidth;
+    if (max <= 0) return;
+    if (d < 0 && sc.scrollLeft <= 0) return;
+    if (d > 0 && sc.scrollLeft >= max - 1) return;
+    e.preventDefault();
+    sc.scrollLeft += d;
+  }, { passive: false });
+
+  sc.addEventListener('scroll', () => medirOverflow(strip));
+  // ResizeObserver, e não o resize da janela: a .tabrow reflui sozinha quando o
+  // .tabsub some ou a faixa desce de linha, sem a janela mudar de tamanho.
+  ro = new ResizeObserver(() => medirOverflow(strip));
+  ro.observe(sc);
+  medirOverflow(strip);
+}
+
+// Só os números e a classe .zero — nada de estrutura. É o que permite atualizar
+// a faixa a cada tecla digitada sem zerar o scrollLeft nem religar os listeners,
+// e só é possível porque o conjunto de pílulas vem da biblioteca, não da busca.
+export function refreshFonteCounts() {
+  const strip = document.getElementById('fonte-strip');
+  if (!strip) return;
+  const { itens, total } = contagensPorFonte(S.songs, { query: S.query, modeFilter: S.modeFilter });
+  const porNome = new Map(itens.map((i) => [i.nome, i.n]));
+  strip.querySelectorAll('.fpill').forEach((el) => {
+    const todas = el.classList.contains('todas');
+    const n = todas ? total : porNome.get(el.dataset.id);
+    if (n == null) return;
+    el.querySelector('em').textContent = n;
+    if (!todas) el.classList.toggle('zero', n === 0);
+  });
+  medirOverflow(strip);
+}

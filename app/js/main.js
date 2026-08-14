@@ -26,6 +26,7 @@ import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, r
 import { isChordTok } from './chords.js';
 import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
+import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
 
 const app = document.getElementById('app');
 
@@ -47,17 +48,23 @@ let lastScreen = null;
 function captureUI(same) {
   if (!same) return null;
   const scrolls = [...document.querySelectorAll('.content-scroll,[data-autoscroll]')].map((el) => el.scrollTop);
+  // A faixa de fontes rola na horizontal, e update() reescreve o app inteiro:
+  // sem isto, clicar numa pílula joga a faixa de volta ao começo e as fontes do
+  // fim viram inalcançáveis na prática.
+  const hscrolls = [...document.querySelectorAll('[data-hscroll]')].map((el) => el.scrollLeft);
   const a = document.activeElement;
   const focus = a && a.id && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text'))
     ? { id: a.id, start: a.selectionStart, end: a.selectionEnd }
     : null;
-  return { scrolls, focus };
+  return { scrolls, hscrolls, focus };
 }
 
 function restoreUI(snap) {
   if (!snap) return;
   const els = document.querySelectorAll('.content-scroll,[data-autoscroll]');
   els.forEach((el, i) => { if (snap.scrolls[i] != null) el.scrollTop = snap.scrolls[i]; });
+  const hels = document.querySelectorAll('[data-hscroll]');
+  hels.forEach((el, i) => { if (snap.hscrolls[i] != null) el.scrollLeft = snap.hscrolls[i]; });
   if (!snap.focus) return;
   const el = document.getElementById(snap.focus.id);
   if (!el) return;
@@ -86,7 +93,7 @@ export function update() {
 
 function updateHomeResults() {
   const el = document.getElementById('home-results');
-  if (el) el.innerHTML = homeResults();
+  if (el) { el.innerHTML = homeResults(); refreshFonteCounts(); }
   else update();
 }
 
@@ -99,6 +106,18 @@ function afterRender() {
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
     pendingHandleIdx = null;
+  }
+
+  wireFonteStrip();
+
+  // Depois do re-render o foco cai no <body>. Varredura, e nunca uma string de
+  // seletor: nome de fonte é texto livre, e uma aspa ou colchete quebraria o
+  // querySelector. preventScroll porque o foco arrastaria a faixa e desfaria o
+  // scrollLeft que o restoreUI acabou de devolver.
+  if (pendingFonte != null) {
+    const alvo = [...document.querySelectorAll('.fpill')].find((el) => el.dataset.id === pendingFonte);
+    alvo?.focus({ preventScroll: true });
+    pendingFonte = null;
   }
 
   if (S.screen === 'list') {
@@ -244,6 +263,7 @@ const actions = {
     S.fonteFilter = calcToggleFonte(S.fonteFilter, d.id, fontesDaBiblioteca(S.songs));
     S.settings.fonteFilter = S.fonteFilter;
     saveSettings();
+    pendingFonte = d.id;
     update();
   },
   clearFonte() {
@@ -251,6 +271,10 @@ const actions = {
     S.settings.fonteFilter = [];
     saveSettings();
     update();
+  },
+  fonteScrollNext() {
+    const sc = document.querySelector('#fonte-strip .fonte-scroll');
+    if (sc) sc.scrollBy({ left: Math.round(sc.clientWidth * 0.7), behavior: 'smooth' });
   },
 
   // favoritos / popover de listas
@@ -688,6 +712,10 @@ const actions = {
 // o mesmo espaço do data-idx que o seletor lá em cima procura.
 let pendingHandleIdx = null;
 function focusHandle(idx) { pendingHandleIdx = idx; }
+
+// Id da fonte cuja pílula deve receber o foco depois do próximo render —
+// mesmo padrão do pendingHandleIdx acima.
+let pendingFonte = null;
 
 // Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
 // AMBOS falam em POSIÇÃO VISÍVEL, porque é isso que o usuário vê e move; a
