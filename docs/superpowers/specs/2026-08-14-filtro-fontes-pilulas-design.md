@@ -310,10 +310,17 @@ e `t()` não escapa parâmetro. `esc()` antes de passar, como `filtroAtivoLabel`
 
 ### `sw.js`
 
-`./js/render/fontestrip.js` no `SHELL` e `VERSION` de `somaplay-v38` para `somaplay-v39`.
-`shell.test.js` já cobre o registro — ele varre `js/**` e reprova qualquer módulo fora do
-`SHELL` —, mas o bump da versão é manual e sem ele quem já instalou continua rodando o JS
-antigo.
+`./js/render/fontestrip.js` no `SHELL`. `shell.test.js` já cobre o registro — ele varre
+`js/**` e reprova qualquer módulo fora do `SHELL`.
+
+**Nota (2026-08-14, revisão pós-implementação):** na hora de escrever este spec a versão
+ainda era o `VERSION` cru do `sw.js` (`somaplay-v38` → `somaplay-v39`, o texto original
+desta seção). No mesmo dia o app ganhou versionamento visível
+(`2026-08-14-versionamento-design.md`): a versão virou um número `X.Y.Z` em três literais
+sincronizados — `export const VERSION` em `app/js/version.js`, `somaplay-<versão>` em
+`app/sw.js`, e uma seção `## [<versão>]` no `CHANGELOG.md`, cobrados por
+`app/test/version.test.js`. Esta funcionalidade saiu como `0.10.0` — MINOR, porque muda o
+que o app faz.
 
 ## O que não muda
 
@@ -322,16 +329,24 @@ antigo.
 - `fonteCasa`, `songIdsDasFontes`, o export filtrado e o apagar em lote.
 - Listas: globais e imunes a filtros.
 - A lente de modos (T2/T3), a busca, a ordenação, a densidade dos cards e a tela de toque.
-- Os badges de origem nas linhas de música (o `.src-qual` da desambiguação por colisão)
-  ficam como estão. `corDaFonte` é exportada para eles poderem reusar a paleta, mas
-  colori-los é outro pedido.
+- O `.src-qual` da desambiguação por colisão (o qualificador de texto puro que aparece só
+  quando dois títulos colidem) fica como está.
+
+**Ruling do controlador, meio da execução (2026-08-14):** o `.src-badge` da linha compacta
+(`2026-08-12-lista-compacta-em-colunas-design.md`) **passou a usar este `corDaFonte`
+hex**, e não mais o índice `0–4` que tinha antes em `state.js`. Os dois sistemas de cor
+discordavam na mesma tela — VJ cinza no badge e verde na pílula, RV cinza contra âmbar — e
+a paleta antiga de 5 posições colidia VJ e RV no mesmo slot. O pedido original do usuário
+já pedia isto por extenso: *"uma cor fixa por fonte, reaproveitada nos badges de origem das
+listas de músicas."* O `corDaFonte` antigo de `state.js` foi apagado; `fonteBadge()` em
+`home.js` agora pinta por `style="--fc:${corDaFonte(nome)}"`, a mesma variável CSS da
+pílula. Ver o plano, Task 3 Step 6b, para o diff exato.
 
 ## Fora de escopo
 
 - Um controle de fonte nas telas de artista e de estilo. O filtro continua valendo lá,
   via `matchesLens`, mas sem controle visível — exatamente como a lente de modos já se
   comporta hoje. Não é regressão; se incomodar, é spec próprio.
-- Colorir os badges de origem das linhas de música.
 - Filtrar por fonte dentro de uma lista aberta.
 - Renomear ou unificar grafias de fonte em massa.
 - Persistir a lente de modos (T2/T3), que segue vivendo só na sessão.

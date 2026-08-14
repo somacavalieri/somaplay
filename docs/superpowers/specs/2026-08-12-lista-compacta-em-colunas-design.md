@@ -114,7 +114,7 @@ O badge:
   demais funções do eixo fonte. Hash djb2 do nome `trim().toLowerCase()`,
   módulo 5, indexando a paleta `[verde, âmbar, teal, dourado, neutro]` — cinco
   classes CSS (`f0`–`f4`) sobre tints que já existem nos tokens (tema claro
-  incluído).
+  incluído). **Superseded — ver a nota de atualização logo abaixo.**
 
 Por que assim:
 
@@ -127,6 +127,18 @@ Por que assim:
   baldes distintos, que são **exatamente as cores do mockup**. Fontes futuras
   podem colidir de cor entre si — aceitável: o texto identifica, a cor reforça;
 - **paleta sem vermelho** — vermelho é vocabulário de erro/exclusão no app.
+
+**Atualização (2026-08-14):** o `corDaFonte` descrito acima — índice `0–4`, hash djb2,
+cinco classes `.src-badge.f0`–`.f4` — foi **substituído**, não só movido de lugar. A faixa
+de pílulas do filtro de fonte (`2026-08-14-filtro-fontes-pilulas-design.md`) trouxe um
+segundo `corDaFonte`, determinístico por hex, em `js/render/fontestrip.js`. Os dois
+sistemas discordavam de cor na mesma tela — VJ cinza no badge e verde na pílula — e a
+paleta de 5 posições colidia VJ e RV no mesmo slot. O controlador determinou a unificação
+a favor do hex, que é o que atende o pedido original do usuário: *"uma cor fixa por fonte,
+reaproveitada nos badges de origem das listas de músicas."* O `corDaFonte` de `state.js`
+não existe mais; `fonteBadge()` em `home.js` agora pinta via
+`style="--fc:${corDaFonte(nome)}"`, importado de `fontestrip.js`. Ver o spec de
+2026-08-14, seção "O que não muda", para o diff completo.
 
 ## O que não muda
 
@@ -152,7 +164,9 @@ bomba mesmo assim porque `app.css` e `home.js` cacheados mudam.
 - `node --test` — `corDaFonte`: determinística; case-insensitive
   (`CifraClub` ≡ `cifraclub`); os três nomes reais (`cifraclub`, `songbook`,
   `vj`) caem em baldes distintos e nos baldes esperados (âmbar, teal, neutro);
-  trim aplicado.
+  trim aplicado. **Superseded (2026-08-14):** estes três testes de `state.js`
+  foram apagados junto do `corDaFonte` antigo; o `corDaFonte` que sobreviveu é
+  o de `js/render/fontestrip.js`, coberto por `app/test/fontestrip.test.js`.
 - `node --check` em `home.js` e `state.js`.
 - **Navegador** — redimensionar: 1 → 2 → 3 colunas sem media query; tema claro
   e escuro; a biblioteca real de 5737 músicas rola fluida; tocar na linha abre
