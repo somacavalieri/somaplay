@@ -517,12 +517,14 @@ ao clique e sobrevive a um reload. O overflow e as contagens durante a digitaç�
 Task 4.
 
 **Files:**
-- Modify: `app/js/state.js` (o `S`, `matchesFonte`, `lensAtiva`, `S.settings`, `initState`)
-- Modify: `app/js/render/home.js` (remove `fonteControl`, ajusta `filtroAtivoLabel` e a `.tabrow`)
+- Modify: `app/js/state.js` (o `S`, `matchesFonte`, `lensAtiva`, `S.settings`, `initState`, e apagar o `corDaFonte` antigo)
+- Modify: `app/js/render/home.js` (remove `fonteControl`, ajusta `filtroAtivoLabel`, `fonteBadge` e a `.tabrow`)
+- Modify: `app/test/fontes.test.js` (apagar os três testes do `corDaFonte` antigo)
 - Modify: `app/js/main.js` (ações, poda pós-import, remoções do menu)
 - Modify: `app/js/i18n/pt.js` e `app/js/i18n/en.js`
 - Modify: `app/css/app.css`
 - Test: `app/test/i18n.test.js` (sem código novo — a paridade já cobra)
+- Commit: acrescentar `app/test/fontes.test.js` ao `git add` do Step 11
 
 **Interfaces:**
 - Consumes: `fonteCasaAlguma`, `toggleFonte`, `podaFontes` (Task 1) e `fonteStripHTML(desligada)` (Task 2).
@@ -630,10 +632,11 @@ function filtroAtivoLabel() {
 }
 ```
 
-No `import` do topo, tirar `fontesDaBiblioteca` (não é mais usada aqui) e acrescentar:
+No `import` do topo, tirar `fontesDaBiblioteca` (não é mais usada aqui) **e `corDaFonte`**
+(ver o passo seguinte), e acrescentar:
 
 ```js
-import { fonteStripHTML } from './fontestrip.js';
+import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 ```
 
 Na `.tabrow` do `renderHome()`, pôr a faixa entre o `.tabsub` e a `.lens`:
@@ -656,6 +659,45 @@ Na `.tabrow` do `renderHome()`, pôr a faixa entre o `.tabsub` e a `.lens`:
 
 O funil deixa de rotular o grupo todo e passa a rotular só os chips T2/T3, que é o que
 sobra na `.lens`; a etiqueta na frente da faixa faz esse papel do outro lado da linha.
+
+- [ ] **Step 6b: Unificar a cor da fonte (Ruling 4)**
+
+A `main` já tem um `corDaFonte` em `app/js/state.js:143`, que devolve um índice `0–4` para
+as classes `.src-badge.f0`–`.f4` do badge de origem da aba Músicas. Ele chegou depois que o
+spec desta faixa foi escrito, e os dois sistemas discordam: **VJ** fica cinza no badge e
+verde na pílula, **RV** cinza contra âmbar, **RN** âmbar contra azul — na mesma tela. E com
+só 5 slots, VJ e RV colidem em `f4`, que é a colisão que o mapa fixo de seis existe para
+evitar.
+
+O pedido original é explícito — *"uma cor fixa por fonte, reaproveitada nos badges de
+origem das listas de músicas"* — então o sistema hex vence e passa a valer nos dois lugares.
+
+Em `app/js/state.js`, **apagar** a função `corDaFonte` inteira, com o bloco de comentário
+acima dela (~linhas 138-148). Em `app/test/fontes.test.js`, apagar os três testes que a
+exercitam (`'corDaFonte é determinística e ignora caixa e espaços'`, o que crava
+`CifraClub→1 / Songbook→2 / VJ→4`, e `'corDaFonte devolve sempre um índice inteiro 0–4'`)
+junto do comentário de bloco acima deles, e tirar `corDaFonte` da lista de `import`.
+O `fontestrip.test.js` já cobre a função que fica.
+
+Em `app/js/render/home.js`, `fonteBadge` passa a pintar por variável inline:
+
+```js
+function fonteBadge(s) {
+  const nome = fonteOf(s);
+  if (!nome) return ''; // sem fonte: sem badge — a ausência é informação
+  return `<span class="src-badge" style="--fc:${corDaFonte(nome)}" title="${t('home.song.sourceQualifier', { fonte: esc(nome) })}">${esc(nome)}</span>`;
+}
+```
+
+E em `app/css/app.css`, as cinco regras `.src-badge.f0`–`.f4` (linhas ~203-207) viram uma
+só, logo abaixo da `.src-badge` que já existe:
+
+```css
+/* Uma cor por fonte, a mesma da pílula do filtro: o badge e a faixa não podem
+   discordar sobre de que cor é o VJ. O fundo é a própria cor a 14%, que é o que
+   as regras .f0–.f4 faziam com os tints dos tokens. */
+.src-badge{color:var(--fc);background:color-mix(in srgb, var(--fc) 14%, transparent)}
+```
 
 - [ ] **Step 7: As ações em `main.js`**
 
@@ -779,7 +821,7 @@ Conferir:
 - [ ] **Step 11: Commit**
 
 ```bash
-git add app/js/state.js app/js/main.js app/js/render/home.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css
+git add app/js/state.js app/js/main.js app/js/render/home.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css app/test/fontes.test.js
 git commit -m "feat(fontes): faixa de pílulas multisseleção no lugar do dropdown"
 ```
 
