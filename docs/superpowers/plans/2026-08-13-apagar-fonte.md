@@ -20,7 +20,7 @@
 - **Contexto de escape:** o que vai para atributo HTML (`title`, `aria-label`) passa por `esc()`; o que vai para o `confirm()` nativo **não** — diálogo do navegador é texto puro, e `&quot;` apareceria literal na tela.
 - **Comandos:** `cd app && node --test` (suíte), `cd app && node --test test/<arquivo>` (um arquivo), `cd app && node --check js/<arquivo>.js` (sintaxe), `cd app && python3 -m http.server 8137` (verificação manual em `http://localhost:8137`).
 - **Verificação manual no navegador conta** — não há harness de DOM, de propósito. Tarefa de UI só termina depois de olhar a tela.
-- **Idioma:** comentários de código **em português**, seguindo o arquivo que você está editando. Mensagem de commit também em português, no estilo das existentes (`git log --oneline -10`).
+- **Idioma:** comentários de código **em português**, seguindo o arquivo que você está editando. **Mensagem de commit em inglês**, como o `CLAUDE.md` manda. Não se guie pelo `git log` de uma branch local: as branches não mergeadas usam português e induzem ao erro. A história da `main` é o que vale.
 - **Esta é a primeira feature destrutiva em lote do app.** Antes de qualquer verificação manual que apague de verdade, leia a seção "Segurança na verificação manual" no fim deste plano.
 
 ---
