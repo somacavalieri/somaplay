@@ -5,7 +5,7 @@ import {
   createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
   SEM_FONTE,
-  toggleFonte as calcToggleFonte, podaFontes,
+  toggleFonte as calcToggleFonte, podarFonteFilter,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -377,6 +377,9 @@ const actions = {
     if (!confirm(t('msg.song.confirmDelete', { title: song.title }))) return;
     leavePlay();
     await deleteSong(song.id);
+    // Apagar a última música de uma fonte pequena não deixa pílula nenhuma
+    // marcada — a mesma poda do apagar-em-lote, aqui pro apagar avulso.
+    podarFonteFilter();
     S.screen = 'home';
     update();
     toast(t('msg.song.deleted'));
@@ -575,6 +578,9 @@ const actions = {
       S.draft = null;
       S.editSongId = null;
       S.chordEd = null;
+      // Editar a fonte da última música que a tinha esvazia aquela pílula do
+      // mesmo jeito que apagar a música esvaziaria — mesma poda.
+      podarFonteFilter();
       S.screen = 'home';
       update();
       toast(t('msg.song.saved', { title: song.title }));
@@ -641,9 +647,7 @@ const actions = {
       // import; a seleção da lente é podada — a mesma regra do boot e do
       // import, aqui a biblioteca é quem mudou por baixo dela.
       S.exportFontes = null;
-      S.fonteFilter = podaFontes(S.fonteFilter, fontesDaBiblioteca(S.songs));
-      S.settings.fonteFilter = S.fonteFilter;
-      saveSettings();
+      podarFonteFilter();
       update();
       toast(t('msg.fonte.deleted', { name, count: n, song }));
     } catch (e) {
@@ -805,9 +809,7 @@ function wireBackupInput() {
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
       // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
       S.exportFontes = null;
-      S.fonteFilter = podaFontes(S.fonteFilter, fontesDaBiblioteca(S.songs));
-      S.settings.fonteFilter = S.fonteFilter;
-      saveSettings();
+      podarFonteFilter();
       applyTheme();
       update();
       toast(merge

@@ -213,6 +213,20 @@ export function podaFontes(salvas, daBiblioteca) {
   return out;
 }
 
+// A poda de podaFontes(), já lendo e escrevendo S: prune, persiste em
+// S.settings.fonteFilter, salva. As mesmas três linhas apareciam copiadas em
+// cinco lugares — boot, apagar por fonte, importar backup, e as duas onde
+// FALTAVAM (apagar uma música avulsa, editar/salvar uma música) — e foi
+// exatamente por serem cópia, e não uma função nomeada, que ninguém notou a
+// falta. Lê S.fonteFilter como a seleção corrente: quem só tem a seleção nos
+// settings recém-carregados (o boot) precisa copiá-la para S.fonteFilter antes
+// de chamar.
+export function podarFonteFilter() {
+  S.fonteFilter = podaFontes(S.fonteFilter, fontesDaBiblioteca(S.songs));
+  S.settings.fonteFilter = S.fonteFilter;
+  saveSettings();
+}
+
 // Quantas músicas cada pílula representa. Três decisões moram aqui:
 //
 //   1. conta MÚSICAS mesmo na aba Artistas, onde os cards contam artistas — a
@@ -359,8 +373,11 @@ export async function initState() {
   // A seleção salva guarda grafias, e a biblioteca pode ter mudado desde a última
   // sessão — uma fonte apagada em lote, um backup restaurado sem ela. Sem a poda o
   // app abriria numa biblioteca vazia sem nenhuma pílula explicando o porquê.
-  S.fonteFilter = podaFontes(S.settings.fonteFilter, fontesDaBiblioteca(S.songs));
-  S.settings.fonteFilter = S.fonteFilter;
+  // A fonte da seleção ainda não podada é S.settings (recém-carregado do disco),
+  // não S.fonteFilter (que só tem o valor inicial []) — por isso a cópia antes
+  // de chamar a função compartilhada.
+  S.fonteFilter = S.settings.fonteFilter;
+  podarFonteFilter();
   // a escala da rolagem tinha 10 níveis; um valor antigo acima do topo vira o topo
   S.settings.defaultSpeed = clampSpeed(S.settings.defaultSpeed);
   if (!S.settings.lang) S.settings.lang = detectLang(navigator.language);
