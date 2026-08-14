@@ -1,9 +1,10 @@
 // main.js — bootstrap, roteador e ações (delegação de eventos)
 import {
   S, audio, initState, applyTheme, saveSettings,
-  songById, openSong as goSong, currentSong, toggleFav, deleteSong, saveSong,
+  songById, openSong as goSong, currentSong, toggleFav, deleteSong, deleteSongs, saveSong,
   createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
+  SEM_FONTE, matchesFonte,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -206,6 +207,12 @@ async function gravarNoDestino(st, shape, varId) {
 }
 
 // ---------- ações ----------
+// Uma exclusão de fonte por vez. O confirm() é modal e segura a thread, mas o
+// trabalho DEPOIS dele é assíncrono: sem esta guarda, dois cliques em lixeiras
+// diferentes rodam concorrentes, e o segundo S.songs = S.songs.filter(...)
+// escreve por cima do primeiro sem deixar rastro.
+let apagandoFonte = false;
+
 const actions = {
   // navegação
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
@@ -575,6 +582,39 @@ const actions = {
     // representações, e o nome do arquivo não voltaria a ser somaplay-backup-*.
     S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
+  },
+  // Apaga todas as músicas de uma fonte. O motor recebe ids: aqui só se traduz
+  // o eixo, se confirma e se reconcilia o que ficou apontando para o vazio.
+  async deleteFonteAsk(d) {
+    if (apagandoFonte) return;
+    const ids = songIdsDasFontes(S.songs, [d.id]);
+    if (!ids.size) return;
+    const n = ids.size;
+    // O nome vai CRU no confirm(): diálogo nativo é texto puro, e um esc()
+    // aqui faria aparecer &quot; na tela. No aria-label da lixeira é o oposto.
+    const name = d.id === SEM_FONTE ? t('home.fonte.none') : d.id;
+    const song = t(n === 1 ? 'common.song' : 'common.songs');
+    if (!confirm(t('msg.fonte.confirmDelete', { count: n, song, name }))) return;
+    apagandoFonte = true;
+    try {
+      toast(t('msg.fonte.deleting'));
+      await deleteSongs(ids, { manterEmListas: true });
+      // Os ids ficam nas listas de propósito: reimportar esta fonte depois cura
+      // o repertório sozinho, que é o principal motivo de apagar por fonte.
+      //
+      // Duas coisas guardam GRAFIA de fonte e podem estar apontando para a que
+      // acabou de sumir. A seleção do export volta para "todas", como no
+      // import; a lente da home só cai se não sobrou música nenhuma para ela.
+      S.exportFontes = null;
+      if (S.fonteFilter !== null && !S.songs.some(matchesFonte)) S.fonteFilter = null;
+      update();
+      toast(t('msg.fonte.deleted', { name, count: n, song }));
+    } catch (e) {
+      update();
+      toast(t('msg.fonte.deleteFailed', { error: e.message }));
+    } finally {
+      apagandoFonte = false;
+    }
   },
   async exportBackup() {
     const fontes = S.exportFontes;
