@@ -8,6 +8,8 @@ karaokê — feito para um tablet em cima da estante de partitura.
 **[Abrir o app →](https://somacavalieri.github.io/somaplay/)** · Sem conta, sem servidor,
 sem instalar nada. Tudo vive no seu aparelho.
 
+Veja as novidades no [changelog](CHANGELOG.md).
+
 ![Modo karaokê](screens/karaoke.png)
 
 ---

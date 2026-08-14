@@ -73,7 +73,9 @@ Hard-won. None of these are obvious from reading the code.
 it makes the app open an empty database — every user's library disappears. The name is
 invisible to users; there is no reason to touch it.
 
-**Changing the `SHELL` array in `app/sw.js` requires bumping the version.** The
+**Any release that changes a file listed in `SHELL` is at least a PATCH.** Not "editing the
+array" — changing anything the array precaches, which in practice means any change under
+`app/`; a CSS-only fix shipped without a bump is served from the old cache forever. The
 install step calls `cache.addAll(SHELL)`, which fails entirely if any path is missing,
 and without a new cache key installed clients keep the old list. Since 0.9.0 the cache
 key *is* the product version (`somaplay-0.9.0`), declared in two places — `app/js/version.js`

@@ -8,6 +8,8 @@ audio, and singing karaoke — built for a tablet on a music stand.
 **[Try it →](https://somacavalieri.github.io/somaplay/)** · No account, no server, nothing
 to install. Everything lives on your device.
 
+See what's new in the [changelog](CHANGELOG.md).
+
 ![Karaoke mode](screens/karaoke.png)
 
 ---

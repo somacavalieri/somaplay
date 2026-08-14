@@ -43,10 +43,15 @@ screens you opened and what you checked.
 
 Hard-won, and not obvious from reading the code:
 
-**Changing the Service Worker's `SHELL` requires bumping `VERSION`.** Both live in
-[`app/sw.js`](app/sw.js). The install step calls `cache.addAll(SHELL)`, which fails
-entirely if any path is missing — and without a version bump, installed clients keep the
-old list. A stale `SHELL` breaks the app offline for everyone who already installed it.
+**Any release that changes a file listed in `SHELL` is at least a PATCH.** Not "editing the
+array" — changing anything the array precaches, which in practice means any change under
+`app/`. The narrow reading is how the bug that started this comes back: a CSS-only fix
+shipped without a bump is served from the old cache forever. The same goes for changing
+`sw.js`'s own logic, which is not in `SHELL` but ships with it. The version is declared in
+two places — [`app/js/version.js`](app/js/version.js) and line 2 of [`app/sw.js`](app/sw.js)
+— and kept in sync by `app/test/version.test.js`. The install step calls `cache.addAll(SHELL)`,
+which fails entirely if any path is missing, and without a new cache key installed clients keep
+the old list. A stale `SHELL` breaks the app offline for everyone who already installed it.
 
 **Never rename `DB_NAME` in [`app/js/db.js`](app/js/db.js).** It is the IndexedDB
 database name. Changing it makes the app open an empty database — which means every

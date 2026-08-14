@@ -22,8 +22,9 @@ defeitos como versão de produto: é invisível para quem usa, sobe por motivo
 técnico (qualquer arquivo do `SHELL`) e é bumpado à mão, então esquecer dele é
 uma das armadilhas registradas no `CLAUDE.md`.
 
-Não existe `package.json`, `CHANGELOG.md`, arquivo `VERSION` nem uma única tag
-git no repositório.
+Não existe `CHANGELOG.md`, arquivo `VERSION` nem uma única tag git no repositório. Existe um
+`app/package.json`, mas ele não carrega versão — só `name`, `private` e `type` — e continua
+assim de propósito: um terceiro literal sem teste de paridade seria mais um lugar para divergir.
 
 ## A decisão
 
@@ -100,9 +101,10 @@ que o app já fazia e o `Added` do número visível.
 Duas regras sustentam o resto:
 
 - **Toda publicação que toca o `SHELL` é no mínimo um PATCH.** É o que garante
-  que não existe deploy sem chave de cache nova — a armadilha do `VERSION`
-  esquecido deixa de ser possível, porque o número que o usuário lê e o número
-  que invalida o cache são o mesmo.
+  que não existe deploy sem chave de cache nova — o esquecimento continua possível — nada
+  impede publicar um arquivo do `SHELL` sem subir o número —, mas passa a ter **sintoma
+  visível**: o número na tela não muda, e é justamente ele que se olha quando se desconfia
+  de cache velho.
 - **Mudança que não é do app não mexe na versão.** `docs/`, specs, planos,
   `scripts/chords/`, `scripts/new_songbook/`. Sem essa regra o número giraria
   durante o trabalho de extração do acervo, que é a maior parte dos commits.
@@ -128,10 +130,13 @@ num app offline, saber o número é o que resolve o problema; ler o changelog é
 consulta ocasional, e quem está sem rede está tocando, não conferindo release.
 O número ao lado nunca depende de rede.
 
-**O número não pode mentir.** Como a versão é a chave do cache, ler `0.9.1` na
-tela prova que o Service Worker está servindo o cache da `0.9.1`. Não existe
-estado em que a tela diga uma coisa e o cache seja outra — é isso que transforma
-o número num diagnóstico, e não só num enfeite.
+**O número quase não pode mentir, e quando mente é para menos.** Como a versão é a chave do
+cache, ler `0.9.1` na tela prova que o Service Worker está servindo o cache da `0.9.1`. Há uma
+janela transitória: com `skipWaiting()` e `clients.claim()` (`app/sw.js`), o Service Worker novo
+assume enquanto a página já aberta continua pintada com os módulos do cache anterior — tela em
+`0.9.0`, SW já em `somaplay-0.9.1`, até o próximo recarregamento. O desvio é sempre na direção
+segura, porque a tela **sub-reporta**, e a reação que ele induz — recarregar — é exatamente a
+correta. Fora dessa janela, o número e a chave do cache são a mesma coisa.
 
 ## O CHANGELOG
 
@@ -157,8 +162,10 @@ Teste novo, `app/test/version.test.js`, com três asserções:
 2. o formato casa com `X.Y.Z`, só dígitos;
 3. o `CHANGELOG.md` tem uma entrada para a versão atual.
 
-A terceira é a que dá dente à disciplina: não dá para subir o número sem
-registrar o que mudou, e não dá para escrever a entrada e esquecer de bumpar.
+O que a terceira asserção elimina é **subir o número e não registrar nada**. Ela não pega o
+inverso: uma entrada escrita para uma versão futura passa, porque o teste só cobra a versão
+corrente. E não pega um arquivo do `SHELL` mudado sem bump nenhum — isso continua sendo
+disciplina humana, com o número na tela como sintoma.
 
 O teste de paridade de i18n, que já existe, cobre as chaves novas do rótulo.
 

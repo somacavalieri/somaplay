@@ -19,11 +19,18 @@ guarantee for import and export.
 
 Two rules keep the number honest:
 
-- **Any release that touches the service worker `SHELL` is at least a PATCH.**
-  The version *is* the cache key, so a new release always means a new cache —
-  there is no way to ship stale files by forgetting to bump something.
+- **Any release that changes a file listed in `SHELL` is at least a PATCH.** Not "editing the
+  array" — changing anything the array precaches, which in practice means any change under
+  `app/`. The version *is* the cache key, so a new release always means a new cache. The narrow
+  reading is how stale files ship: a CSS-only fix without a bump is served from the old cache
+  forever. The same goes for changing `sw.js`'s own logic, which is not in `SHELL` but ships
+  with it.
 - **Changes outside the app do not bump the version** — `docs/`, specs, plans,
   `scripts/`. The number tracks the app, not the repository.
+
+## [Unreleased]
+
+Nothing yet.
 
 ## [0.9.0] - 2026-08-14
 
