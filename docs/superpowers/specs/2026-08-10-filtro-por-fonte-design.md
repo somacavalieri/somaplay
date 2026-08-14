@@ -1,6 +1,21 @@
 # Soma_play — Filtro por fonte na lente global — design
 
-**Data:** 2026-08-10 · **Estado:** especificado
+**Data:** 2026-08-10 · **Estado:** implementado, **parcialmente superado** por
+`2026-08-14-filtro-fontes-pilulas-design.md`
+
+> **Superado em 2026-08-14, em dois pontos.** O acervo chegou às seis fontes que este
+> spec previa como teto ("seis ou sete"), e aí as duas decisões abaixo viraram o gargalo:
+>
+> - **"Uma fonte por vez"** → multisseleção, com o primeiro clique isolando (o gesto
+>   comum continua custando um clique).
+> - **"Não persiste entre sessões"** → persiste, com poda no boot. O argumento original —
+>   *"vira uma biblioteca misteriosamente vazia no próximo ensaio"* — era correto para um
+>   filtro escondido atrás de um dropdown; a faixa sempre visível o desarma.
+>
+> Junto foi o dropdown inteiro: `S.fonteMenuOpen`, `fonteControl()`, `.fonte-menu` e
+> `setFonteFilter` não existem mais. O que **continua valendo** deste spec: alcance global
+> igual à lente de modos, listas imunes a filtros, comparação por grafia normalizada, o
+> sentinela `SEM_FONTE`, `fontesDaBiblioteca` e `fonteCasa`.
 **Origem:** pedido do usuário — "gostaria que tivesse uma opção de filtrar por
 categoria... pode ser um ícone para economizar espaço. Porém, quando o filtro estiver
 ativado, eu quero que mostre e destaque qual filtro que é... com um xizinho."
