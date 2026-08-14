@@ -302,7 +302,7 @@ test('a lente de modos reduz as contagens', () => {
 test('SEM_FONTE entra por último, com a contagem das músicas sem fonte', () => {
   const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', '  ')];
   const { itens, total } = contagensPorFonte(songs, { nomeDoArtista: nomeFixo });
-  assert.deepEqual(itens, [{ nome: SEM_FONTE, n: 2 }, { nome: 'RV', n: 1 }]);
+  assert.deepEqual(itens, [{ nome: 'RV', n: 1 }, { nome: SEM_FONTE, n: 2 }]);
   assert.equal(total, 3);
 });
 
@@ -316,4 +316,10 @@ test('grafias divergentes da mesma fonte somam na mesma pílula', () => {
   const songs = [m('a', 'Songbook'), m('b', 'songbook'), m('c', 'SONGBOOK ')];
   const { itens } = contagensPorFonte(songs, { nomeDoArtista: nomeFixo });
   assert.deepEqual(itens, [{ nome: 'Songbook', n: 3 }]);
+});
+
+test('a ordem das pílulas não muda quando a busca entra', () => {
+  const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', ''), m('Retiros', '')];
+  const nomes = (opts) => contagensPorFonte(songs, { nomeDoArtista: nomeFixo, ...opts }).itens.map((i) => i.nome);
+  assert.deepEqual(nomes({}), nomes({ query: 'dr' }));
 });

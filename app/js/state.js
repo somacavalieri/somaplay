@@ -254,10 +254,6 @@ export function contagensPorFonte(songs, opts = {}) {
   }
   const itens = fontesDaBiblioteca(songs)
     .map(({ nome }) => ({ nome, n: conta.get(chaveFonte(nome)) || 0 }));
-  // Sem filtros, ordena por contagem. Com filtros, mantém a ordem da biblioteca.
-  if (!q && !modeFilter.length) {
-    itens.sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome, 'pt'));
-  }
   return { itens, total };
 }
 
