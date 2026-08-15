@@ -10,7 +10,7 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje } from '../js/backup.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir } from '../js/backup.js';
 import { PARTES_TODAS } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
@@ -146,4 +146,26 @@ test('recorte vazio cai no nome genérico', () => {
 
 test('o carimbo de data é zero-padded', () => {
   assert.equal(stampDeHoje(new Date(2026, 0, 5)), '2026-01-05');
+});
+
+// --- o aviso do substituir -------------------------------------------------
+// "Substituir tudo" com um arquivo parcial apaga o que o arquivo não traz. É a
+// leitura honesta de "substituir", mas é fácil de fazer sem querer e é
+// irreversível. A função devolve NOMES DE CHAVE, não texto: assim ela é pura e
+// o teste não depende da tabela de tradução.
+test('arquivo completo não gera aviso nenhum', () => {
+  assert.deepEqual(avisosDeSubstituir(PARTES_TODAS), []);
+  assert.deepEqual(avisosDeSubstituir(null), []);
+});
+
+test('arquivo sem áudio avisa que o áudio some', () => {
+  assert.deepEqual(avisosDeSubstituir(['cifra']), ['msg.backup.replaceNoAudio']);
+});
+
+test('pacote só de áudio avisa que as cifras somem', () => {
+  assert.deepEqual(avisosDeSubstituir(['audio']), ['msg.backup.replaceNoCifra']);
+});
+
+test('faltar só o pessoal não gera aviso', () => {
+  assert.deepEqual(avisosDeSubstituir(['cifra', 'audio']), []);
 });

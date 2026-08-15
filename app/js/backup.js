@@ -124,6 +124,17 @@ export async function lerManifest(file) {
   return { manifest, blobsStart: jsonStart + jsonLen };
 }
 
+// Devolve NOMES DE CHAVE, não texto traduzido: assim a função continua pura e o
+// teste não depende da tabela de i18n. `pessoal` não gera aviso — perder as
+// favoritas num "substituir tudo" é o que substituir sempre fez.
+export function avisosDeSubstituir(partes) {
+  const ps = partes || PARTES_TODAS;
+  const out = [];
+  if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
+  if (!ps.includes('cifra')) out.push('msg.backup.replaceNoCifra');
+  return out;
+}
+
 export async function importLibrary(file, { merge = false } = {}) {
   const { manifest, blobsStart } = await lerManifest(file);
   // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —

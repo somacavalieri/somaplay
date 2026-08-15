@@ -21,7 +21,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje } from './backup.js';
+import { exportLibrary, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
 import { PARTES_TODAS } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
@@ -881,8 +881,15 @@ function wireBackupInput() {
     const total = S.songs.length;
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
-    } else if (total > 0 && !confirm(t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') }))) {
-      return;
+    } else if (total > 0) {
+      // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
+      // cabeçalho — alguns KB, não o arquivo.
+      let partes = null;
+      try { partes = (await lerManifest(f)).manifest.partes || null; }
+      catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+      const avisos = avisosDeSubstituir(partes).map((k) => t(k)).join('\n');
+      const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
+      if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
