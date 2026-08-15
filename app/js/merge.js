@@ -1,9 +1,12 @@
 // merge.js — reconciliação de import com merge (upsert). Puro (sem DOM/DB), testável.
 // Dado o estado atual e o manifesto de um backup, decide o que gravar (upsert por id),
 // deduplicando artistas por nome e remapeando o artistId das músicas.
-import { fundeMusica } from './partes.js';
+import { fundeMusica, normalizaPartes } from './partes.js';
 
-export function mergePlan(existing, incoming) {
+// `agora` é o relógio do import, injetado para o módulo continuar puro. Um só
+// por import, e não um Date.now() por música: um repertório importado junto tem
+// que chegar junto no topo de Recentes, e não escorrer alguns milissegundos.
+export function mergePlan(existing, incoming, agora = null) {
   const exArtists = (existing && existing.artists) || [];
   const exById = new Map(((existing && existing.songs) || []).map((s) => [s.id, s]));
 
@@ -22,7 +25,10 @@ export function mergePlan(existing, incoming) {
     }
   }
 
-  const partes = (incoming && incoming.partes) || null;   // null = arquivo completo
+  // Quem normaliza é partes.js, dono do vocabulário: ausente OU corrompido
+  // significa arquivo completo, e sem isso um `partes` que não é array derrubava
+  // o merge aqui dentro.
+  const partes = normalizaPartes(incoming && incoming.partes);
 
   // A música que sai daqui é a FUNDIDA, não a do arquivo: quem grava faz
   // DB.putSong(s), que substitui o registro inteiro, e é essa substituição que
@@ -33,7 +39,7 @@ export function mergePlan(existing, incoming) {
     // chave passa a existir sempre, e a fusão gravaria `undefined` por cima do
     // artista que o aparelho já tinha.
     const doArquivo = 'artistId' in s ? { ...s, artistId } : s;
-    return fundeMusica(exById.get(s.id) || null, doArquivo, partes);
+    return fundeMusica(exById.get(s.id) || null, doArquivo, partes, agora);
   });
 
   let added = 0;

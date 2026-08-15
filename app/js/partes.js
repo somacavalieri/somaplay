@@ -23,18 +23,31 @@ export const CAMPOS = {
   pessoal: ['favorita', 'createdAt'],
 };
 
+// Anything that is not a list of parts reads as a complete file: that is what a
+// .somaplay written before this format means, and what a corrupt one should mean
+// instead of bringing the import down. Every reader goes through here — the
+// guard lives with the vocabulary, by the same argument that put CAMPOS here.
+export function normalizaPartes(partes) {
+  return Array.isArray(partes) ? partes : PARTES_TODAS;
+}
+
+const todasAsPartes = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
+
+// The one copy loop both sides share: identity always, plus the fields of the
+// declared parts. `k in src` and not `src[k] !== undefined`, so a field the
+// record simply does not have stays absent instead of becoming undefined.
+const copiaCampos = (dest, src, ps) => {
+  for (const k of IDENTIDADE) if (k in src) dest[k] = src[k];
+  for (const p of ps) for (const k of (CAMPOS[p] || [])) if (k in src) dest[k] = src[k];
+  return dest;
+};
+
 // null = every part. With every part the records come back untouched — that is
 // the complete-backup path, and the test asserts it rather than hoping for it.
 export function podaPorPartes(songs, partes) {
-  const ps = partes || PARTES_TODAS;
-  if (PARTES_TODAS.every((p) => ps.includes(p))) return (songs || []).slice();
-  const manter = ps.flatMap((p) => CAMPOS[p] || []);
-  return (songs || []).map((s) => {
-    const out = {};
-    for (const k of IDENTIDADE) if (k in s) out[k] = s[k];
-    for (const k of manter) if (k in s) out[k] = s[k];
-    return out;
-  });
+  const ps = normalizaPartes(partes);
+  if (todasAsPartes(ps)) return (songs || []).slice();
+  return (songs || []).map((s) => copiaCampos({}, s, ps));
 }
 
 // The app-wide invariant: every song has a cifra object, because the add/edit
@@ -50,7 +63,9 @@ const cifraVazia = () => ({ tipo: null, imagens: [], texto: '', acordes: [], dig
 // touched. That is what keeps an audio pack alive when a light file lands after
 // it, and what keeps the recipient's favourites when a repertoire update lands.
 //
-// `atual` is null for a song the device does not have yet.
+// `atual` is null for a song the device does not have yet. `agora` is the
+// import's clock, passed in rather than read here so the function stays pure —
+// see the createdAt rule at the bottom.
 //
 // CONTRACT: the returned record is a SHALLOW merge — its nested values are the
 // same objects as the inputs', not copies. Callers persist it and drop it:
@@ -59,11 +74,24 @@ const cifraVazia = () => ({ tipo: null, imagens: [], texto: '', acordes: [], dig
 // returned record in place would write through into the caller's library — do
 // not do that. This matches mergePlan, which has always returned
 // `{ ...s, artistId }`; a deep copy here would be the only one in the codebase.
-export function fundeMusica(atual, doArquivo, partes) {
-  const ps = partes || PARTES_TODAS;
+export function fundeMusica(atual, doArquivo, partes, agora = null) {
+  const ps = normalizaPartes(partes);
   const out = { ...(atual || {}) };
-  for (const k of IDENTIDADE) if (k in doArquivo) out[k] = doArquivo[k];
-  for (const p of ps) for (const k of (CAMPOS[p] || [])) if (k in doArquivo) out[k] = doArquivo[k];
+  // The same fast path podaPorPartes has, and for the same reason. A file that
+  // declares every part is a complete backup, and restoring one has to give the
+  // record back WHOLE — including a field this module has never heard of. The
+  // copy loop below would drop it silently, and only on the way back IN, which
+  // is the direction nobody thinks to check.
+  if (todasAsPartes(ps)) Object.assign(out, doArquivo);
+  else copiaCampos(out, doArquivo, ps);
   if (!out.cifra) out.cifra = cifraVazia();
+  // A shared song must arrive dated TODAY. createdAt sits in `pessoal` so it
+  // does not travel — but with nothing filling the gap the song lands with no
+  // date at all, and Recentes sorts on `(b.createdAt || 0)`, which parks a whole
+  // imported repertoire at the bottom, at epoch 0. That is the lie the spec was
+  // avoiding, inverted. Only for a song the device does not have yet and whose
+  // file did not carry the date: an existing record keeps its own, and a
+  // complete backup keeps the one it restored.
+  if (!atual && !out.createdAt && agora) out.createdAt = agora;
   return out;
 }

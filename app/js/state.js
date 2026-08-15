@@ -4,6 +4,7 @@ import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
+import { PARTES_TODAS } from './partes.js';
 
 export const S = {
   // navegação
@@ -36,7 +37,9 @@ export const S = {
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
-  exportPartes: ['cifra', 'audio', 'pessoal'],  // o que de cada música; todas = backup
+  // O que de cada música; todas = backup. Cópia, e não a constante: o estado da
+  // sessão é mutável e não pode escrever no vocabulário de partes.js.
+  exportPartes: [...PARTES_TODAS],
   exportListas: true,                           // as listas viajam? backup quer que sim
 
   // biblioteca (cache em memória, espelho do IDB)

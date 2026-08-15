@@ -5,7 +5,8 @@
 // usuário já usa — não regrediu quando as partes entraram.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { podaPorPartes, fundeMusica, PARTES_TODAS } from '../js/partes.js';
+import { podaPorPartes, fundeMusica, normalizaPartes, PARTES_TODAS } from '../js/partes.js';
+import { blobIdsDasMusicas } from '../js/state.js';
 
 const musica = () => ({
   id: 's1', artistId: 'ar1', title: 'Aquele Abraço',
@@ -92,6 +93,47 @@ test('não muta a música recebida', () => {
   assert.equal(m.favorita, true);
 });
 
+// --- podar primeiro, coletar depois ----------------------------------------
+// A composição inteira da feature em duas linhas. blobIdsDasMusicas NÃO ganhou
+// um parâmetro `partes` — ela é a definição única de "quais blobs são desta
+// música", e um segundo eixo de verdade ali é como apagar e exportar passam a
+// discordar. O que faz o arquivo leve encolher é a ORDEM: a poda tira
+// cifra.imagens, e aí a função existente naturalmente não acha imagem nenhuma.
+test('o pacote de áudio não leva nenhum blob de imagem', () => {
+  const ids = blobIdsDasMusicas(podaPorPartes([musica()], ['audio']));
+  assert.deepEqual(ids, ['aud1', 'aud2']);
+  assert.ok(!ids.includes('img1'));
+});
+
+test('o arquivo de cifras não leva nenhum blob de áudio', () => {
+  const ids = blobIdsDasMusicas(podaPorPartes([musica()], ['cifra']));
+  assert.deepEqual(ids, ['img1']);
+  assert.ok(!ids.includes('aud1'));
+  assert.ok(!ids.includes('aud2'));
+});
+
+// --- a normalização do vocabulário -----------------------------------------
+// Uma guarda só, no módulo dono das partes, em vez de uma por leitor — e o
+// merge era justamente o quarto leitor que não tinha a sua.
+test('o que não é lista de partes significa arquivo completo', () => {
+  assert.equal(normalizaPartes(null), PARTES_TODAS);
+  assert.equal(normalizaPartes(undefined), PARTES_TODAS);
+  assert.equal(normalizaPartes(42), PARTES_TODAS);
+  assert.equal(normalizaPartes({}), PARTES_TODAS);
+  assert.equal(normalizaPartes('cifra'), PARTES_TODAS);
+});
+
+test('uma lista de partes passa intacta, inclusive vazia', () => {
+  const ps = ['cifra'];
+  assert.equal(normalizaPartes(ps), ps);
+  assert.deepEqual(normalizaPartes([]), []);
+});
+
+test('nenhum leitor quebra com um partes corrompido', () => {
+  assert.deepEqual(podaPorPartes([musica()], 42), [musica()]);
+  assert.equal(fundeMusica(null, musica(), 'lixo').tom, 'D');
+});
+
 // --- a fusão -------------------------------------------------------------
 // A regra inteira: um campo de parte NÃO declarada nunca é tocado. É o que faz
 // o pacote de áudio sobreviver a um arquivo leve importado depois, e as
@@ -131,6 +173,24 @@ test('backup completo sobrescreve tudo', () => {
   assert.equal(out.tom, 'G');
   assert.equal(out.favorita, false);
   assert.deepEqual(out.stems, []);
+});
+
+// A simétrica da primeira asserção deste arquivo, e a que faltava. Na volta
+// também: restaurar um backup completo tem que devolver o registro INTEIRO. O
+// campo `velocidade` não está em IDENTIDADE nem em CAMPOS de propósito — é o
+// próximo campo que alguém vai adicionar à música, vai vê-lo sobreviver ao
+// arquivo, e nunca vai vê-lo sumir na volta. No modo substituir `atual` é sempre
+// null (o DB.wipe() já rodou), então era exatamente aí que ele sumiria.
+test('todas as partes devolvem o registro idêntico, também na fusão', () => {
+  const m = { ...musica(), velocidade: 42 };
+  assert.deepEqual(fundeMusica(null, m, PARTES_TODAS), m);
+  assert.equal(fundeMusica(null, m, PARTES_TODAS).velocidade, 42);
+  assert.equal(fundeMusica(null, m, null).velocidade, 42);
+});
+
+test('um recorte parcial continua levando só o que declara', () => {
+  const m = { ...musica(), velocidade: 42 };
+  assert.ok(!('velocidade' in fundeMusica(null, m, ['cifra'])));
 });
 
 test('música nova de pacote de áudio nasce com cifra VAZIA, nunca ausente', () => {
@@ -176,6 +236,37 @@ test('não reescreve propriedade de nenhum dos dois lados', () => {
   assert.equal(doArquivo.title, 'Novo');
   assert.deepEqual(doArquivo.stems, [{ blobId: 'z' }]);
   assert.equal(out.title, 'Novo');
+});
+
+// --- a data de quem recebe -------------------------------------------------
+// `createdAt` é "quando EU adicionei", e por isso mora em `pessoal` e não viaja
+// num compartilhamento. Sem alguém preencher o buraco na chegada, a música entra
+// sem data nenhuma — e a aba Recentes ordena por `(b.createdAt || 0)`, o que
+// joga o repertório inteiro para o FIM da lista, na época zero. É a mentira que
+// a spec queria evitar, ao contrário. O relógio chega de fora para a função
+// continuar pura.
+const AGORA = 1800000000000;
+
+test('música nova de arquivo compartilhado chega com a data de hoje', () => {
+  const leve = { id: 'novo', artistId: 'ar1', title: 'Refazenda', cifra: { tipo: 'texto', texto: 'C G' } };
+  assert.equal(fundeMusica(null, leve, ['cifra'], AGORA).createdAt, AGORA);
+});
+
+test('a data do arquivo ganha da de hoje: um backup completo restaura a original', () => {
+  const doBackup = { ...musica(), createdAt: 1700000000000 };
+  assert.equal(fundeMusica(null, doBackup, PARTES_TODAS, AGORA).createdAt, 1700000000000);
+  assert.equal(fundeMusica(null, doBackup, ['pessoal'], AGORA).createdAt, 1700000000000);
+});
+
+test('a data de quem já tinha a música nunca é reescrita por um compartilhamento', () => {
+  const atual = musica();                       // createdAt: 1700000000000
+  const leve = { id: 's1', artistId: 'ar1', title: 'Aquele Abraço', tom: 'E' };
+  assert.equal(fundeMusica(atual, leve, ['cifra'], AGORA).createdAt, 1700000000000);
+});
+
+test('sem relógio a fusão fica como era: nada de data inventada', () => {
+  const leve = { id: 'novo', artistId: 'ar1', title: 'Refazenda' };
+  assert.ok(!fundeMusica(null, leve, ['cifra']).createdAt);
 });
 
 // O contrato, afirmado em vez de suposto: a fusão é RASA. Quem chama grava e

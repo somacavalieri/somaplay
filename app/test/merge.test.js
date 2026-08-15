@@ -135,3 +135,44 @@ test('o remap alcança o registro fundido de uma música que o aparelho já tem'
   assert.equal(p.songs[0].tom, 'E');
   assert.equal(p.updated, 1);
 });
+
+// O relógio do import atravessa o plano. Um Date.now() por música faria o
+// repertório escorrer alguns milissegundos e chegar embaralhado no topo de
+// Recentes; um só, injetado, faz o lote inteiro chegar junto.
+test('o relógio do import carimba as músicas novas que chegaram sem data', () => {
+  const AGORA = 1800000000000;
+  const existing = { artists: [], songs: [], lists: [] };
+  const incoming = {
+    partes: ['cifra'],
+    artists: [{ id: 'a1', name: 'Gil' }],
+    songs: [
+      { id: 's1', artistId: 'a1', title: 'Aquele Abraço', tom: 'D' },
+      { id: 's2', artistId: 'a1', title: 'Refazenda', tom: 'C' },
+    ],
+    lists: [],
+  };
+  const p = mergePlan(existing, incoming, AGORA);
+  assert.equal(p.songs[0].createdAt, AGORA);
+  assert.equal(p.songs[1].createdAt, AGORA);   // o LOTE inteiro, com a mesma data
+});
+
+test('o relógio não encosta em quem já tinha data', () => {
+  const AGORA = 1800000000000;
+  const existing = { artists: [], songs: [{ id: 's1', artistId: 'a1', title: 'X', createdAt: 1700000000000 }], lists: [] };
+  const incoming = { partes: ['cifra'], artists: [], songs: [{ id: 's1', artistId: 'a1', title: 'X', tom: 'E' }], lists: [] };
+  assert.equal(mergePlan(existing, incoming, AGORA).songs[0].createdAt, 1700000000000);
+});
+
+// O quarto leitor de `partes`, que era o único sem guarda: um arquivo corrompido
+// derrubava o merge aqui dentro em vez de ser lido como completo.
+test('um partes corrompido no manifest não derruba o merge', () => {
+  const incoming = {
+    partes: 'cifra',
+    artists: [{ id: 'a1', name: 'Gil' }],
+    songs: [{ id: 's1', artistId: 'a1', title: 'Aquele Abraço', tom: 'D', favorita: true }],
+    lists: [],
+  };
+  const p = mergePlan({ artists: [], songs: [], lists: [] }, incoming);
+  assert.equal(p.songs[0].tom, 'D');
+  assert.equal(p.songs[0].favorita, true);     // lido como arquivo completo
+});
