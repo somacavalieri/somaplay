@@ -6,6 +6,7 @@ import {
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
+  musicasPresentes, songsOfArtist, artistById,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -14,6 +15,7 @@ import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
+import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
 import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
@@ -85,6 +87,7 @@ export function update() {
   else if (scr === 'settings') html = renderSettings();
   else if (scr === 'chordbook') html = renderChordbook();
   html += renderPopover();
+  html += renderShareSheet();
   app.innerHTML = html;
   restoreUI(snap);
   lastScreen = scr;
@@ -673,6 +676,60 @@ const actions = {
     try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
+  toggleArtistMenu() { S.artistMenuOpen = !S.artistMenuOpen; update(); },
+
+  // O ⋯ traduz o seu eixo em ids e entrega ao motor, que não sabe o que é lista
+  // nem artista. listIds é o que impede que os outros repertórios do usuário
+  // viajem junto para o amigo — e um artista não leva lista nenhuma.
+  async openShare(d) {
+    const daLista = d.id === 'list';
+    const l = daLista ? listById(S.openListId) : null;
+    const a = daLista ? null : artistById(S.artistId);
+    if (daLista && !l) return;
+    if (!daLista && !a) return;
+    const songIds = daLista
+      ? new Set(musicasPresentes(l))
+      : new Set(songsOfArtist(a.id).map((s) => s.id));
+    S.shareSheet = {
+      titulo: daLista ? l.nome : a.name,
+      songIds,
+      listIds: daLista ? new Set([l.id]) : new Set(),
+      opcao: 'cifras',
+      tamanhos: null,
+    };
+    S.listMenuOpen = false;
+    S.artistMenuOpen = false;
+    update();
+    // Os números chegam depois: medir são ~4 handles por música, e a folha não
+    // pode esperar por eles para abrir.
+    const songs = [...songIds].map(songById).filter(Boolean);
+    const tam = await calculaTamanhos(songs);
+    // Identidade pela referência do Set, não pelo título: abrir duas folhas
+    // seguidas com o mesmo nome faria a medição da primeira sobrescrever a
+    // segunda.
+    if (S.shareSheet && S.shareSheet.songIds === songIds) {
+      S.shareSheet.tamanhos = tam;
+      update();
+    }
+  },
+  closeShare() { S.shareSheet = null; update(); },
+  pickShareOpt(d) { if (S.shareSheet) { S.shareSheet.opcao = d.id; update(); } },
+  async doShare() {
+    const sh = S.shareSheet;
+    if (!sh) return;
+    const opt = OPCOES.find((o) => o.id === sh.opcao);
+    if (!opt) return;
+    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), opt.partes, {
+      cifras: t('share.word.cifras'), audio: t('share.word.audio'),
+    });
+    S.shareSheet = null;
+    update();
+    toast(t('msg.backup.exporting'));
+    try {
+      await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName });
+      toast(t('msg.backup.exported'));
+    } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
+  },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
   importBackupMerge() { S.importMode = 'merge'; document.getElementById('file-backup').click(); },
   async importSamples() {
@@ -845,7 +902,7 @@ document.addEventListener('click', (e) => {
       // Testar `t !== e.target` não serve: o alvo real de um botão com ícone é o
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
-      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker') && stop && !stop.contains(t)) return;
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
       actions[name](t.dataset, e, t);
       return;
     }
@@ -854,6 +911,7 @@ document.addEventListener('click', (e) => {
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
+  if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
 });
 
@@ -901,10 +959,13 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    // A folha cobre a tela inteira — tem prioridade sobre qualquer coisa por
+    // baixo dela.
+    if (S.shareSheet) { S.shareSheet = null; update(); return; }
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
       update();
     }
   }

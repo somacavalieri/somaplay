@@ -41,6 +41,7 @@ export function renderListScreen() {
       ${S.listMenuOpen ? `<div class="menu-pop" style="width:218px">
         <button data-a="startRename">${I.pencil()}${t('list.rename')}</button>
         <button data-a="togglePinList">${I.pinStroke()}${l.fixada ? t('list.unpin') : t('list.pinToTop')}</button>
+        <button data-a="openShare" data-id="list">${I.uploadSm()}${t('common.share')}</button>
         <button class="danger" data-a="deleteList">${I.trash()}${t('list.deleteList')}</button>
       </div>` : ''}
     </div>` : '';
