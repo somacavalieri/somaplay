@@ -1749,6 +1749,15 @@ funciona. O mesmo mapa é lido pela poda da exportação e pela fusão da import
 propósito: duas verdades ali é como as duas passam a discordar.
 ```
 
+Na seção **Language**, desambiguar a regra de comentário — hoje ela diz "code comments in new code", que se lê tanto como "arquivo novo" quanto como "linha nova", e os dois levam a códigos diferentes. A prática real é: nenhum módulo pré-existente de `app/js/` tem um único comentário em inglês. Trocar o marcador `**English:**` por:
+
+```markdown
+- **English:** `README.md`, public docs, commit messages, and **comments in new
+  files**. Comments follow the file they live in: a new module is written in
+  English, and a file that is already commented in Portuguese stays Portuguese —
+  a module that switches language halfway is harder to read than either choice.
+```
+
 E na seção **Architecture**, trocar o marcador `**Storage:**` por:
 
 ```markdown
