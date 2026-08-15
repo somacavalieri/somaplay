@@ -29,6 +29,11 @@ export const S = {
 
   // popover adicionar-à-lista
   popoverSongId: null,
+  // folha de compartilhar (contextual, ⋯ da lista e do artista)
+  // Vive só na sessão, como exportFontes: uma seleção que sobrevive ao fechar o
+  // app vira um arquivo misteriosamente incompleto no próximo ensaio.
+  shareSheet: null,        // { titulo, songIds:Set, listIds:Set|null, opcao, tamanhos }
+  artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
 

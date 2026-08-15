@@ -145,6 +145,16 @@ export const DB = {
     if (dir) { try { await dir.removeEntry(id); return; } catch (e) { /* segue */ } }
     return tx('blobs', 'readwrite', (s) => s.delete(id));
   },
+  // Só o tamanho, sem trazer os bytes. No OPFS, getFile() é metadado — logo isto
+  // é um stat. No fallback IDB não tem como saber sem carregar o blob inteiro na
+  // memória, e a folha de compartilhar prefere não mostrar tamanho a travar um
+  // tablet — por isso devolve null.
+  async blobSize(id) {
+    const dir = await opfs();
+    if (!dir) return null;
+    try { return (await (await dir.getFileHandle(id)).getFile()).size; }
+    catch (e) { return null; }
+  },
   async listBlobIds() {
     const ids = new Set();
     const dir = await opfs();

@@ -33,6 +33,7 @@ const SHELL = [
   './js/render/chordbookscreen.js',
   './js/render/addedit.js',
   './js/render/settings.js',
+  './js/render/sharesheet.js',
   './js/render/estilo.js',
   './js/render/popover.js',
   './js/render/fontestrip.js',
