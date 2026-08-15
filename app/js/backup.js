@@ -6,7 +6,7 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
-import { PARTES_TODAS, podaPorPartes, fundeMusica } from './partes.js';
+import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -97,7 +97,12 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   if (ps.includes('pessoal')) manifest.settings = S.settings;
   const json = JSON.stringify(manifest);
   const header = MAGIC + String(new TextEncoder().encode(json).byteLength).padStart(10, '0') + '\n' + json;
-  const nome = fileName || nomeDoExport('backup', stampDeHoje(), ps, {});
+  // `palavras` real, não `{}`: sem ela um recorte parcial que caia neste
+  // fallback perderia o qualificador (cifras/áudio) do nome, e um backup
+  // parcial ficaria com o mesmo nome de um completo.
+  const nome = fileName || nomeDoExport('backup', stampDeHoje(), ps, {
+    cifras: t('share.word.cifras'), audio: t('share.word.audio'),
+  });
   return new File([header, ...parts], nome, { type: 'application/octet-stream' });
 }
 
@@ -141,18 +146,33 @@ export async function lerManifest(file) {
 }
 
 // Devolve NOMES DE CHAVE, não texto traduzido: assim a função continua pura e o
-// teste não depende da tabela de i18n. `pessoal` não gera aviso — perder as
-// favoritas num "substituir tudo" é o que substituir sempre fez.
+// teste não depende da tabela de i18n.
 //
-// Um `partes` que não é array vem de arquivo corrompido ou feito à mão. Vale a
-// mesma leitura que importLibrary já faz: o que não é uma lista de partes
-// válida significa arquivo completo. A guarda mora aqui, e não em quem chama,
-// para a função ser total — ela roda ANTES do try do diálogo.
-export function avisosDeSubstituir(partes) {
-  const ps = Array.isArray(partes) ? partes : PARTES_TODAS;
+// Recebe o MANIFEST inteiro, e não só `partes`, porque os dois eixos que
+// somem num "substituir tudo" moram em lugares diferentes do arquivo: as partes
+// no campo `partes`, as listas na presença de `lists`.
+//
+// `pessoal` avisa. A regra antiga — "perder as favoritas num substituir tudo é o
+// que substituir sempre fez" — era verdade até esta branch: ANTES dela todo
+// .somaplay carregava as favoritas, então substituir nunca as perdia. É esta
+// branch que fabrica o arquivo que perde, e ele tem o MESMO NOME de um backup
+// completo (`pessoal` e as listas não qualificam o nome, de propósito). Sem o
+// aviso, o único sinal de que a biblioteca foi reescrita sem favorita, sem
+// createdAt, sem ajustes e sem lista nenhuma seria a biblioteca depois.
+//
+// Um `partes` que não é array vem de arquivo corrompido ou feito à mão, e
+// normalizaPartes o lê como completo — a mesma leitura de importLibrary. A
+// guarda mora aqui, e não em quem chama, para a função ser total: ela roda ANTES
+// do try do diálogo.
+export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false } = {}) {
+  const ps = normalizaPartes(partes);
   const out = [];
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
   if (!ps.includes('cifra')) out.push('msg.backup.replaceNoCifra');
+  if (!ps.includes('pessoal')) out.push('msg.backup.replaceNoPessoal');
+  // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
+  // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
+  if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
   return out;
 }
 
@@ -161,7 +181,11 @@ export async function importLibrary(file, { merge = false } = {}) {
   // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —
   // e sem essa guarda o `.includes` mais abaixo lançaria DEPOIS do DB.wipe() no
   // modo substituir. Tratar como "completo" é a mesma regra de "partes ausente".
-  const partes = Array.isArray(manifest.partes) ? manifest.partes : PARTES_TODAS;
+  const partes = normalizaPartes(manifest.partes);
+  // Um relógio só para o import inteiro: uma música que chega sem `createdAt`
+  // (todo compartilhamento, porque a data é `pessoal`) nasce com a data de hoje,
+  // e o repertório inteiro entra JUNTO no topo de Recentes.
+  const agora = Date.now();
 
   // Substituir apaga tudo antes; merge preserva a biblioteca (upsert por id).
   if (!merge) await DB.wipe();
@@ -176,7 +200,7 @@ export async function importLibrary(file, { merge = false } = {}) {
 
   let result;
   if (merge) {
-    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists }, manifest);
+    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists }, manifest, agora);
     for (const a of plan.artists) await DB.putArtist(a);
     for (const s of plan.songs) await DB.putSong(s);
     for (const l of plan.lists) await DB.putList(l);
@@ -189,7 +213,7 @@ export async function importLibrary(file, { merge = false } = {}) {
     // Mesmo no modo espelho a música precisa sair com a invariante da cifra —
     // um arquivo só de áudio criaria registros sem o objeto que todo render
     // assume que existe.
-    for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes));
+    for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes, agora));
     for (const l of manifest.lists || []) await DB.putList(l);
     if (partes.includes('pessoal') && manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas

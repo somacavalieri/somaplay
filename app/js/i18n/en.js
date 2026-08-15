@@ -303,6 +303,8 @@ export const EN = {
   'msg.backup.invalidBackup': 'Invalid backup',
   'msg.backup.replaceNoAudio': "This file has no audio. Replacing will delete your library's audio.",
   'msg.backup.replaceNoCifra': "This file has no charts. Replacing will delete your library's charts.",
+  'msg.backup.replaceNoPessoal': 'This file has no favorites or settings. Replacing will delete yours.',
+  'msg.backup.replaceNoLists': 'This file has no lists. Replacing will delete all of yours.',
   'msg.fonte.confirmDelete': 'Delete the {count} {song} from the source "{name}" on this device? Charts, audio and images go with them, and there is no undo. Export first if you want to keep them.',
   'msg.fonte.deleting': 'Deleting...',
   'msg.fonte.deleted': 'Source deleted: {name} · {count} {song}',

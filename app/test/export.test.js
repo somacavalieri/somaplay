@@ -153,26 +153,81 @@ test('o carimbo de data é zero-padded', () => {
 // leitura honesta de "substituir", mas é fácil de fazer sem querer e é
 // irreversível. A função devolve NOMES DE CHAVE, não texto: assim ela é pura e
 // o teste não depende da tabela de tradução.
+//
+// A armadilha que a função existe para fechar: um export sem `pessoal` e sem
+// listas tem o MESMO NOME de um backup completo, porque nem `pessoal` nem as
+// listas qualificam o nome. Meses depois não há como distinguir os dois na pasta
+// de Downloads — a única defesa é este aviso.
+const COMPLETO = { partes: PARTES_TODAS, lists: [{ id: 'l1' }] };
+
 test('arquivo completo não gera aviso nenhum', () => {
-  assert.deepEqual(avisosDeSubstituir(PARTES_TODAS), []);
-  assert.deepEqual(avisosDeSubstituir(null), []);
+  assert.deepEqual(avisosDeSubstituir(COMPLETO, { temListas: true }), []);
+  assert.deepEqual(avisosDeSubstituir({ lists: [{ id: 'l1' }] }, { temListas: true }), []);
 });
 
 test('arquivo sem áudio avisa que o áudio some', () => {
-  assert.deepEqual(avisosDeSubstituir(['cifra']), ['msg.backup.replaceNoAudio']);
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['cifra', 'pessoal'] }, { temListas: true }),
+    ['msg.backup.replaceNoAudio']);
 });
 
 test('pacote só de áudio avisa que as cifras somem', () => {
-  assert.deepEqual(avisosDeSubstituir(['audio']), ['msg.backup.replaceNoCifra']);
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['audio', 'pessoal'] }, { temListas: true }),
+    ['msg.backup.replaceNoCifra']);
 });
 
-test('faltar só o pessoal não gera aviso', () => {
-  assert.deepEqual(avisosDeSubstituir(['cifra', 'audio']), []);
+// A regra que esta branch fabricou: antes dela todo .somaplay levava as
+// favoritas, então substituir nunca as perdia. Agora perde, e em silêncio.
+test('arquivo sem o pessoal avisa que favoritas e ajustes somem', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio'], lists: [{ id: 'l1' }] }, { temListas: true }),
+    ['msg.backup.replaceNoPessoal']);
+});
+
+test('arquivo sem lista avisa quando o aparelho tem listas', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }, { temListas: true }),
+    ['msg.backup.replaceNoLists']);
+});
+
+test('arquivo COM lista não gera o aviso de listas', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [{ id: 'l1' }] }, { temListas: true }), []);
+});
+
+// Não há o que perder: quem nunca criou uma lista não pode ser avisado de que
+// vai perder as suas.
+test('arquivo sem lista NÃO avisa se o aparelho também não tem', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }, { temListas: false }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }), []);
+});
+
+test('os dois eixos se acumulam, na ordem do dano', () => {
+  // O arquivo da folha de compartilhar, mais perigoso de todos: só cifras.
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra'], lists: [] }, { temListas: true }), [
+    'msg.backup.replaceNoAudio',
+    'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoLists',
+  ]);
+  assert.deepEqual(avisosDeSubstituir({ partes: ['audio'], lists: [] }, { temListas: true }), [
+    'msg.backup.replaceNoCifra',
+    'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoLists',
+  ]);
 });
 
 test('um partes corrompido é lido como arquivo completo, não explode', () => {
   // Vale para qualquer coisa que não seja array: número, objeto, string.
-  assert.deepEqual(avisosDeSubstituir(42), []);
-  assert.deepEqual(avisosDeSubstituir({}), []);
-  assert.deepEqual(avisosDeSubstituir('cifra'), []);
+  const lists = [{ id: 'l1' }];
+  assert.deepEqual(avisosDeSubstituir({ partes: 42, lists }, { temListas: true }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: {}, lists }, { temListas: true }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: 'cifra', lists }, { temListas: true }), []);
+});
+
+test('lists malformado conta como "não traz lista"', () => {
+  for (const lists of [undefined, null, 42, {}, 'l1']) {
+    assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists }, { temListas: true }),
+      ['msg.backup.replaceNoLists'], String(lists));
+  }
+});
+
+test('sem argumento nenhum a função é total', () => {
+  // Roda ANTES do try do diálogo: quebrar aqui deixaria o import sem caminho.
+  assert.deepEqual(avisosDeSubstituir(), []);
 });

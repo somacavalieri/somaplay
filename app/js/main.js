@@ -6,7 +6,7 @@ import {
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
-  musicasPresentes, songsOfArtist, artistById,
+  musicasPresentes, songsOfArtist, artistById, matchesLens,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -688,7 +688,7 @@ const actions = {
       { cifras: t('share.word.cifras'), audio: t('share.word.audio') },
     );
     toast(t('msg.backup.exporting'));
-    try { await baixaArquivo(await exportLibrary({ ...sel, partes, fileName })); toast(t('msg.backup.exported')); }
+    try { baixaArquivo(await exportLibrary({ ...sel, partes, fileName })); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   toggleArtistMenu() { S.artistMenuOpen = !S.artistMenuOpen; update(); },
@@ -696,6 +696,11 @@ const actions = {
   // O ⋯ traduz o seu eixo em ids e entrega ao motor, que não sabe o que é lista
   // nem artista. listIds é o que impede que os outros repertórios do usuário
   // viajem junto para o amigo — e um artista não leva lista nenhuma.
+  //
+  // O artista passa pela LENTE, porque a tela do artista passa
+  // (artist.js:10): sem isso a tela mostra 3 músicas com o T2 ligado e a folha
+  // se oferece para mandar 40. A lista, não — listas ignoram a lente por
+  // desenho, e musicasPresentes já é exatamente o que aquela tela desenha.
   async openShare(d) {
     const daLista = d.id === 'list';
     const l = daLista ? listById(S.openListId) : null;
@@ -704,7 +709,7 @@ const actions = {
     if (!daLista && !a) return;
     const songIds = daLista
       ? new Set(musicasPresentes(l))
-      : new Set(songsOfArtist(a.id).map((s) => s.id));
+      : new Set(songsOfArtist(a.id).filter(matchesLens).map((s) => s.id));
     S.shareSheet = {
       titulo: daLista ? l.nome : a.name,
       songIds,
@@ -885,10 +890,14 @@ function wireBackupInput() {
     } else if (total > 0) {
       // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
       // cabeçalho — alguns KB, não o arquivo.
-      let partes = null;
-      try { partes = (await lerManifest(f)).manifest.partes || null; }
+      let manifest = null;
+      try { manifest = (await lerManifest(f)).manifest; }
       catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
-      const avisos = avisosDeSubstituir(partes).map((k) => t(k)).join('\n');
+      // O manifest inteiro, porque o aviso das listas depende de o arquivo
+      // trazer lista; e o aparelho ter lista, porque não há o que perder quem
+      // não tem nenhuma.
+      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0 })
+        .map((k) => t(k)).join('\n');
       const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }

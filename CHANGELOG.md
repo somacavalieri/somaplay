@@ -46,10 +46,26 @@ Nothing yet.
   Audio, My lists, My favourites and settings — that are the same vocabulary,
   so a backup can be narrowed the same way.
 
+  A song that arrives from a share is dated the day it arrives, so it lands at
+  the top of **Recém-adicionadas** for whoever received it. A complete backup
+  still restores the original date.
+
 - **Compartilhar** hands the file to the system share sheet where the browser
   offers one, so on Android it reaches WhatsApp in a single tap instead of going
   through Downloads. **Exportar** in Settings still downloads — a backup is a
   file you keep, not something you send.
+
+- **Substituir tudo** now says what a partial file will cost before it does it.
+  A file that carries no audio, no charts, no favourites and settings, or no
+  lists gets a line of its own in the confirmation, one per missing piece.
+
+  This matters most for the two pieces that do *not* change the file name: an
+  export with **Minhas favoritas e ajustes** and **Minhas listas** unchecked is
+  named exactly like a complete backup, so months later there is nothing in the
+  Downloads folder to tell them apart. Replacing with the wrong one rewrites the
+  library with no favourites, no dates, no settings and no playlists. The
+  warning is the only thing that says so. The lists warning is skipped when the
+  device has no lists to lose.
 
 ### Fixed
 

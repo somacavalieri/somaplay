@@ -151,16 +151,47 @@ Não são dois portais: é o mesmo mecanismo nos dois pontos de origem.
 
 ## Componentes
 
-### `js/backup.js` — a poda
+### `js/partes.js` — o vocabulário
+
+Um módulo novo, e não um pedaço de `backup.js` como esta spec dizia antes. O motivo é que
+os **dois lados** da troca leem o mesmo mapa de campos: a poda, na saída, e a fusão, na
+entrada. Uma segunda cópia desse mapa é exatamente como as duas passariam a discordar sobre
+o que é `cifra`.
 
 ```js
 export const PARTES_TODAS = ['cifra', 'audio', 'pessoal'];
-export function podaPorPartes(songs, partes)   // → songs com só os campos das partes
+export const IDENTIDADE = ['id', 'artistId', 'title'];
+export const CAMPOS = { cifra: [...], audio: [...], pessoal: [...] };
+
+export function normalizaPartes(partes)                     // → lista de partes, sempre
+export function podaPorPartes(songs, partes)                // saída: só os campos das partes
+export function fundeMusica(atual, doArquivo, partes, agora) // entrada: campo a campo
 ```
 
-Pura, sem DOM e sem DB, como `recorteParaExport` ao lado. `partes` contendo as três devolve
-os registros **idênticos** — é a asserção que prova que backup e leitura de arquivo antigo
-não regrediram.
+Puras, sem DOM e sem DB, como `recorteParaExport` ao lado.
+
+`normalizaPartes` é a guarda única: **o que não é uma lista de partes significa arquivo
+completo** — que é o que um `.somaplay` anterior a este formato quer dizer, e o que um
+arquivo corrompido deve querer dizer em vez de derrubar o import. Ela mora aqui, e não em
+cada leitor, pelo mesmo argumento que trouxe `CAMPOS`: quatro guardas ad-hoc é quatro
+chances de uma divergir. Os leitores são `podaPorPartes`, `fundeMusica`,
+`avisosDeSubstituir`, `importLibrary` e `mergePlan`.
+
+As duas funções compartilham um **atalho de identidade**: quando as partes declaradas cobrem
+`PARTES_TODAS`, os registros passam **inteiros**, sem copiar campo a campo. Na saída é a
+asserção que prova que o backup não regrediu; na entrada é o que faz restaurar um backup
+devolver o registro **inteiro** — inclusive um campo que este módulo nunca ouviu falar. Sem
+o atalho, no modo substituir (`atual` é sempre null, o `DB.wipe()` já rodou) um campo fora de
+`IDENTIDADE ∪ CAMPOS` sobreviveria ao arquivo e sumiria na volta, em silêncio.
+
+`fundeMusica` recebe `agora` — o relógio do import — em vez de chamar `Date.now()`, para
+continuar pura. Uma música **nova** que chega **sem** `createdAt` (todo compartilhamento,
+porque a data é `pessoal`) nasce com essa data. Sem isso ela entraria sem data nenhuma, e
+Recentes ordena por `(b.createdAt || 0)`: o repertório inteiro iria para o **fim** da lista,
+na época zero — a mesma mentira que pôr `createdAt` em `pessoal` queria evitar, ao contrário.
+Um relógio só por import, e não um por música, para o lote chegar junto.
+
+### `js/backup.js` — o export
 
 `exportLibrary` ganha `partes` nas opções e passa a ordenar assim:
 
@@ -198,8 +229,10 @@ função continua pura.
 
 ### `js/merge.js` — o merge campo-a-campo
 
-`mergePlan(existing, incoming)` passa a ler `incoming.partes` (ausente = todas) e a devolver,
-para cada música, o registro **fundido** com o que já existe, e não o registro do arquivo.
+`mergePlan(existing, incoming, agora)` passa a ler `incoming.partes` (ausente **ou
+corrompido** = todas, por `normalizaPartes`) e a devolver, para cada música, o registro
+**fundido** com o que já existe, e não o registro do arquivo. A fusão em si é `fundeMusica`,
+em `partes.js`: o merge não conhece o mapa de campos, só o aplica.
 
 Duas garantias que moram aqui, e só aqui:
 
@@ -226,6 +259,22 @@ continua fazendo o aparelho virar espelho do arquivo — inclusive quando o arqu
 áudio da biblioteca**. É a leitura honesta de "substituir tudo", mas é fácil de fazer sem
 querer e é irreversível. O diálogo de confirmação ganha uma linha quando o arquivo é parcial:
 *"Este arquivo não tem áudio. Substituir vai apagar o áudio da sua biblioteca."*
+
+`avisosDeSubstituir(manifest, { temListas })` cobre os **quatro** eixos, e não só as partes:
+falta `audio`, falta `cifra`, falta `pessoal`, e o arquivo não traz lista alguma enquanto o
+aparelho tem pelo menos uma. Os dois últimos foram um acréscimo tardio, e são o mais
+importante: `pessoal` e as listas **não qualificam o nome do arquivo** (de propósito — quatro
+sufixos empilhados não ajudam ninguém), então um export com as duas caixas desmarcadas sai
+com o nome **byte a byte idêntico** ao de um backup completo. Meses depois não há como
+distinguir os dois na pasta de Downloads, e substituir com o errado reescreve a biblioteca
+sem `favorita`, sem `createdAt`, sem os ajustes e sem lista nenhuma.
+
+O argumento antigo — "perder as favoritas num substituir tudo é o que substituir sempre fez"
+— era verdade **até esta feature**: antes dela todo `.somaplay` carregava as favoritas, então
+substituir nunca as perdia. É esta feature que fabrica o arquivo que perde.
+
+O aviso das listas só aparece quando há o que perder: num aparelho sem lista nenhuma ele
+seria ruído.
 
 ### `js/render/` — a folha de compartilhar
 
@@ -366,7 +415,8 @@ MINOR: **0.11.0 → 0.12.0** — capacidade nova, pela tabela de
 
 **Automática** (`cd app && node --test`), tudo puro e sem DOM.
 
-Em `test/export.test.js`, sobre `podaPorPartes`:
+Em `test/partes.test.js`, sobre `podaPorPartes` (o arquivo acompanhou o módulo, que saiu de
+`backup.js`):
 
 - `PARTES_TODAS` → registros **idênticos** aos de entrada. É esta asserção que garante que o
   backup e a leitura de arquivo antigo não regrediram;

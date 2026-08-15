@@ -10,6 +10,7 @@
 // Settings block is for, where the normal job is backup.
 import { S, blobIdsDasMusicas, songById } from '../state.js';
 import { podaPorPartes } from '../partes.js';
+import { chordbookRecords } from '../chordbook.js';
 import { DB } from '../db.js';
 import { I, esc } from '../icons.js';
 import { t, getLang } from '../i18n.js';
@@ -35,26 +36,47 @@ export function formataTamanho(bytes) {
   return `${Math.round(b / 1e3)} KB`;
 }
 
-// Os bytes de cada opção, medidos e não estimados. Só é chamada para um recorte
-// limitado (uma lista, um artista): numa biblioteca inteira seriam milhares de
-// handles, e é por isso que Configurações não mostra tamanho.
+// The metadata half of an option: the JSON exportLibrary would write for it —
+// the songs pruned to those parts, plus the chordbook, which travels with
+// `cifra` (backup.js gates it on that part) and can be substantial.
+//
+// Byte length, not String.length: an accented Portuguese title is more bytes
+// than characters, and it is bytes that go through WhatsApp.
+function tamanhoDoJson(songs, partes) {
+  const m = { songs: podaPorPartes(songs, partes) };
+  if (partes.includes('cifra')) m.chordbook = chordbookRecords();
+  return new TextEncoder().encode(JSON.stringify(m)).byteLength;
+}
+
+// The bytes of each option, measured rather than estimated. Only called for a
+// limited slice (one list, one artist): a whole library would be thousands of
+// handles, which is why Settings shows no size at all.
+//
+// Blobs AND metadata. Blobs alone made a text chart read "0 KB" — it has no blob
+// — when the real file is a couple of kilobytes; "0 KB" reads as an empty file,
+// the one thing formataTamanho was written never to say.
+//
+// The blobs of `cifra` and of `audio` are disjoint sets, so adding them is
+// exact and costs no extra handles. The JSON is NOT: identity fields and the
+// chordbook appear in both, so `ambos` measures its own instead of summing.
 export async function calculaTamanhos(songs) {
   const soma = async (ids) => {
     let total = 0;
     for (const id of ids) {
       const n = await DB.blobSize(id);
-      if (n === null) return null;    // fallback IDB: prefere não mostrar
+      if (n === null) return null;    // IDB fallback: would rather show nothing
       total += n;
     }
     return total;
   };
-  const cifras = await soma(blobIdsDasMusicas(podaPorPartes(songs, ['cifra'])));
-  const audio = await soma(blobIdsDasMusicas(podaPorPartes(songs, ['audio'])));
-  return {
-    cifras,
-    audio,
-    ambos: cifras === null || audio === null ? null : cifras + audio,
-  };
+  const bCifras = await soma(blobIdsDasMusicas(podaPorPartes(songs, ['cifra'])));
+  const bAudio = await soma(blobIdsDasMusicas(podaPorPartes(songs, ['audio'])));
+  const blobs = { cifras: bCifras, audio: bAudio, ambos: bCifras === null || bAudio === null ? null : bCifras + bAudio };
+  const out = {};
+  // Driven by OPCOES so the estimate and the file can never disagree about what
+  // an option means.
+  for (const o of OPCOES) out[o.id] = blobs[o.id] === null ? null : blobs[o.id] + tamanhoDoJson(songs, o.partes);
+  return out;
 }
 
 export function renderShareSheet() {
@@ -73,10 +95,11 @@ export function renderShareSheet() {
       <span class="ct">${formataTamanho(tam[o.id])}</span>
     </button>`).join('');
 
-  // O backdrop leva o data-a e o painel leva data-stop="1", como o .scrim e o
-  // .popover já fazem: a delegação global (main.js) descarta o closeShare
-  // quando o clique nasceu dentro do conteúdo protegido. Testar o alvo direto
-  // não serviria — num botão com ícone o alvo real é o <svg> de dentro.
+  // The backdrop carries the data-a and the panel carries data-stop="1", the way
+  // .scrim and .popover already do: the global delegation (main.js) drops the
+  // closeShare when the click was born inside protected content. Testing the
+  // direct target would not work — in a button with an icon the real target is
+  // the <svg> inside it.
   return `<div class="sheet-backdrop" data-a="closeShare">
     <div class="sheet" data-stop="1">
       <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(t('share.title', { name: sh.titulo }))}</div>
