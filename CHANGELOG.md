@@ -32,6 +32,33 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.12.0] - 2026-08-15
+
+### Added
+
+- A `.somaplay` file now declares which **parts** it carries — `cifra`, `audio`,
+  `pessoal` — and sharing can leave parts out. You can send a repertoire as
+  charts only, small enough for WhatsApp, and send the audio afterwards as a
+  separate pack that finds its own songs.
+
+  New: **Compartilhar** in the ⋯ of a list and of an artist, with the size of
+  each option shown before you choose; and four checkboxes in Settings — Charts,
+  Audio, My lists, My favourites and settings — that are the same vocabulary,
+  so a backup can be narrowed the same way.
+
+- **Compartilhar** hands the file to the system share sheet where the browser
+  offers one, so on Android it reaches WhatsApp in a single tap instead of going
+  through Downloads. **Exportar** in Settings still downloads — a backup is a
+  file you keep, not something you send.
+
+### Fixed
+
+- Importing a file no longer overwrites what the receiving device did with those
+  songs. The merge now only touches the fields of the parts the file actually
+  declares, so a shared repertoire stops wiping the recipient's favourites, and
+  a chart-only file stops deleting audio that is already there. Absence in a
+  file is no longer read as an instruction to delete.
+
 ## [0.11.0] - 2026-08-15
 
 ### Added
