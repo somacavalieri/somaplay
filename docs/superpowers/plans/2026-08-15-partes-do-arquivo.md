@@ -526,10 +526,10 @@ export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
 }
 ```
 
-E acrescentar ao bloco de imports do topo de `app/js/backup.js`:
+E acrescentar ao bloco de imports do topo de `app/js/backup.js` — **só `PARTES_TODAS` nesta tarefa**; `podaPorPartes` e `fundeMusica` entram na Task 4, que é onde eles passam a ser usados. Import morto num commit é ruído:
 
 ```js
-import { PARTES_TODAS, podaPorPartes, fundeMusica } from './partes.js';
+import { PARTES_TODAS } from './partes.js';
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -714,7 +714,13 @@ Expected: PASS, 9 testes.
 
 - [ ] **Step 5: Wire the export side**
 
-Em `app/js/backup.js`, substituir a assinatura e o miolo de `exportLibrary`:
+Primeiro, estender o import de `./partes.js` no topo de `app/js/backup.js` (a Task 3 deixou só `PARTES_TODAS`):
+
+```js
+import { PARTES_TODAS, podaPorPartes, fundeMusica } from './partes.js';
+```
+
+Depois, substituir a assinatura e o miolo de `exportLibrary`:
 
 ```js
 // Sem argumento, o comportamento é o de sempre: a biblioteca inteira, todas as
@@ -1647,11 +1653,40 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `app/js/version.js`
 - Modify: `app/sw.js:2`
+- Modify: `CHANGELOG.md`
 - Modify: `CLAUDE.md`
 
 **Interfaces:**
 - Consumes: tudo.
 - Produces: release.
+
+- [ ] **Step 0: Add the CHANGELOG entry**
+
+`app/test/version.test.js:27` exige `## [<VERSION>]` em `CHANGELOG.md` — subir a versão sem isso deixa a suíte vermelha. Acrescentar no topo da lista de versões, **acima** de `## [0.11.0]`, no formato Keep a Changelog que o arquivo já usa:
+
+```markdown
+## [0.12.0] - 2026-08-15
+
+### Added
+
+- A `.somaplay` file now declares which **parts** it carries — `cifra`, `audio`,
+  `pessoal` — and sharing can leave parts out. You can send a repertoire as
+  charts only, small enough for WhatsApp, and send the audio afterwards as a
+  separate pack that finds its own songs.
+
+  New: **Compartilhar** in the ⋯ of a list and of an artist, with the size of
+  each option shown before you choose; and four checkboxes in Settings — Charts,
+  Audio, My lists, My favourites and settings — that are the same vocabulary,
+  so a backup can be narrowed the same way.
+
+### Fixed
+
+- Importing a file no longer overwrites what the receiving device did with those
+  songs. The merge now only touches the fields of the parts the file actually
+  declares, so a shared repertoire stops wiping the recipient's favourites, and
+  a chart-only file stops deleting audio that is already there. Absence in a
+  file is no longer read as an instruction to delete.
+```
 
 - [ ] **Step 1: Bump both literals**
 
@@ -1726,7 +1761,7 @@ E na seção **Architecture**, trocar o marcador `**Storage:**` por:
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/js/version.js app/sw.js CLAUDE.md
+git add app/js/version.js app/sw.js CHANGELOG.md CLAUDE.md
 git commit -m "release: 0.12.0 — file parts
 
 MINOR: new capability. Both version literals move together, and the SHELL
