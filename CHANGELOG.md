@@ -32,6 +32,20 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.11.0] - 2026-08-15
+
+### Added
+
+- Chord charts can now use a whole chord as the bass — `Dm7/G7`, `C/Bb7M`,
+  `Am7/D9`. The slash after a chord already accepted a bass *note* (`D/F#`) and
+  a CifraClub-style extension (`A7/13`), but not a bass *chord*.
+
+  This was not cosmetic. A token the parser does not recognise drops the whole
+  line, because a chord line requires every token to be a chord or a mark — so
+  the chart was demoted to lyrics and the song opened **with no chords at all**,
+  without any error. Almir Chediak prints `Dm7/G7` twenty-two times in *Beleza
+  pura* alone, so that whole song was unreadable.
+
 ## [0.10.0] - 2026-08-14
 
 ### Changed

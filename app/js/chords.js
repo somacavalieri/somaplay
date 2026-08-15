@@ -15,8 +15,20 @@ import { defaultShape } from './chordbook.js';
 // valeria em qualquer posição e as palavras "Com", "Bom", "Como", "Dom" — nota
 // seguida de 'o' e mais letra — passariam a ser acorde. Ver o spec
 // 2026-08-10-diminuto-com-o-design.md; a segunda guarda mora em isChordLine.
+// Depois da barra cabe um ACORDE INTEIRO, não só a nota do baixo: o Chediak
+// imprime `Dm7/G7` (22 vezes só em "Beleza pura"), e antes disso o token não
+// casava — o que derrubava a LINHA toda pela regra de isChordLine e fazia a
+// música abrir sem acorde nenhum, em silêncio. Por isso o corpo do acorde é um
+// pedaço nomeado, reusado dos dois lados da barra. A guarda contra palavra de
+// letra continua sendo a nota inicial: "Como", "Bom", "Dom" e "C/Como" seguem
+// fora, porque sobra letra depois do 'o' terminal.
+const QUAL = '(?:m|maj|min|dim|aug|sus2|sus4|sus|add\\d+|M|°|º|\\+|-|\\d)*';
+const PAREN = '(?:\\([^)]{1,7}\\))*';
+const CORPO = `[A-G][#b]?${QUAL}o?${PAREN}`;
+const EXT_CC = '\\d+[M+\\-#b]?';        // extensão estilo CifraClub: /7, /13, /5-
+const RE_ACORDE = new RegExp(`^${CORPO}(?:\\/(?:${CORPO}|${EXT_CC}))*${PAREN}$`);
 export function isChordTok(t) {
-  return /^[A-G][#b]?(m|maj|min|dim|aug|sus2|sus4|sus|add\d+|M|°|º|\+|-|\d)*o?(\([^)]{1,7}\))*(\/([A-G][#b]?|\d+[M+\-#b]?))*(\([^)]{1,7}\))*$/.test(t);
+  return RE_ACORDE.test(t);
 }
 
 // Token que, sozinho, tanto pode ser diminuto quanto palavra: feito só de letras e
