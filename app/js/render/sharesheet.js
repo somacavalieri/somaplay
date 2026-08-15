@@ -12,7 +12,7 @@ import { S, blobIdsDasMusicas, songById } from '../state.js';
 import { podaPorPartes } from '../partes.js';
 import { DB } from '../db.js';
 import { I, esc } from '../icons.js';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 
 export const OPCOES = [
   { id: 'cifras', partes: ['cifra'] },
@@ -22,11 +22,14 @@ export const OPCOES = [
 
 // 1,8 MB reads; 1887436,8 bytes does not. One decimal below ten, none above, and
 // KB always whole — nobody chooses a delivery channel over half a kilobyte.
-// '' means "not measured yet", never 0, which would read as an empty file.
+// '' means "not measured yet", never 0, which would read as an empty file. The
+// decimal separator follows the language, like the storage bar in settings.js:
+// in English a comma would read as a thousands separator, not a decimal point.
 export function formataTamanho(bytes) {
   if (bytes === null || bytes === undefined) return '';
   const b = Math.max(bytes, 0);
-  const um = (n, u) => `${(n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', ',')} ${u}`;
+  const dec = getLang() === 'pt' ? ',' : '.';
+  const um = (n, u) => `${(n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', dec)} ${u}`;
   if (b >= 1e9) return um(b / 1e9, 'GB');
   if (b >= 1e6) return um(b / 1e6, 'MB');
   return `${Math.round(b / 1e3)} KB`;
@@ -70,11 +73,12 @@ export function renderShareSheet() {
       <span class="ct">${formataTamanho(tam[o.id])}</span>
     </button>`).join('');
 
-  // O data-a fica no backdrop, e a ação confere que o clique foi NELE: a
-  // delegação global usa closest('[data-a]'), então sem essa checagem um clique
-  // no fundo do painel encontraria o backdrop e fecharia a folha.
+  // O backdrop leva o data-a e o painel leva data-stop="1", como o .scrim e o
+  // .popover já fazem: a delegação global (main.js) descarta o closeShare
+  // quando o clique nasceu dentro do conteúdo protegido. Testar o alvo direto
+  // não serviria — num botão com ícone o alvo real é o <svg> de dentro.
   return `<div class="sheet-backdrop" data-a="closeShare">
-    <div class="sheet">
+    <div class="sheet" data-stop="1">
       <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(t('share.title', { name: sh.titulo }))}</div>
       <div style="color:var(--muted);font-size:13px;margin:2px 0 14px">${songs.length} ${t(songs.length === 1 ? 'common.song' : 'common.songs')}</div>
       ${linhas}

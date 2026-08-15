@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OPCOES, formataTamanho } from '../js/render/sharesheet.js';
+import { setLang } from '../js/i18n.js';
 
 test('cada opção da folha mapeia para as partes certas', () => {
   const porId = Object.fromEntries(OPCOES.map((o) => [o.id, o.partes]));
@@ -20,11 +21,22 @@ test('nenhuma opção da folha compartilha o pessoal', () => {
 });
 
 test('o tamanho é legível na escala que importa', () => {
+  setLang('pt');
   assert.equal(formataTamanho(0), '0 KB');
   assert.equal(formataTamanho(1536), '2 KB');          // KB é sempre inteiro
   assert.equal(formataTamanho(1_800_000), '1,8 MB');
   assert.equal(formataTamanho(184_000_000), '184 MB');
   assert.equal(formataTamanho(2_500_000_000), '2,5 GB');
+});
+
+// O separador decimal segue o idioma, como a barra de armazenamento em
+// settings.js já faz. Em inglês a vírgula leria como separador de milhar.
+test('o separador decimal segue o idioma', () => {
+  setLang('en');
+  assert.equal(formataTamanho(1_800_000), '1.8 MB');
+  assert.equal(formataTamanho(2_500_000_000), '2.5 GB');
+  assert.equal(formataTamanho(184_000_000), '184 MB');  // sem decimal, igual nos dois
+  setLang('pt');                                        // não vaza para os outros testes
 });
 
 test('tamanho desconhecido não vira zero', () => {
