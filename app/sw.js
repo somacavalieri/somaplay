@@ -16,6 +16,7 @@ const SHELL = [
   './js/scroll-speed.js',
   './js/backup.js',
   './js/merge.js',
+  './js/partes.js',
   './js/icons.js',
   './js/samples.js',
   './js/version.js',
