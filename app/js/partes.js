@@ -36,3 +36,26 @@ export function podaPorPartes(songs, partes) {
     return out;
   });
 }
+
+// The app-wide invariant: every song has a cifra object, because the add/edit
+// form always creates one. An audio-only pack would break it, and normalizaCifra
+// (db.js:186) returns the song untouched when cifra is missing instead of
+// filling in a default. Restoring it here means one place, rather than auditing
+// every render for an unguarded `.cifra.`.
+const cifraVazia = () => ({ tipo: null, imagens: [], texto: '', acordes: [], digitacoes: {} });
+
+// Merge one incoming song onto what the device already has.
+//
+// The whole rule: a field belonging to a part the file does NOT declare is never
+// touched. That is what keeps an audio pack alive when a light file lands after
+// it, and what keeps the recipient's favourites when a repertoire update lands.
+//
+// `atual` is null for a song the device does not have yet.
+export function fundeMusica(atual, doArquivo, partes) {
+  const ps = partes || PARTES_TODAS;
+  const out = { ...(atual || {}) };
+  for (const k of IDENTIDADE) if (k in doArquivo) out[k] = doArquivo[k];
+  for (const p of ps) for (const k of (CAMPOS[p] || [])) if (k in doArquivo) out[k] = doArquivo[k];
+  if (!out.cifra) out.cifra = cifraVazia();
+  return out;
+}

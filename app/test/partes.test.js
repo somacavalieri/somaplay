@@ -5,7 +5,7 @@
 // usuário já usa — não regrediu quando as partes entraram.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { podaPorPartes, PARTES_TODAS } from '../js/partes.js';
+import { podaPorPartes, fundeMusica, PARTES_TODAS } from '../js/partes.js';
 
 const musica = () => ({
   id: 's1', artistId: 'ar1', title: 'Aquele Abraço',
@@ -90,4 +90,87 @@ test('não muta a música recebida', () => {
   podaPorPartes([m], ['audio']);
   assert.equal(m.cifra.texto, 'D A7');
   assert.equal(m.favorita, true);
+});
+
+// --- a fusão -------------------------------------------------------------
+// A regra inteira: um campo de parte NÃO declarada nunca é tocado. É o que faz
+// o pacote de áudio sobreviver a um arquivo leve importado depois, e as
+// favoritas de quem recebe sobreviverem a uma atualização de repertório.
+const CIFRA_VAZIA = { tipo: null, imagens: [], texto: '', acordes: [], digitacoes: {} };
+
+test('arquivo leve não encosta no áudio que já existe', () => {
+  const atual = musica();
+  const leve = { id: 's1', artistId: 'ar1', title: 'Aquele Abraço', tom: 'E', cifra: { tipo: 'texto', texto: 'E B7' } };
+  const out = fundeMusica(atual, leve, ['cifra']);
+  assert.equal(out.tom, 'E');
+  assert.equal(out.cifra.texto, 'E B7');
+  assert.deepEqual(out.stems, atual.stems);
+});
+
+test('arquivo compartilhado não encosta nas favoritas de quem recebe', () => {
+  const atual = { ...musica(), favorita: true };
+  const compartilhado = { id: 's1', artistId: 'ar1', title: 'Aquele Abraço', favorita: false, tom: 'E' };
+  const out = fundeMusica(atual, compartilhado, ['cifra']);
+  assert.equal(out.favorita, true);
+  assert.equal(out.tom, 'E');
+});
+
+test('pacote de áudio não encosta na cifra que já existe', () => {
+  const atual = musica();
+  const pacote = { id: 's1', artistId: 'ar1', title: 'Aquele Abraço', stems: [{ blobId: 'novo', vol: 80 }] };
+  const out = fundeMusica(atual, pacote, ['audio']);
+  assert.deepEqual(out.stems, [{ blobId: 'novo', vol: 80 }]);
+  assert.equal(out.cifra.texto, 'D A7');
+  assert.equal(out.letra, 'la la');
+});
+
+test('backup completo sobrescreve tudo', () => {
+  const atual = musica();
+  const doBackup = { ...musica(), tom: 'G', favorita: false, stems: [] };
+  const out = fundeMusica(atual, doBackup, PARTES_TODAS);
+  assert.equal(out.tom, 'G');
+  assert.equal(out.favorita, false);
+  assert.deepEqual(out.stems, []);
+});
+
+test('música nova de pacote de áudio nasce com cifra VAZIA, nunca ausente', () => {
+  const pacote = { id: 'novo', artistId: 'ar1', title: 'Refazenda', stems: [{ blobId: 'a' }] };
+  const out = fundeMusica(null, pacote, ['audio']);
+  assert.deepEqual(out.cifra, CIFRA_VAZIA);
+  assert.deepEqual(out.stems, [{ blobId: 'a' }]);
+});
+
+test('música nova de arquivo leve mantém a cifra que veio', () => {
+  const leve = { id: 'novo', artistId: 'ar1', title: 'Refazenda', cifra: { tipo: 'texto', texto: 'C G' } };
+  const out = fundeMusica(null, leve, ['cifra']);
+  assert.equal(out.cifra.texto, 'C G');
+});
+
+// A PROPRIEDADE que sustenta a extensão: as duas ordens chegam no mesmo lugar.
+// Se este teste cair, o pacote de áudio deixou de ser uma extensão.
+test('leve→pacote e pacote→leve chegam no mesmo registro', () => {
+  const leve = { id: 's9', artistId: 'ar1', title: 'Domingo no Parque', tom: 'A', cifra: { tipo: 'texto', texto: 'A E' }, letra: 'oi', estilo: 'MPB', fonte: 'VJ' };
+  const pacote = { id: 's9', artistId: 'ar1', title: 'Domingo no Parque', stems: [{ blobId: 'x', vol: 70 }], full: [] };
+
+  const leveDepoisPacote = fundeMusica(fundeMusica(null, leve, ['cifra']), pacote, ['audio']);
+  const pacoteDepoisLeve = fundeMusica(fundeMusica(null, pacote, ['audio']), leve, ['cifra']);
+
+  assert.deepEqual(leveDepoisPacote, pacoteDepoisLeve);
+  assert.equal(leveDepoisPacote.cifra.texto, 'A E');
+  assert.deepEqual(leveDepoisPacote.stems, [{ blobId: 'x', vol: 70 }]);
+});
+
+test('partes vazio não explode: só a identidade e a invariante da cifra', () => {
+  const out = fundeMusica(null, { id: 'z', artistId: 'a', title: 'T', tom: 'C' }, []);
+  assert.equal(out.id, 'z');
+  assert.ok(!('tom' in out));
+  assert.deepEqual(out.cifra, CIFRA_VAZIA);
+});
+
+test('não muta nenhum dos dois lados', () => {
+  const atual = musica();
+  const doArquivo = { id: 's1', artistId: 'ar1', title: 'X', stems: [] };
+  fundeMusica(atual, doArquivo, ['audio']);
+  assert.equal(atual.stems.length, 1);
+  assert.equal(atual.title, 'Aquele Abraço');
 });
