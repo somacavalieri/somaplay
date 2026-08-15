@@ -10,7 +10,8 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, nomeDoExport, stampDeHoje } from '../js/backup.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje } from '../js/backup.js';
+import { PARTES_TODAS } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
 // mesmo se os artistas fossem filtrados, e a asserção que mais importa não
@@ -84,32 +85,63 @@ test('tolera biblioteca com campos ausentes', () => {
 
 // --- nome do arquivo -------------------------------------------------------
 // Quatro arquivos chamados somaplay-backup-2026-08-11 na pasta de Downloads não
-// servem para nada. O nome precisa dizer o recorte.
+// servem para nada. O nome diz o recorte e, quando cifra e áudio se separam,
+// diz também qual metade é esta.
+const PALAVRAS = { cifras: 'cifras', audio: 'audio' };
 
-test('sem recorte, o nome é o de sempre', () => {
-  assert.equal(nomeDoExport(null, '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
-  assert.equal(nomeDoExport([], '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
+test('sem recorte, o miolo é o de sempre', () => {
+  assert.equal(recorteDeFontes(null, 'fontes'), 'backup');
+  assert.equal(recorteDeFontes([], 'fontes'), 'backup');
 });
 
-test('uma fonte vira o nome dela', () => {
-  assert.equal(nomeDoExport(['Songbook'], '2026-08-11', 'fontes'), 'somaplay-songbook-2026-08-11.somaplay');
-});
-
-test('o slug tira acento e espaço', () => {
-  assert.equal(nomeDoExport(['Coletâneas VJ'], '2026-08-11', 'fontes'), 'somaplay-coletaneas-vj-2026-08-11.somaplay');
+test('uma fonte vira o nome dela; o slug tira acento e espaço', () => {
+  assert.equal(recorteDeFontes(['Songbook'], 'fontes'), 'songbook');
+  assert.equal(recorteDeFontes(['Coletâneas VJ'], 'fontes'), 'coletaneas-vj');
 });
 
 test('o balde sem fonte tem nome legível', () => {
-  assert.equal(nomeDoExport(['__sem_fonte'], '2026-08-11', 'fontes'), 'somaplay-sem-fonte-2026-08-11.somaplay');
+  assert.equal(recorteDeFontes(['__sem_fonte'], 'fontes'), 'sem-fonte');
 });
 
 test('duas ou mais fontes viram a contagem, na língua do app', () => {
-  assert.equal(nomeDoExport(['A', 'B', 'C'], '2026-08-11', 'fontes'), 'somaplay-3-fontes-2026-08-11.somaplay');
-  assert.equal(nomeDoExport(['A', 'B'], '2026-08-11', 'sources'), 'somaplay-2-sources-2026-08-11.somaplay');
+  assert.equal(recorteDeFontes(['A', 'B', 'C'], 'fontes'), '3-fontes');
+  assert.equal(recorteDeFontes(['A', 'B'], 'sources'), '2-sources');
 });
 
-test('uma fonte que vira slug vazio cai no nome genérico', () => {
-  assert.equal(nomeDoExport(['###'], '2026-08-11', 'fontes'), 'somaplay-backup-2026-08-11.somaplay');
+test('uma fonte que vira slug vazio cai no miolo genérico', () => {
+  assert.equal(recorteDeFontes(['###'], 'fontes'), 'backup');
+});
+
+test('todas as partes não qualificam nada — o backup mantém o nome de hoje', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', PARTES_TODAS, PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('backup', '2026-08-15', null, PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('songbook', '2026-08-15', PARTES_TODAS, PALAVRAS), 'somaplay-songbook-2026-08-15.somaplay');
+});
+
+test('cifra e audio juntas também não qualificam', () => {
+  assert.equal(nomeDoExport('show-sabado', '2026-08-15', ['cifra', 'audio'], PALAVRAS), 'somaplay-show-sabado-2026-08-15.somaplay');
+});
+
+test('cifra sozinha e audio sozinho viram sufixo', () => {
+  assert.equal(nomeDoExport('show-sabado', '2026-08-15', ['cifra'], PALAVRAS), 'somaplay-show-sabado-cifras-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('show-sabado', '2026-08-15', ['audio'], PALAVRAS), 'somaplay-show-sabado-audio-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('songbook', '2026-08-15', ['cifra', 'pessoal'], PALAVRAS), 'somaplay-songbook-cifras-2026-08-15.somaplay');
+});
+
+test('tirar só o pessoal não muda o nome', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['cifra', 'audio'], PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
+});
+
+test('a palavra do sufixo vem traduzida de fora', () => {
+  assert.equal(nomeDoExport('setlist', '2026-08-15', ['cifra'], { cifras: 'charts', audio: 'audio' }), 'somaplay-setlist-charts-2026-08-15.somaplay');
+});
+
+test('o nome de uma lista é slugado', () => {
+  assert.equal(nomeDoExport('Show de Sábado!', '2026-08-15', PARTES_TODAS, PALAVRAS), 'somaplay-show-de-sabado-2026-08-15.somaplay');
+});
+
+test('recorte vazio cai no nome genérico', () => {
+  assert.equal(nomeDoExport('', '2026-08-15', PARTES_TODAS, PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
 });
 
 test('o carimbo de data é zero-padded', () => {

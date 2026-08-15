@@ -6,6 +6,7 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
+import { PARTES_TODAS } from './partes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -32,20 +33,33 @@ export function stampDeHoje(d = new Date()) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-// O nome diz o recorte. `fontes` é null ou vazio quando é tudo — aí o nome é o
-// de sempre, e um backup completo continua se chamando o que sempre se chamou.
+const slug = (parte) => String(parte || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tira acento
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+// O miolo do nome quando o recorte é por fonte. Sem seleção é 'backup', e é isso
+// que faz um backup completo continuar se chamando o que sempre se chamou.
 // `palavraFontes` chega de fora ("fontes"/"sources") para a função ficar pura:
 // nome de arquivo não é dado persistido, então traduzir aqui é seguro.
-export function nomeDoExport(fontes, stamp, palavraFontes) {
-  const slug = (parte) => String(parte)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // tira acento
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const nome = () => {
-    if (!fontes || !fontes.length) return 'backup';
-    if (fontes.length === 1) return slug(fontes[0]) || 'backup';
-    return `${fontes.length}-${slug(palavraFontes)}`;
-  };
-  return `somaplay-${nome()}-${stamp}.somaplay`;
+export function recorteDeFontes(fontes, palavraFontes) {
+  if (!fontes || !fontes.length) return 'backup';
+  if (fontes.length === 1) return slug(fontes[0]) || 'backup';
+  return `${fontes.length}-${slug(palavraFontes)}`;
+}
+
+// `recorte` é o miolo: de recorteDeFontes, ou o nome de uma lista/artista.
+//
+// A regra do qualificador é uma só, e vale nas duas superfícies: cifra e audio
+// JUNTAS não qualificam nada; sozinhas viram sufixo. `pessoal` e as listas ficam
+// fora do nome — quatro sufixos combinados dariam
+// somaplay-show-sabado-cifras-sem-listas-…, que não ajuda ninguém a escolher um
+// arquivo na pasta de Downloads.
+export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
+  const ps = partes || PARTES_TODAS;
+  const temCifra = ps.includes('cifra');
+  const temAudio = ps.includes('audio');
+  const qual = temCifra === temAudio ? '' : slug(temCifra ? palavras.cifras : palavras.audio);
+  return `somaplay-${slug(recorte) || 'backup'}-${qual ? `${qual}-` : ''}${stamp}.somaplay`;
 }
 
 // Sem argumento, o comportamento é exatamente o de hoje: a biblioteca inteira.

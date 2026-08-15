@@ -19,7 +19,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary, nomeDoExport, stampDeHoje } from './backup.js';
+import { exportLibrary, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje } from './backup.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -663,7 +663,12 @@ const actions = {
   async exportBackup() {
     const fontes = S.exportFontes;
     const sel = fontes?.length ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
-    const fileName = nomeDoExport(fontes, stampDeHoje(), t('settings.export.fileMulti'));
+    const fileName = nomeDoExport(
+      recorteDeFontes(fontes, t('settings.export.fileMulti')),
+      stampDeHoje(),
+      null,
+      {},
+    );
     toast(t('msg.backup.exporting'));
     try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
