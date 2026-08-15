@@ -169,3 +169,10 @@ test('pacote só de áudio avisa que as cifras somem', () => {
 test('faltar só o pessoal não gera aviso', () => {
   assert.deepEqual(avisosDeSubstituir(['cifra', 'audio']), []);
 });
+
+test('um partes corrompido é lido como arquivo completo, não explode', () => {
+  // Vale para qualquer coisa que não seja array: número, objeto, string.
+  assert.deepEqual(avisosDeSubstituir(42), []);
+  assert.deepEqual(avisosDeSubstituir({}), []);
+  assert.deepEqual(avisosDeSubstituir('cifra'), []);
+});

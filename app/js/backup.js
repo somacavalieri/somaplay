@@ -127,8 +127,13 @@ export async function lerManifest(file) {
 // Devolve NOMES DE CHAVE, não texto traduzido: assim a função continua pura e o
 // teste não depende da tabela de i18n. `pessoal` não gera aviso — perder as
 // favoritas num "substituir tudo" é o que substituir sempre fez.
+//
+// Um `partes` que não é array vem de arquivo corrompido ou feito à mão. Vale a
+// mesma leitura que importLibrary já faz: o que não é uma lista de partes
+// válida significa arquivo completo. A guarda mora aqui, e não em quem chama,
+// para a função ser total — ela roda ANTES do try do diálogo.
 export function avisosDeSubstituir(partes) {
-  const ps = partes || PARTES_TODAS;
+  const ps = Array.isArray(partes) ? partes : PARTES_TODAS;
   const out = [];
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
   if (!ps.includes('cifra')) out.push('msg.backup.replaceNoCifra');
