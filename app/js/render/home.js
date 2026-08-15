@@ -1,6 +1,7 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
 import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
+import { iniciais } from '../initials.js';
 import { t } from '../i18n.js';
 import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 
@@ -33,9 +34,9 @@ function artistCards() {
     const label = lensAtiva()
       ? `${matching.length} ${matching.length === 1 ? t('common.song') : t('common.songs')} · ${esc(filtroAtivoLabel())}`
       : `${songs.length} ${songs.length === 1 ? t('common.song') : t('common.songs')}`;
-    return `<div class="card-artist" data-a="openArtist" data-id="${a.id}">
-      <div class="avatar ${a.av}">${esc(a.name[0] || '?')}</div>
-      <div><div class="name">${esc(a.name)}</div><div class="count">${label}</div></div>
+    return `<div class="card-artist" data-a="openArtist" data-id="${a.id}" title="${esc(a.name)}">
+      <div class="avatar sm ${a.av}">${esc(iniciais(a.name))}</div>
+      <div class="txt"><div class="name">${esc(a.name)}</div><div class="count">${label}</div></div>
     </div>`;
   }).join('') + `</div>`;
 }
@@ -58,9 +59,9 @@ function estiloCards() {
   return `<div class="artist-grid">` + names.map((e) => {
     const n = groups[e].length;
     const label = e === SEM_ESTILO ? t('estilo.none') : e;
-    return `<div class="card-artist" data-a="openEstilo" data-id="${esc(e)}">
-      <div class="avatar teal">${esc(label[0] || '?')}</div>
-      <div><div class="name">${esc(label)}</div><div class="count">${n} ${n === 1 ? t('common.song') : t('common.songs')}</div></div>
+    return `<div class="card-artist" data-a="openEstilo" data-id="${esc(e)}" title="${esc(label)}">
+      <div class="avatar sm teal">${esc(iniciais(label))}</div>
+      <div class="txt"><div class="name">${esc(label)}</div><div class="count">${n} ${n === 1 ? t('common.song') : t('common.songs')}</div></div>
     </div>`;
   }).join('') + `</div>`;
 }
