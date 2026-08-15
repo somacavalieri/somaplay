@@ -105,8 +105,9 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
 
-// Lê só o cabeçalho: magic + tamanho + JSON. O import precisa disso, e o diálogo
-// de confirmação do "Substituir tudo" também — daí a função existir sozinha.
+// Lê só o cabeçalho: magic + tamanho + JSON. O import precisa disso, e o
+// diálogo de confirmação do "Substituir tudo" vai precisar do mesmo
+// cabeçalho, por isso a função existe sozinha.
 export async function lerManifest(file) {
   const headProbe = await file.slice(0, MAGIC.length + 11).text();
   if (!headProbe.startsWith(MAGIC)) throw new Error(t('msg.backup.notASomaplayFile'));
@@ -120,7 +121,10 @@ export async function lerManifest(file) {
 
 export async function importLibrary(file, { merge = false } = {}) {
   const { manifest, blobsStart } = await lerManifest(file);
-  const partes = manifest.partes || PARTES_TODAS;
+  // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —
+  // e sem essa guarda o `.includes` mais abaixo lançaria DEPOIS do DB.wipe() no
+  // modo substituir. Tratar como "completo" é a mesma regra de "partes ausente".
+  const partes = Array.isArray(manifest.partes) ? manifest.partes : PARTES_TODAS;
 
   // Substituir apaga tudo antes; merge preserva a biblioteca (upsert por id).
   if (!merge) await DB.wipe();
@@ -150,7 +154,7 @@ export async function importLibrary(file, { merge = false } = {}) {
     // assume que existe.
     for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes));
     for (const l of manifest.lists || []) await DB.putList(l);
-    if (manifest.settings) {
+    if (partes.includes('pessoal') && manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas
       const { lang, chordNotation, chordNotationTouched, ...rest } = manifest.settings;
       S.settings = { ...S.settings, ...rest };

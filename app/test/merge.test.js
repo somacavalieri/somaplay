@@ -47,10 +47,20 @@ const comAudio = () => ({
 });
 
 test('manifest sem partes se comporta como arquivo completo', () => {
-  const incoming = { artists: [{ id: 'a1', name: 'Gil' }], songs: [{ id: 's1', artistId: 'a1', title: 'Novo', tom: 'E' }], lists: [] };
+  const incoming = {
+    artists: [{ id: 'a1', name: 'Gil' }],
+    songs: [{ id: 's1', artistId: 'a1', title: 'Novo', tom: 'E', stems: [], favorita: false }],
+    lists: [],
+  };
   const p = mergePlan(comAudio(), incoming);
   assert.equal(p.songs[0].title, 'Novo');
   assert.equal(p.songs[0].tom, 'E');
+  // As duas asserções que fazem o teste discriminar: sem `partes`, o arquivo
+  // fala de TODAS as partes. Se o default virasse ['cifra'], as duas quebram —
+  // e é esse default que faz todo .somaplay anterior a esta branch importar
+  // exatamente como importava.
+  assert.deepEqual(p.songs[0].stems, []);
+  assert.equal(p.songs[0].favorita, false);
 });
 
 test('arquivo leve não apaga o áudio nem a favorita de quem recebe', () => {
@@ -105,4 +115,23 @@ test('backup completo continua sobrescrevendo tudo', () => {
   assert.equal(p.songs[0].tom, 'G');
   assert.equal(p.songs[0].favorita, false);
   assert.deepEqual(p.songs[0].stems, []);
+});
+
+test('o remap alcança o registro fundido de uma música que o aparelho já tem', () => {
+  const existing = {
+    artists: [{ id: 'DEV', name: 'Gil' }],
+    songs: [{ id: 's1', artistId: 'OLD', title: 'Aquele Abraço', tom: 'D',
+              cifra: { tipo: 'texto', texto: 'D A7', imagens: [], acordes: [], digitacoes: {} } }],
+    lists: [],
+  };
+  const incoming = {
+    partes: ['cifra'],
+    artists: [{ id: 'BKP', name: 'Gil' }],
+    songs: [{ id: 's1', artistId: 'BKP', title: 'Aquele Abraço', tom: 'E' }],
+    lists: [],
+  };
+  const p = mergePlan(existing, incoming);
+  assert.equal(p.songs[0].artistId, 'DEV');
+  assert.equal(p.songs[0].tom, 'E');
+  assert.equal(p.updated, 1);
 });

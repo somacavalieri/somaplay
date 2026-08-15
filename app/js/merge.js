@@ -29,7 +29,11 @@ export function mergePlan(existing, incoming) {
   // apagava o áudio e as favoritas de quem recebia.
   const songs = ((incoming && incoming.songs) || []).map((s) => {
     const artistId = remap[s.artistId] || s.artistId;
-    return fundeMusica(exById.get(s.id) || null, { ...s, artistId }, partes);
+    // Só reescreve artistId quando a música traz um: com `{ ...s, artistId }` a
+    // chave passa a existir sempre, e a fusão gravaria `undefined` por cima do
+    // artista que o aparelho já tinha.
+    const doArquivo = 'artistId' in s ? { ...s, artistId } : s;
+    return fundeMusica(exById.get(s.id) || null, doArquivo, partes);
   });
 
   let added = 0;
