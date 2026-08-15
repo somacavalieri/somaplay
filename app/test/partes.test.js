@@ -167,10 +167,25 @@ test('partes vazio não explode: só a identidade e a invariante da cifra', () =
   assert.deepEqual(out.cifra, CIFRA_VAZIA);
 });
 
-test('não muta nenhum dos dois lados', () => {
+test('não reescreve propriedade de nenhum dos dois lados', () => {
   const atual = musica();
-  const doArquivo = { id: 's1', artistId: 'ar1', title: 'X', stems: [] };
-  fundeMusica(atual, doArquivo, ['audio']);
-  assert.equal(atual.stems.length, 1);
+  const doArquivo = { id: 's1', artistId: 'ar1', title: 'Novo', stems: [{ blobId: 'z' }] };
+  const out = fundeMusica(atual, doArquivo, ['audio']);
   assert.equal(atual.title, 'Aquele Abraço');
+  assert.deepEqual(atual.stems, [{ blobId: 'aud1', name: 'violao', vol: 60, mute: false }]);
+  assert.equal(doArquivo.title, 'Novo');
+  assert.deepEqual(doArquivo.stems, [{ blobId: 'z' }]);
+  assert.equal(out.title, 'Novo');
+});
+
+// O contrato, afirmado em vez de suposto: a fusão é RASA. Quem chama grava e
+// descarta — DB.putSong clona ao entrar no IndexedDB e o import recarrega
+// S.songs do disco logo depois. Este teste existe para que trocar a fusão por
+// uma cópia profunda seja uma decisão consciente, e não um acidente silencioso.
+test('o registro devolvido compartilha as estruturas aninhadas com as entradas', () => {
+  const atual = musica();
+  const pacote = { id: 's1', artistId: 'ar1', title: 'Aquele Abraço', stems: [{ blobId: 'novo' }] };
+  const out = fundeMusica(atual, pacote, ['audio']);
+  assert.equal(out.stems, pacote.stems);   // parte declarada: a referência vem do arquivo
+  assert.equal(out.cifra, atual.cifra);    // parte não declarada: fica a do aparelho
 });

@@ -51,6 +51,14 @@ const cifraVazia = () => ({ tipo: null, imagens: [], texto: '', acordes: [], dig
 // it, and what keeps the recipient's favourites when a repertoire update lands.
 //
 // `atual` is null for a song the device does not have yet.
+//
+// CONTRACT: the returned record is a SHALLOW merge — its nested values are the
+// same objects as the inputs', not copies. Callers persist it and drop it:
+// DB.putSong structured-clones on the way into IndexedDB, and the import
+// reloads S.songs from disk right after. Mutating a nested field of the
+// returned record in place would write through into the caller's library — do
+// not do that. This matches mergePlan, which has always returned
+// `{ ...s, artistId }`; a deep copy here would be the only one in the codebase.
 export function fundeMusica(atual, doArquivo, partes) {
   const ps = partes || PARTES_TODAS;
   const out = { ...(atual || {}) };
