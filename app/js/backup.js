@@ -100,7 +100,12 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   const blob = new Blob([header, ...parts], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = fileName || nomeDoExport('backup', stampDeHoje(), ps, {});
+  // `palavras` real, não `{}`: sem ela um recorte parcial pela fronteira de
+  // fallback perderia o qualificador (cifras/áudio) do nome, e um backup
+  // parcial ficaria com o mesmo nome de um completo.
+  a.download = fileName || nomeDoExport('backup', stampDeHoje(), ps, {
+    cifras: t('share.word.cifras'), audio: t('share.word.audio'),
+  });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }

@@ -22,6 +22,7 @@ import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
 import { exportLibrary, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje } from './backup.js';
+import { PARTES_TODAS } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -629,6 +630,16 @@ const actions = {
     S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
   },
+  // A remarcação reconstrói a partir de PARTES_TODAS para a ordem do array ser
+  // sempre a canônica — assim o `partes` gravado no arquivo não depende da
+  // ordem em que as caixas foram clicadas.
+  toggleExportParte(d) {
+    S.exportPartes = S.exportPartes.includes(d.id)
+      ? S.exportPartes.filter((p) => p !== d.id)
+      : [...PARTES_TODAS.filter((p) => p === d.id || S.exportPartes.includes(p))];
+    update();
+  },
+  toggleExportListas() { S.exportListas = !S.exportListas; update(); },
   // Apaga todas as músicas de uma fonte. O motor recebe ids: aqui só se traduz
   // o eixo, se confirma e se reconcilia o que ficou apontando para o vazio.
   async deleteFonteAsk(d) {
@@ -665,15 +676,19 @@ const actions = {
   },
   async exportBackup() {
     const fontes = S.exportFontes;
-    const sel = fontes?.length ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
+    const partes = S.exportPartes;
+    const sel = {
+      songIds: fontes?.length ? songIdsDasFontes(S.songs, fontes) : null,
+      listIds: S.exportListas ? null : new Set(),
+    };
     const fileName = nomeDoExport(
       recorteDeFontes(fontes, t('settings.export.fileMulti')),
       stampDeHoje(),
-      null,
-      {},
+      partes,
+      { cifras: t('share.word.cifras'), audio: t('share.word.audio') },
     );
     toast(t('msg.backup.exporting'));
-    try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
+    try { await exportLibrary({ ...sel, partes, fileName }); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   toggleArtistMenu() { S.artistMenuOpen = !S.artistMenuOpen; update(); },

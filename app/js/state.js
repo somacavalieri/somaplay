@@ -36,6 +36,8 @@ export const S = {
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
+  exportPartes: ['cifra', 'audio', 'pessoal'],  // o que de cada música; todas = backup
+  exportListas: true,                           // as listas viajam? backup quer que sim
 
   // biblioteca (cache em memória, espelho do IDB)
   artists: [],
