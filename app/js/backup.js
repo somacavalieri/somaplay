@@ -97,15 +97,24 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   if (ps.includes('pessoal')) manifest.settings = S.settings;
   const json = JSON.stringify(manifest);
   const header = MAGIC + String(new TextEncoder().encode(json).byteLength).padStart(10, '0') + '\n' + json;
-  const blob = new Blob([header, ...parts], { type: 'application/octet-stream' });
+  const nome = fileName || nomeDoExport('backup', stampDeHoje(), ps, {});
+  return new File([header, ...parts], nome, { type: 'application/octet-stream' });
+}
+
+// Como o arquivo chega na mão da pessoa. No Chrome Android a folha do sistema
+// manda direto pro WhatsApp — um toque, em vez de baixar, achar em Downloads e
+// anexar. Onde não existir, o caminho de sempre continua inteiro por baixo.
+//
+// Cancelar a folha do sistema lança AbortError, e isso NÃO é uma falha: sem
+// esta guarda o usuário veria um toast de erro por ter mudado de ideia.
+export async function entregaArquivo(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  // `palavras` real, não `{}`: sem ela um recorte parcial pela fronteira de
-  // fallback perderia o qualificador (cifras/áudio) do nome, e um backup
-  // parcial ficaria com o mesmo nome de um completo.
-  a.download = fileName || nomeDoExport('backup', stampDeHoje(), ps, {
-    cifras: t('share.word.cifras'), audio: t('share.word.audio'),
-  });
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }

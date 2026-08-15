@@ -21,7 +21,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
+import { exportLibrary, entregaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
 import { PARTES_TODAS } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
@@ -688,7 +688,7 @@ const actions = {
       { cifras: t('share.word.cifras'), audio: t('share.word.audio') },
     );
     toast(t('msg.backup.exporting'));
-    try { await exportLibrary({ ...sel, partes, fileName }); toast(t('msg.backup.exported')); }
+    try { await entregaArquivo(await exportLibrary({ ...sel, partes, fileName })); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   toggleArtistMenu() { S.artistMenuOpen = !S.artistMenuOpen; update(); },
@@ -741,7 +741,7 @@ const actions = {
     update();
     toast(t('msg.backup.exporting'));
     try {
-      await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName });
+      await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName }));
       toast(t('msg.backup.exported'));
     } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
