@@ -101,22 +101,29 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   return new File([header, ...parts], nome, { type: 'application/octet-stream' });
 }
 
-// Como o arquivo chega na mão da pessoa. No Chrome Android a folha do sistema
-// manda direto pro WhatsApp — um toque, em vez de baixar, achar em Downloads e
-// anexar. Onde não existir, o caminho de sempre continua inteiro por baixo.
-//
-// Cancelar a folha do sistema lança AbortError, e isso NÃO é uma falha: sem
-// esta guarda o usuário veria um toast de erro por ter mudado de ideia.
-export async function entregaArquivo(file) {
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return; }
-    catch (e) { if (e && e.name === 'AbortError') return; }
-  }
+// O caminho de sempre: o arquivo cai na pasta de downloads. É o que Exportar
+// (backup) usa, porque backup é "me dê um arquivo para guardar" — abrir a folha
+// do sistema para isso obrigaria a escolher um destino a cada vez.
+export function baixaArquivo(file) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(file);
   a.download = file.name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+
+// Devolve false só quando a pessoa desistiu na folha do sistema: nada foi
+// entregue, e quem chama não pode dizer que foi.
+export async function entregaArquivo(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return true; }
+    // Desistir não é falha: sai quieto, sem baixar e sem toast de erro.
+    catch (e) { if (e && e.name === 'AbortError') return false; }
+    // Qualquer OUTRA falha do compartilhamento cai no download de propósito:
+    // a pessoa continua ficando com o arquivo, só por outro caminho.
+  }
+  baixaArquivo(file);
+  return true;
 }
 
 // Lê só o cabeçalho: magic + tamanho + JSON. O import precisa disso, e o
