@@ -65,6 +65,8 @@ export const PT = {
   'settings.notation.br': 'Brasileira',
   'settings.notation.intl': 'Internacional',
   'settings.about.title': 'Sobre',
+  'settings.about.version': 'Versão',
+  'settings.about.changelog': 'Ver novidades',
   // compartilhamento de música
   'share.title': 'Compartilhar "{name}"',
   'share.opt.cifras': 'Só as cifras',
@@ -75,8 +77,6 @@ export const PT = {
   'share.opt.audioSub': 'Pra quem já recebeu as cifras.',
   'share.word.cifras': 'cifras',
   'share.word.audio': 'audio',
-  'settings.about.version': 'Versão',
-  'settings.about.changelog': 'Ver novidades',
   'home.tabs.artists': 'Artistas',
   'home.tabs.songs': 'Músicas',
   'home.tabs.styles': 'Estilos',
