@@ -32,6 +32,25 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.10.0] - 2026-08-14
+
+### Changed
+
+- The source filter is now a strip of pills that is always visible, in the same row
+  as the tabs, instead of a dropdown behind a tag icon. The filter state and every
+  source's song count are readable without a click.
+- Sources combine: the first click on a source isolates it, further clicks add and
+  remove. Removing the last one — or selecting every source — returns to **All**.
+- The selection persists between sessions. On startup it is pruned against the
+  sources the library actually has, so a source deleted or missing from a restored
+  backup cannot leave the library looking empty with nothing on screen to explain it.
+- Each source carries a fixed colour, derived from its name so it stays the same
+  across devices.
+
+### Removed
+
+- The source dropdown and its tag button in the top bar.
+
 ## [0.9.0] - 2026-08-14
 
 First numbered release. The app was already in production and in use on stage;

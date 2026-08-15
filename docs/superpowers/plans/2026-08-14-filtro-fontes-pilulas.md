@@ -23,7 +23,7 @@ gerenciador de pacotes. Testes com `node --test` (Node ≥ 20). CSS num arquivo 
 - **Rodar os testes:** `cd app && node --test`. Sintaxe de um módulo: `cd app && node --check js/<arquivo>.js`.
 - **Servidor manual:** `cd app && python3 -m http.server 8137` → http://localhost:8137. `file://` não funciona (Service Worker, OPFS, ES modules).
 - **Todo módulo novo em `app/js/` PRECISA entrar no array `SHELL` de `app/sw.js`**, ou o app quebra offline. `app/test/shell.test.js` reprova se faltar.
-- **Mexeu no `SHELL` → suba `VERSION` na linha 2 de `app/sw.js`.** Hoje: `somaplay-v38`. Este plano deixa em `somaplay-v39`.
+- **A versão do app é um número X.Y.Z que vive em TRÊS lugares em sincronia**, cobrados por `app/test/version.test.js`: `export const VERSION` em `app/js/version.js`, `const VERSION = 'somaplay-<versão>'` na linha 2 de `app/sw.js`, e uma seção `## [<versão>]` em `CHANGELOG.md`. Hoje: `0.9.0`. **Este plano sobe para `0.10.0` — MINOR, porque muda o que o app faz — e o bump acontece de uma vez só na Task 5**, junto da entrada do CHANGELOG que descreve a funcionalidade pronta. Nenhuma task anterior mexe na versão; `version.test.js` só verifica sincronia entre os três literais, e `0.9.0` segue consistente até lá.
 - **Chave de tradução nova entra nas DUAS tabelas** (`app/js/i18n/pt.js` e `app/js/i18n/en.js`), senão `app/test/i18n.test.js` reprova por paridade.
 - **`t()` não escapa parâmetro.** Nome de fonte é conteúdo do usuário: `esc()` antes de passar para `t()`.
 - **Nunca traduzir um valor de `data-*`.** `data-id` carrega a grafia salva da fonte; só o rótulo visível passa por `t()`.
@@ -181,8 +181,17 @@ test('a lente de modos reduz as contagens', () => {
 test('SEM_FONTE entra por último, com a contagem das músicas sem fonte', () => {
   const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', '  ')];
   const { itens, total } = contagensPorFonte(songs, { nomeDoArtista: nomeFixo });
-  assert.deepEqual(itens, [{ nome: SEM_FONTE, n: 2 }, { nome: 'RV', n: 1 }]);
+  assert.deepEqual(itens, [{ nome: 'RV', n: 1 }, { nome: SEM_FONTE, n: 2 }]);
   assert.equal(total, 3);
+});
+
+// O caso que prende a ordem: nenhum outro teste cruza a fronteira entre busca
+// vazia e busca preenchida no mesmo conjunto de músicas, que é onde uma ordem
+// dependente do filtro apareceria.
+test('a ordem das pílulas não muda quando a busca entra', () => {
+  const songs = [m('Drão', 'RV'), m('Palco', ''), m('Refazenda', ''), m('Retiros', '')];
+  const nomes = (opts) => contagensPorFonte(songs, { nomeDoArtista: nomeFixo, ...opts }).itens.map((i) => i.nome);
+  assert.deepEqual(nomes({}), nomes({ query: 'dr' }));
 });
 
 test('o total é sempre a soma dos itens', () => {
@@ -198,10 +207,17 @@ test('grafias divergentes da mesma fonte somam na mesma pílula', () => {
 });
 ```
 
-Duas coisas para não estranhar na leitura: `nomeDoArtista` é injetado porque `artistName`
-lê `S.artists`, e um teste puro não pode depender do estado global; e `SEM_FONTE` aparece
-antes de `RV` no penúltimo caso porque `fontesDaBiblioteca` ordena por contagem (2 antes
-de 1) e só empurra o balde para o fim quando empata.
+Duas coisas para não estranhar na leitura. `nomeDoArtista` é injetado porque `artistName`
+lê `S.artists`, e um teste puro não pode depender do estado global. E `SEM_FONTE` vem
+depois de `RV` mesmo tendo mais músicas: `fontesDaBiblioteca` faz `out.push()` do balde
+**depois** do `.sort()`, então ele é sempre o último, com qualquer contagem — o teste
+pré-existente `'as músicas sem fonte viram um balde no fim da lista'` já prova isso, com o
+balde em 4 contra `Songbook` em 1.
+
+Daí a regra que o último teste prende: a ordem sai de `fontesDaBiblioteca(songs)` e **nunca**
+depende de `query` ou `modeFilter`. Ordenar os itens por contagem filtrada, ainda que só
+quando não há filtro, faz as pílulas trocarem de lugar na primeira tecla digitada — que é
+o defeito que a decisão 3 da função existe para impedir.
 
 - [ ] **Step 2: Rodar e ver falhar**
 
@@ -322,7 +338,7 @@ módulo de fora — o teste passa a cobrar assim que o arquivo existe.
 
 **Files:**
 - Create: `app/js/render/fontestrip.js`
-- Modify: `app/sw.js:2` (VERSION) e o array `SHELL`
+- Modify: `app/sw.js` — **só o array `SHELL`**. Não tocar na linha 2 (`VERSION`): o bump é da Task 5.
 - Test: `app/test/fontestrip.test.js` (novo)
 
 **Interfaces:**
@@ -463,21 +479,23 @@ export function fonteStripHTML(desligada = false) {
 As chaves de tradução usadas aqui entram na Task 3, Step 4. Até lá `t()` devolve a própria
 chave em vez de quebrar — e o módulo ainda não é chamado por ninguém.
 
-- [ ] **Step 4: Registrar no `SHELL` e subir a versão**
+- [ ] **Step 4: Registrar no `SHELL`**
 
-Em `app/sw.js`, linha 2: `const VERSION = 'somaplay-v38';` → `const VERSION = 'somaplay-v39';`
-
-E no array `SHELL`, junto das outras entradas de `./js/render/`:
+No array `SHELL` de `app/sw.js`, junto das outras entradas de `./js/render/`:
 
 ```js
   './js/render/fontestrip.js',
 ```
 
+**Não tocar na linha 2 (`const VERSION`).** A versão é artefato de release e sobe uma vez
+só, na Task 5, junto da entrada do CHANGELOG. `version.test.js` cobra sincronia entre os
+três literais, não que eles tenham mudado — `0.9.0` continua consistente aqui.
+
 - [ ] **Step 5: Rodar tudo e ver passar**
 
 Run: `cd app && node --test`
-Expected: PASS. Em particular `fontestrip.test.js` e os quatro testes de `shell.test.js` —
-"todo módulo JS do app está registrado no SHELL" é o que cobra o passo anterior.
+Expected: PASS. Em particular `fontestrip.test.js` e o teste de `shell.test.js` "todo
+módulo JS do app está registrado no SHELL", que é o que cobra o passo anterior.
 
 Run: `cd app && node --check js/render/fontestrip.js`
 Expected: sem saída.
@@ -499,12 +517,14 @@ ao clique e sobrevive a um reload. O overflow e as contagens durante a digitaç�
 Task 4.
 
 **Files:**
-- Modify: `app/js/state.js` (o `S`, `matchesFonte`, `lensAtiva`, `S.settings`, `initState`)
-- Modify: `app/js/render/home.js` (remove `fonteControl`, ajusta `filtroAtivoLabel` e a `.tabrow`)
+- Modify: `app/js/state.js` (o `S`, `matchesFonte`, `lensAtiva`, `S.settings`, `initState`, e apagar o `corDaFonte` antigo)
+- Modify: `app/js/render/home.js` (remove `fonteControl`, ajusta `filtroAtivoLabel`, `fonteBadge` e a `.tabrow`)
+- Modify: `app/test/fontes.test.js` (apagar os três testes do `corDaFonte` antigo)
 - Modify: `app/js/main.js` (ações, poda pós-import, remoções do menu)
 - Modify: `app/js/i18n/pt.js` e `app/js/i18n/en.js`
 - Modify: `app/css/app.css`
 - Test: `app/test/i18n.test.js` (sem código novo — a paridade já cobra)
+- Commit: acrescentar `app/test/fontes.test.js` ao `git add` do Step 11
 
 **Interfaces:**
 - Consumes: `fonteCasaAlguma`, `toggleFonte`, `podaFontes` (Task 1) e `fonteStripHTML(desligada)` (Task 2).
@@ -612,10 +632,11 @@ function filtroAtivoLabel() {
 }
 ```
 
-No `import` do topo, tirar `fontesDaBiblioteca` (não é mais usada aqui) e acrescentar:
+No `import` do topo, tirar `fontesDaBiblioteca` (não é mais usada aqui) **e `corDaFonte`**
+(ver o passo seguinte), e acrescentar:
 
 ```js
-import { fonteStripHTML } from './fontestrip.js';
+import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 ```
 
 Na `.tabrow` do `renderHome()`, pôr a faixa entre o `.tabsub` e a `.lens`:
@@ -639,6 +660,45 @@ Na `.tabrow` do `renderHome()`, pôr a faixa entre o `.tabsub` e a `.lens`:
 O funil deixa de rotular o grupo todo e passa a rotular só os chips T2/T3, que é o que
 sobra na `.lens`; a etiqueta na frente da faixa faz esse papel do outro lado da linha.
 
+- [ ] **Step 6b: Unificar a cor da fonte (Ruling 4)**
+
+A `main` já tem um `corDaFonte` em `app/js/state.js:143`, que devolve um índice `0–4` para
+as classes `.src-badge.f0`–`.f4` do badge de origem da aba Músicas. Ele chegou depois que o
+spec desta faixa foi escrito, e os dois sistemas discordam: **VJ** fica cinza no badge e
+verde na pílula, **RV** cinza contra âmbar, **RN** âmbar contra azul — na mesma tela. E com
+só 5 slots, VJ e RV colidem em `f4`, que é a colisão que o mapa fixo de seis existe para
+evitar.
+
+O pedido original é explícito — *"uma cor fixa por fonte, reaproveitada nos badges de
+origem das listas de músicas"* — então o sistema hex vence e passa a valer nos dois lugares.
+
+Em `app/js/state.js`, **apagar** a função `corDaFonte` inteira, com o bloco de comentário
+acima dela (~linhas 138-148). Em `app/test/fontes.test.js`, apagar os três testes que a
+exercitam (`'corDaFonte é determinística e ignora caixa e espaços'`, o que crava
+`CifraClub→1 / Songbook→2 / VJ→4`, e `'corDaFonte devolve sempre um índice inteiro 0–4'`)
+junto do comentário de bloco acima deles, e tirar `corDaFonte` da lista de `import`.
+O `fontestrip.test.js` já cobre a função que fica.
+
+Em `app/js/render/home.js`, `fonteBadge` passa a pintar por variável inline:
+
+```js
+function fonteBadge(s) {
+  const nome = fonteOf(s);
+  if (!nome) return ''; // sem fonte: sem badge — a ausência é informação
+  return `<span class="src-badge" style="--fc:${corDaFonte(nome)}" title="${t('home.song.sourceQualifier', { fonte: esc(nome) })}">${esc(nome)}</span>`;
+}
+```
+
+E em `app/css/app.css`, as cinco regras `.src-badge.f0`–`.f4` (linhas ~203-207) viram uma
+só, logo abaixo da `.src-badge` que já existe:
+
+```css
+/* Uma cor por fonte, a mesma da pílula do filtro: o badge e a faixa não podem
+   discordar sobre de que cor é o VJ. O fundo é a própria cor a 14%, que é o que
+   as regras .f0–.f4 faziam com os tints dos tokens. */
+.src-badge{color:var(--fc);background:color-mix(in srgb, var(--fc) 14%, transparent)}
+```
+
 - [ ] **Step 7: As ações em `main.js`**
 
 No `import` de `./state.js` do topo (~linha 6), acrescentar a função pura com apelido — o
@@ -648,23 +708,14 @@ apelido evita confundi-la com a ação de mesmo nome — e a poda:
   toggleFonte as calcToggleFonte, podaFontes,
 ```
 
-Junto das outras variáveis de módulo do topo (perto de `let pendingHandleIdx`):
-
-```js
-let pendingFonte = null;
-```
-
 Trocar as três ações de fonte (~linhas 235-237) por estas duas:
 
 ```js
   // setFonte (mais abaixo) já é dos atalhos do formulário — esta é a da lente.
-  // pendingFonte devolve o foco à pílula depois do re-render: update() reescreve
-  // o app inteiro, e sem isso a navegação por teclado morre no primeiro clique.
   toggleFonte(d) {
     S.fonteFilter = calcToggleFonte(S.fonteFilter, d.id, fontesDaBiblioteca(S.songs));
     S.settings.fonteFilter = S.fonteFilter;
     saveSettings();
-    pendingFonte = d.id;
     update();
   },
   clearFonte() {
@@ -770,7 +821,7 @@ Conferir:
 - [ ] **Step 11: Commit**
 
 ```bash
-git add app/js/state.js app/js/main.js app/js/render/home.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css
+git add app/js/state.js app/js/main.js app/js/render/home.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css app/test/fontes.test.js
 git commit -m "feat(fontes): faixa de pílulas multisseleção no lugar do dropdown"
 ```
 
@@ -903,6 +954,22 @@ No topo de `main.js`:
 import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
 ```
 
+Junto das outras variáveis de módulo do topo (perto de `let pendingHandleIdx`):
+
+```js
+let pendingFonte = null;
+```
+
+E na ação `toggleFonte` que a Task 3 criou, acrescentar a marcação antes do `update()`:
+
+```js
+    pendingFonte = d.id;
+    update();
+```
+
+Declaração, atribuição e leitura entram juntas nesta task de propósito: separadas, a Task 3
+entregaria uma variável que ninguém lê.
+
 Em `afterRender()` (~linha 92), junto do bloco do `pendingHandleIdx`:
 
 ```js
@@ -977,10 +1044,13 @@ git commit -m "feat(fontes): overflow, foco e contagens vivas da faixa"
 
 ---
 
-### Task 5: Responsivo e limpeza
+### Task 5: Responsivo, limpeza e release 0.10.0
 
 **Files:**
 - Modify: `app/css/app.css` (os `@media`)
+- Modify: `app/js/version.js` (a constante `VERSION`)
+- Modify: `app/sw.js:2` (a chave de cache)
+- Modify: `CHANGELOG.md` (entrada da versão nova)
 
 **Interfaces:**
 - Consumes: as classes `.fonte-strip` e `.fpill` das Tasks 3 e 4.
@@ -1024,19 +1094,74 @@ Em http://localhost:8137, com o DevTools aberto e a janela redimensionada:
 - Em emulação de toque (ponteiro grosso): as pílulas têm 44px de altura e dá para acertar uma com o dedo; a faixa rola por arrasto.
 - Em nenhuma largura o cabeçalho cresce a ponto de comer a lista.
 
-- [ ] **Step 4: Rodar tudo uma última vez**
+- [ ] **Step 4: Varrer o que sobrou do dropdown e commitar o CSS**
+
+Run: `cd app && grep -rn "fonteMenuOpen\|fonte-wrap\|fonte-menu\|setFonteFilter\|fonteControl\|home.fonte.clear" js css`
+Expected: nenhuma saída. É a varredura que confirma que o dropdown antigo saiu inteiro. Se
+sobrar qualquer ocorrência, apagar antes de seguir.
 
 Run: `cd app && node --test`
 Expected: PASS.
 
-Run: `cd app && grep -rn "fonteMenuOpen\|fonte-wrap\|fonte-menu\|setFonteFilter\|fonteControl\|home.fonte.clear" js css`
-Expected: nenhuma saída. É a varredura que confirma que o dropdown antigo saiu inteiro.
-
-- [ ] **Step 5: Commit**
-
 ```bash
 git add app/css/app.css
 git commit -m "feat(fontes): quebra da faixa em telas estreitas e alvos de toque"
+```
+
+- [ ] **Step 5: Subir a versão nos três lugares**
+
+A versão é ao mesmo tempo o que o usuário lê em Ajustes e a chave do cache do Service
+Worker, e `app/test/version.test.js` reprova se os três literais divergirem. **MINOR**
+(`0.9.0` → `0.10.0`), pela regra do `CHANGELOG.md`: "a change to what the app *does*".
+
+Em `app/js/version.js`:
+
+```js
+export const VERSION = '0.10.0';
+```
+
+Em `app/sw.js`, linha 2:
+
+```js
+const VERSION = 'somaplay-0.10.0';
+```
+
+Em `CHANGELOG.md`, uma seção nova **acima** de `## [0.9.0]`, e a seção `## [Unreleased]`
+volta a ser `Nothing yet.`:
+
+```markdown
+## [0.10.0] - 2026-08-14
+
+### Changed
+
+- The source filter is now a strip of pills that is always visible, in the same row
+  as the tabs, instead of a dropdown behind a tag icon. The filter state and every
+  source's song count are readable without a click.
+- Sources combine: the first click on a source isolates it, further clicks add and
+  remove. Removing the last one — or selecting every source — returns to **All**.
+- The selection persists between sessions. On startup it is pruned against the
+  sources the library actually has, so a source deleted or missing from a restored
+  backup cannot leave the library looking empty with nothing on screen to explain it.
+- Each source carries a fixed colour, derived from its name so it stays the same
+  across devices.
+
+### Removed
+
+- The source dropdown and its tag button in the top bar.
+```
+
+- [ ] **Step 6: Rodar os testes de versão e commitar o release**
+
+Run: `cd app && node --test test/version.test.js`
+Expected: PASS nos três — formato X.Y.Z, chave de cache `somaplay-0.10.0`, e entrada
+`## [0.10.0]` no CHANGELOG.
+
+Run: `cd app && node --test`
+Expected: PASS.
+
+```bash
+git add app/js/version.js app/sw.js CHANGELOG.md
+git commit -m "chore(release): 0.10.0 — filtro de fontes em pílulas"
 ```
 
 ---

@@ -4,7 +4,8 @@ import {
   songById, openSong as goSong, currentSong, toggleFav, deleteSong, deleteSongs, saveSong,
   createList, listById, toggleSongInList, reorderInList, favList, indicesPresentes,
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
-  SEM_FONTE, matchesFonte,
+  SEM_FONTE,
+  toggleFonte as calcToggleFonte, podarFonteFilter,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -25,6 +26,7 @@ import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, r
 import { isChordTok } from './chords.js';
 import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
+import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
 
 const app = document.getElementById('app');
 
@@ -46,17 +48,23 @@ let lastScreen = null;
 function captureUI(same) {
   if (!same) return null;
   const scrolls = [...document.querySelectorAll('.content-scroll,[data-autoscroll]')].map((el) => el.scrollTop);
+  // A faixa de fontes rola na horizontal, e update() reescreve o app inteiro:
+  // sem isto, clicar numa pílula joga a faixa de volta ao começo e as fontes do
+  // fim viram inalcançáveis na prática.
+  const hscrolls = [...document.querySelectorAll('[data-hscroll]')].map((el) => el.scrollLeft);
   const a = document.activeElement;
   const focus = a && a.id && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text'))
     ? { id: a.id, start: a.selectionStart, end: a.selectionEnd }
     : null;
-  return { scrolls, focus };
+  return { scrolls, hscrolls, focus };
 }
 
 function restoreUI(snap) {
   if (!snap) return;
   const els = document.querySelectorAll('.content-scroll,[data-autoscroll]');
   els.forEach((el, i) => { if (snap.scrolls[i] != null) el.scrollTop = snap.scrolls[i]; });
+  const hels = document.querySelectorAll('[data-hscroll]');
+  hels.forEach((el, i) => { if (snap.hscrolls[i] != null) el.scrollLeft = snap.hscrolls[i]; });
   if (!snap.focus) return;
   const el = document.getElementById(snap.focus.id);
   if (!el) return;
@@ -85,7 +93,7 @@ export function update() {
 
 function updateHomeResults() {
   const el = document.getElementById('home-results');
-  if (el) el.innerHTML = homeResults();
+  if (el) { el.innerHTML = homeResults(); refreshFonteCounts(); }
   else update();
 }
 
@@ -98,6 +106,20 @@ function afterRender() {
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
     pendingHandleIdx = null;
+  }
+
+  wireFonteStrip();
+
+  // Depois do re-render o foco cai no <body>. Varredura, e nunca uma string de
+  // seletor: nome de fonte é texto livre, e uma aspa ou colchete quebraria o
+  // querySelector. preventScroll porque o foco arrastaria a faixa e desfaria o
+  // scrollLeft que o restoreUI acabou de devolver.
+  if (pendingFonte != null) {
+    const alvo = pendingFonte === PENDING_TODAS
+      ? [...document.querySelectorAll('.fpill')].find((el) => el.classList.contains('todas'))
+      : [...document.querySelectorAll('.fpill')].find((el) => el.dataset.id === pendingFonte);
+    alvo?.focus({ preventScroll: true });
+    pendingFonte = null;
   }
 
   if (S.screen === 'list') {
@@ -215,7 +237,7 @@ let apagandoFonte = false;
 
 const actions = {
   // navegação
-  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
+  goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
   openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
@@ -229,7 +251,7 @@ const actions = {
     else { S.screen = 'home'; }
     update();
   },
-  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; S.fonteMenuOpen = false; update(); },
+  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
       ? S.modeFilter.filter((x) => x !== d.id)
@@ -238,10 +260,25 @@ const actions = {
   },
   toggleSortMenu() { S.sortMenuOpen = !S.sortMenuOpen; update(); },
   setSort(d) { S.sort = d.id; S.sortMenuOpen = false; update(); },
-  // setFonte (mais abaixo) já é dos atalhos do formulário — este é o da lente
-  toggleFonteMenu() { S.fonteMenuOpen = !S.fonteMenuOpen; update(); },
-  setFonteFilter(d) { S.fonteFilter = d.id; S.fonteMenuOpen = false; update(); },
-  clearFonte() { S.fonteFilter = null; S.fonteMenuOpen = false; update(); },
+  // setFonte (mais abaixo) já é dos atalhos do formulário — esta é a da lente.
+  toggleFonte(d) {
+    S.fonteFilter = calcToggleFonte(S.fonteFilter, d.id, fontesDaBiblioteca(S.songs));
+    S.settings.fonteFilter = S.fonteFilter;
+    saveSettings();
+    pendingFonte = d.id;
+    update();
+  },
+  clearFonte() {
+    S.fonteFilter = [];
+    S.settings.fonteFilter = [];
+    saveSettings();
+    pendingFonte = PENDING_TODAS;
+    update();
+  },
+  fonteScrollNext() {
+    const sc = document.querySelector('#fonte-strip .fonte-scroll');
+    if (sc) sc.scrollBy({ left: Math.round(sc.clientWidth * 0.7), behavior: 'smooth' });
+  },
 
   // favoritos / popover de listas
   toggleFav(d) { toggleFav(d.id); update(); },
@@ -343,6 +380,9 @@ const actions = {
     if (!confirm(t('msg.song.confirmDelete', { title: song.title }))) return;
     leavePlay();
     await deleteSong(song.id);
+    // Apagar a última música de uma fonte pequena não deixa pílula nenhuma
+    // marcada — a mesma poda do apagar-em-lote, aqui pro apagar avulso.
+    podarFonteFilter();
     S.screen = 'home';
     update();
     toast(t('msg.song.deleted'));
@@ -541,6 +581,9 @@ const actions = {
       S.draft = null;
       S.editSongId = null;
       S.chordEd = null;
+      // Editar a fonte da última música que a tinha esvazia aquela pílula do
+      // mesmo jeito que apagar a música esvaziaria — mesma poda.
+      podarFonteFilter();
       S.screen = 'home';
       update();
       toast(t('msg.song.saved', { title: song.title }));
@@ -604,9 +647,10 @@ const actions = {
       //
       // Duas coisas guardam GRAFIA de fonte e podem estar apontando para a que
       // acabou de sumir. A seleção do export volta para "todas", como no
-      // import; a lente da home só cai se não sobrou música nenhuma para ela.
+      // import; a seleção da lente é podada — a mesma regra do boot e do
+      // import, aqui a biblioteca é quem mudou por baixo dela.
       S.exportFontes = null;
-      if (S.fonteFilter !== null && !S.songs.some(matchesFonte)) S.fonteFilter = null;
+      podarFonteFilter();
       update();
       toast(t('msg.fonte.deleted', { name, count: n, song }));
     } catch (e) {
@@ -675,6 +719,13 @@ const actions = {
 // o mesmo espaço do data-idx que o seletor lá em cima procura.
 let pendingHandleIdx = null;
 function focusHandle(idx) { pendingHandleIdx = idx; }
+
+// Id da fonte cuja pílula deve receber o foco depois do próximo render —
+// mesmo padrão do pendingHandleIdx acima. A pílula "Todas" não tem data-id (não
+// é uma fonte de verdade), então usa este sentinela em vez de uma grafia — um
+// Symbol nunca colide com o que dataset.id devolve, que é sempre string.
+let pendingFonte = null;
+const PENDING_TODAS = Symbol('todas');
 
 // Reordena e re-renderiza uma única vez. Usado pelo teclado e pelo arraste.
 // AMBOS falam em POSIÇÃO VISÍVEL, porque é isso que o usuário vê e move; a
@@ -764,6 +815,7 @@ function wireBackupInput() {
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
       // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
       S.exportFontes = null;
+      podarFonteFilter();
       applyTheme();
       update();
       toast(merge
@@ -795,7 +847,6 @@ document.addEventListener('click', (e) => {
   }
   // clique fora fecha menus abertos
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
-  if (S.fonteMenuOpen && !e.target.closest('.fonte-wrap')) { S.fonteMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
@@ -847,8 +898,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.fonteMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.fonteMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
       update();
     }
   }

@@ -1,7 +1,8 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, fontesDaBiblioteca, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, corDaFonte } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { t } from '../i18n.js';
+import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 
@@ -9,7 +10,7 @@ const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 // escapa: o nome da fonte é conteúdo do usuário e t() não escapa parâmetro.
 function filtroAtivoLabel() {
   const partes = S.modeFilter.slice();
-  if (S.fonteFilter) partes.push(S.fonteFilter === SEM_FONTE ? t('home.fonte.none') : S.fonteFilter);
+  for (const f of S.fonteFilter) partes.push(f === SEM_FONTE ? t('home.fonte.none') : f);
   return partes.join(' · ');
 }
 
@@ -88,7 +89,7 @@ function ordinalHTML(s) {
 function fonteBadge(s) {
   const nome = fonteOf(s);
   if (!nome) return ''; // sem fonte: sem badge — a ausência é informação
-  return `<span class="src-badge f${corDaFonte(nome)}" title="${t('home.song.sourceQualifier', { fonte: esc(nome) })}">${esc(nome)}</span>`;
+  return `<span class="src-badge" style="--fc:${corDaFonte(nome)}" title="${t('home.song.sourceQualifier', { fonte: esc(nome) })}">${esc(nome)}</span>`;
 }
 
 // Linha compacta da aba Músicas: uma linha só, em grade responsiva
@@ -195,35 +196,6 @@ export function homeResults() {
   return listsTab();
 }
 
-// O controle de fonte é um camaleão: ícone quando não filtra nada, pílula com o
-// nome e um × quando filtra. O rótulo e o × são botões IRMÃOS, não aninhados —
-// a delegação de clique usa closest('[data-a]'), e um <button> dentro de outro
-// entregaria o clique errado.
-function fonteControl() {
-  const ativa = S.fonteFilter;
-  const rotuloDe = (nome) => (nome === SEM_FONTE ? t('home.fonte.none') : esc(nome));
-  const itens = fontesDaBiblioteca(S.songs);
-
-  const menu = S.fonteMenuOpen ? `<div class="fonte-menu">
-      <button class="${ativa ? '' : 'on'}" data-a="clearFonte">
-        <span class="nm">${t('home.fonte.all')}</span>${ativa ? '' : I.check(16, 2.5)}</button>
-      ${itens.map(({ nome, n }) => {
-        const on = !!ativa && nome.toLowerCase() === ativa.toLowerCase();
-        return `<button class="${on ? 'on' : ''}" data-a="setFonteFilter" data-id="${esc(nome)}">
-          <span class="nm">${rotuloDe(nome)} <em>· ${n}</em></span>${on ? I.check(16, 2.5) : ''}</button>`;
-      }).join('')}
-    </div>` : '';
-
-  const gatilho = ativa
-    ? `<div class="fonte-pill">
-        <button class="lbl" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}<span>${rotuloDe(ativa)}</span></button>
-        <button class="x" data-a="clearFonte" title="${t('home.fonte.clear')}">${I.close(15)}</button>
-      </div>`
-    : `<button class="chip fonte" data-a="toggleFonteMenu" title="${t('home.fonte.hint')}">${I.tag()}</button>`;
-
-  return `<div class="fonte-wrap">${gatilho}${menu}</div>`;
-}
-
 export function renderHome() {
   const isL = S.tab === 'lists';
   const tabsub = isL
@@ -254,8 +226,9 @@ export function renderHome() {
         <button class="${S.tab === 'lists' ? 'on' : ''}" data-a="setTab" data-id="lists">${I.listIcon()}${t('home.tabs.lists')}</button>
       </div>
       <div class="tabsub">${tabsub}</div>
+      ${fonteStripHTML(isL)}
       <div class="lens ${isL ? 'off' : ''}" title="${isL ? t('home.lens.disabledHint') : t('home.lens.filterHint')}">
-        ${I.funnel()}${fonteControl()}${chips}
+        ${I.funnel()}${chips}
       </div>
     </div>
     <div class="content-scroll" id="home-results">${homeResults()}</div>
