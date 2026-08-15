@@ -243,12 +243,12 @@ const actions = {
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
-  openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
+  openArtist(d) { S.artistId = d.id; S.screen = 'artist'; S.artistMenuOpen = false; update(); },
   openEstilo(d) { S.estiloId = d.id; S.screen = 'estilo'; update(); },
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
   goBack() {
     leavePlay();
-    if (S.backTo === 'artist') S.screen = 'artist';
+    if (S.backTo === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
     else if (S.backTo === 'estilo') S.screen = 'estilo';
     else if (S.backTo === 'list') S.screen = 'list';
     else { S.screen = 'home'; }
