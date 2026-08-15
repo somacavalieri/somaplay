@@ -6,7 +6,7 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
-import { PARTES_TODAS } from './partes.js';
+import { PARTES_TODAS, podaPorPartes, fundeMusica } from './partes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -62,10 +62,18 @@ export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
   return `somaplay-${slug(recorte) || 'backup'}-${qual ? `${qual}-` : ''}${stamp}.somaplay`;
 }
 
-// Sem argumento, o comportamento é exatamente o de hoje: a biblioteca inteira.
-export async function exportLibrary({ songIds = null, listIds = null, fileName = null } = {}) {
+// Sem argumento, o comportamento é o de sempre: a biblioteca inteira, todas as
+// partes.
+export async function exportLibrary({ songIds = null, listIds = null, partes = null, fileName = null } = {}) {
+  const ps = partes || PARTES_TODAS;
   const corte = recorteParaExport({ artists: S.artists, songs: S.songs, lists: S.lists }, { songIds, listIds });
-  const blobIds = blobIdsDasMusicas(corte.songs);
+  // Podar PRIMEIRO, coletar depois: um pacote só de áudio tem registros sem
+  // cifra.imagens, então blobIdsDasMusicas naturalmente devolve só os stems.
+  // Ela NÃO ganha um parâmetro `partes` — é a definição única de "quais blobs
+  // são desta música" (state.js:279), e um segundo eixo de verdade ali é
+  // exatamente como apagar e exportar passam a discordar.
+  const podadas = podaPorPartes(corte.songs, ps);
+  const blobIds = blobIdsDasMusicas(podadas);
   const parts = [];
   const manifestBlobs = [];
   for (const id of blobIds) {
@@ -74,31 +82,32 @@ export async function exportLibrary({ songIds = null, listIds = null, fileName =
     manifestBlobs.push({ id, size: b.size, type: b.type || 'application/octet-stream' });
     parts.push(b);
   }
-  // chordbook e settings não têm fonte: não passam pelo recorte. O chordbook é
-  // JSON pequeno, e sem ele uma cifra pode chegar sem a forma customizada do
-  // acorde. `version` continua 1 — um arquivo filtrado é um .somaplay legítimo,
-  // e uma versão antiga do app lê ele sem saber que houve filtro.
+  // `version` continua 1: um arquivo parcial é um .somaplay v1 legítimo, e
+  // `partes` ausente significa completo — que é como todo arquivo antigo é lido.
   const manifest = {
     version: 1,
     app: 'soma_play',
+    partes: ps,
     artists: corte.artists,
-    songs: corte.songs,
+    songs: podadas,
     lists: corte.lists,
-    settings: S.settings,
-    chordbook: chordbookRecords(),
     blobs: manifestBlobs,
   };
+  if (ps.includes('cifra')) manifest.chordbook = chordbookRecords();
+  if (ps.includes('pessoal')) manifest.settings = S.settings;
   const json = JSON.stringify(manifest);
   const header = MAGIC + String(new TextEncoder().encode(json).byteLength).padStart(10, '0') + '\n' + json;
   const blob = new Blob([header, ...parts], { type: 'application/octet-stream' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = fileName || nomeDoExport(null, stampDeHoje());
+  a.download = fileName || nomeDoExport('backup', stampDeHoje(), ps, {});
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
 
-export async function importLibrary(file, { merge = false } = {}) {
+// Lê só o cabeçalho: magic + tamanho + JSON. O import precisa disso, e o diálogo
+// de confirmação do "Substituir tudo" também — daí a função existir sozinha.
+export async function lerManifest(file) {
   const headProbe = await file.slice(0, MAGIC.length + 11).text();
   if (!headProbe.startsWith(MAGIC)) throw new Error(t('msg.backup.notASomaplayFile'));
   const jsonLen = parseInt(headProbe.slice(MAGIC.length, MAGIC.length + 10), 10);
@@ -106,12 +115,18 @@ export async function importLibrary(file, { merge = false } = {}) {
   const json = await file.slice(jsonStart, jsonStart + jsonLen).text();
   const manifest = JSON.parse(json);
   if (!manifest.songs || !manifest.artists) throw new Error(t('msg.backup.invalidBackup'));
+  return { manifest, blobsStart: jsonStart + jsonLen };
+}
+
+export async function importLibrary(file, { merge = false } = {}) {
+  const { manifest, blobsStart } = await lerManifest(file);
+  const partes = manifest.partes || PARTES_TODAS;
 
   // Substituir apaga tudo antes; merge preserva a biblioteca (upsert por id).
   if (!merge) await DB.wipe();
 
   // blobs — upsert por id nos dois modos
-  let off = jsonStart + jsonLen;
+  let off = blobsStart;
   for (const meta of manifest.blobs || []) {
     const chunk = file.slice(off, off + meta.size, meta.type);
     await DB.saveBlob(meta.id, chunk);
@@ -124,11 +139,16 @@ export async function importLibrary(file, { merge = false } = {}) {
     for (const a of plan.artists) await DB.putArtist(a);
     for (const s of plan.songs) await DB.putSong(s);
     for (const l of plan.lists) await DB.putList(l);
-    await mergeChordbookRecords(manifest.chordbook || []);
+    // Ausência não é deleção, também aqui: um pacote só de áudio não fala do
+    // dicionário, e não pode encostar nele.
+    if (partes.includes('cifra')) await mergeChordbookRecords(manifest.chordbook || []);
     result = { added: plan.added, updated: plan.updated };
   } else {
     for (const a of manifest.artists) await DB.putArtist(a);
-    for (const s of manifest.songs) await DB.putSong(s);
+    // Mesmo no modo espelho a música precisa sair com a invariante da cifra —
+    // um arquivo só de áudio criaria registros sem o objeto que todo render
+    // assume que existe.
+    for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes));
     for (const l of manifest.lists || []) await DB.putList(l);
     if (manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas
@@ -136,7 +156,7 @@ export async function importLibrary(file, { merge = false } = {}) {
       S.settings = { ...S.settings, ...rest };
       await DB.saveSettings(S.settings);
     }
-    await replaceChordbook(manifest.chordbook || []);
+    if (partes.includes('cifra')) await replaceChordbook(manifest.chordbook || []);
     result = { artists: manifest.artists.length, songs: manifest.songs.length };
   }
 
