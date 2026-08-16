@@ -163,17 +163,25 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .empty .s{font-size:14px;margin-top:6px}
 .empty .box{display:inline-flex;width:64px;height:64px;border-radius:16px;background:var(--surface);border:1px solid var(--border);align-items:center;justify-content:center;margin-bottom:16px;color:var(--muted)}
 
-/* --- Grade de artistas --- */
-.artist-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.card-artist{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:14px}
+/* --- Grade de artistas e estilos --- */
+/* O nº de colunas emerge da largura, como no .songs-grid: com 200px de coluna
+   um monitor largo dá ~8 e o tablet dá 4-5, sem breakpoint por tamanho de tela.
+   O min() evita coluna mais larga que o viewport. O acervo passa de 200
+   artistas — cartão alto e coluna fixa gastavam a tela à toa. */
+.artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:10px}
+.artist-grid .empty{grid-column:1/-1}
+.card-artist{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0}
 .card-artist:hover{border-color:var(--border2);background:var(--surface-hover)}
 .avatar{width:60px;height:60px;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:var(--f-title);font-weight:700;font-size:24px;flex-shrink:0}
-.avatar.md{width:52px;height:52px;border-radius:13px;font-size:22px}
-.avatar.sm{width:38px;height:38px;border-radius:10px;font-size:16px}
+.avatar.md{width:52px;height:52px;border-radius:13px;font-size:20px}
+.avatar.sm{width:38px;height:38px;border-radius:10px;font-size:15px}
 .avatar.amber{background:var(--accent-tint2);color:var(--accent)}
 .avatar.teal{background:var(--teal-tint2);color:var(--teal)}
-.card-artist .name{font-family:var(--f-title);font-weight:600;font-size:17px;line-height:1.2}
-.card-artist .count{color:var(--muted);font-size:13px;margin-top:4px}
+/* Coluna estreita + nome de usuário de tamanho imprevisível: os dois truncam
+   com reticências, e o nome inteiro fica no title do cartão. */
+.card-artist .txt{flex:1;min-width:0}
+.card-artist .name{font-family:var(--f-title);font-weight:600;font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-artist .count{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* --- Linhas de música / lista --- */
 .rows{display:flex;flex-direction:column;gap:10px;max-width:880px}
@@ -553,7 +561,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .tabrow{flex-wrap:wrap;padding:11px 14px;row-gap:10px;column-gap:10px}
   .segtab{flex:1 1 100%;overflow-x:auto;scrollbar-width:none}
   .lens{margin-left:0;flex:1 1 100%;justify-content:flex-start;order:6}
-  .artist-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .content-scroll{padding-left:14px;padding-right:14px}
   .play-head{padding-left:14px;padding-right:14px;gap:10px}
   .cifra-scroll{padding:20px 16px 96px}
@@ -571,7 +578,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .topbar.home{padding:11px 12px;gap:8px}
   .tabrow{padding:10px 12px}
   .segtab button{padding:0 12px;font-size:14px;height:40px}
-  .artist-grid{grid-template-columns:1fr 1fr;gap:10px}
+  /* Só no celular a coluna encolhe: com 200px o retrato estreito cairia para
+     uma coluna só, que é justamente o que esta grade veio resolver. */
+  .artist-grid{grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:8px}
   .content-scroll{padding-left:12px;padding-right:12px;padding-bottom:90px}
   .play-head{padding:10px 12px;gap:8px}
   .karaoke .verse div{font-size:26px}

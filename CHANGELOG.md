@@ -32,6 +32,21 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.12.1] - 2026-08-15
+
+### Changed
+
+- The Artists and Styles grids are denser. The number of columns now follows the
+  window width instead of a fixed four, and each card is a compact row — thumb,
+  name, count — rather than a tall stack. A wide monitor fits around eight
+  columns where it used to fit four, and a card is roughly half as tall. With a
+  library past 200 artists, the old grid spent most of the screen on padding.
+- An artist or style thumb now shows two initials when the name has two words:
+  Gilberto Gil is **GG**, Banda Mel is **BM**, Rock Nacional is **RN**. Articles
+  and prepositions don't count as words, so A Turma do Seu Lobato is **TS**. A
+  single-word name keeps its single letter. Twenty artists whose names start
+  with A no longer render as twenty identical blocks.
+
 ## [0.12.0] - 2026-08-15
 
 ### Added

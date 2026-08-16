@@ -2,6 +2,7 @@
 import { S, songById, artistById, upsertArtist, saveSong, songsOfArtist, fontesSugeridas } from '../state.js';
 import { DB, uid } from '../db.js';
 import { I, esc } from '../icons.js';
+import { iniciais } from '../initials.js';
 import { offlineBadge } from './home.js';
 import { parseCifraText, extractChords, chordSVG } from '../chords.js';
 import { shapesOf, defaultShape } from '../chordbook.js';
@@ -46,7 +47,7 @@ function artistDropdown(d) {
         ${list.map((a) => {
           const n = songsOfArtist(a.id).length;
           return `<div class="dd-row ${a.name === d.artistName ? 'sel' : ''}" data-a="pickArtist" data-id="${esc(a.name)}">
-          <div class="avatar sm ${a.av}">${esc(a.name[0])}</div>
+          <div class="avatar sm ${a.av}">${esc(iniciais(a.name))}</div>
           <div style="flex:1;min-width:0"><div class="nm">${esc(a.name)}</div><div class="ct">${n} ${n === 1 ? t('common.song') : t('common.songs')}</div></div>
           ${a.name === d.artistName ? `<span style="color:var(--accent)">${I.check(18, 2.4)}</span>` : ''}
         </div>`;
