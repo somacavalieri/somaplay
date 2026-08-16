@@ -37,7 +37,7 @@
 - Consumes: nada — o módulo nasce sem imports; a Task 2 traz os de `js/chords.js`.
 - Produces: `transporAcorde(nome, semitons) → string` — deslocamento de fundamental e baixo, tudo o mais intacto. `transporNota(nota, semitons) → string|null` e a constante `INDICE` são internos e assim permanecem.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Criar `app/test/transpose.test.js`:
 
@@ -99,12 +99,12 @@ test('o que não começa por nota passa incólume', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: FAIL — `Cannot find module '../js/transpose.js'`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Criar `app/js/transpose.js`:
 
@@ -168,12 +168,12 @@ export function transporAcorde(nome, semitons) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: PASS, 7 testes.
 
-- [ ] **Step 5: Adicionar o módulo ao SHELL**
+- [x] **Step 5: Adicionar o módulo ao SHELL**
 
 Em `app/sw.js`, dentro do array `SHELL`, logo depois de `'./js/chord-notation.js',`:
 
@@ -181,12 +181,12 @@ Em `app/sw.js`, dentro do array `SHELL`, logo depois de `'./js/chord-notation.js
   './js/transpose.js',
 ```
 
-- [ ] **Step 6: Rodar a suíte inteira**
+- [x] **Step 6: Rodar a suíte inteira**
 
 Run: `cd app && node --test`
 Expected: PASS — incluindo `shell.test.js`, que reprovaria se o módulo novo estivesse fora do `SHELL`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/js/transpose.js app/test/transpose.test.js app/sw.js
@@ -205,7 +205,7 @@ git commit -m "feat(transpose): shift a chord's root and bass"
 - Consumes: `transporAcorde` (Task 1); `chordLineSegs` de `js/chords.js`
 - Produces: `transporLinha(linha, semitons) → string` — a linha de acordes transposta com as colunas repostas. Consumida pelo render na Task 4.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Trocar o import do topo de `app/test/transpose.test.js` por:
 
@@ -261,12 +261,12 @@ test('transposição de zero devolve a linha byte a byte', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: FAIL — `transporLinha is not a function`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Acrescentar a `app/js/transpose.js`, logo abaixo do comentário de cabeçalho:
 
@@ -310,19 +310,19 @@ export function transporLinha(linha, semitons) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: PASS.
 
 Se o teste do recuo inicial falhar, o culpado é o ramo `out.length === 0`: com recuo, `col` já vale 4 quando o primeiro acorde chega, e o alvo tem de ser `col`, não `0`.
 
-- [ ] **Step 5: Rodar a suíte inteira**
+- [x] **Step 5: Rodar a suíte inteira**
 
 Run: `cd app && node --test`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/js/transpose.js app/test/transpose.test.js
@@ -347,7 +347,7 @@ git commit -m "feat(transpose): re-place transposed chords in their original col
   - `deduzTom(parsed) → string|null`
   - `tituloNoTom(title, tom) → string`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Acrescentar a `app/test/transpose.test.js` (e ao import: `leTom, tomDeSemitons, gradeDeTons, semitonsEntre, deduzTom, tituloNoTom`):
 
@@ -423,12 +423,12 @@ test('parêntese que não é tom é preservado', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: FAIL — `leTom is not a function`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Ajustar o import no topo de `app/js/transpose.js`:
 
@@ -510,17 +510,17 @@ export function tituloNoTom(title, tom) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd app && node --test test/transpose.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Rodar a suíte inteira e checar sintaxe**
+- [x] **Step 5: Rodar a suíte inteira e checar sintaxe**
 
 Run: `cd app && node --test && node --check js/transpose.js`
 Expected: PASS, sem saída do `--check`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/js/transpose.js app/test/transpose.test.js
@@ -541,7 +541,7 @@ git commit -m "feat(transpose): key labels, the twelve-key grid, and the guessed
 
 Nesta tarefa ainda **não há controle na tela**. A verificação é pelo console do navegador. Isso é de propósito: a transposição aplicada ao render é a metade arriscada, e vale ter um portão de revisão só dela antes de encostar em UI.
 
-- [ ] **Step 1: Acrescentar o estado**
+- [x] **Step 1: Acrescentar o estado**
 
 Em `app/js/state.js`, no bloco da tela de toque (junto de `imgVariant`, ~linha 62):
 
@@ -555,7 +555,7 @@ E em `openSong` (~linha 546, junto de `S.currentSongId = songId;`):
   S.transpose = 0;
 ```
 
-- [ ] **Step 2: Aplicar a transposição no render da cifra**
+- [x] **Step 2: Aplicar a transposição no render da cifra**
 
 Em `app/js/render/play.js`, acrescentar ao import de `../chords.js` nada — os novos vêm de outro módulo. Acrescentar depois dele:
 
@@ -598,7 +598,7 @@ export function tomAtual(song) {
 }
 ```
 
-- [ ] **Step 3: Consumir em `cifraTextHTML`**
+- [x] **Step 3: Consumir em `cifraTextHTML`**
 
 Em `cifraTextHTML` (linha 248), trocar a primeira linha:
 
@@ -630,7 +630,7 @@ Em `renderPlay` (linha 436), a mesma correção para o cálculo que alimenta a b
 
 A cifra em imagem fica de fora, sem transposição — é o que o spec declara.
 
-- [ ] **Step 4: A pílula mostra o tom resultante**
+- [x] **Step 4: A pílula mostra o tom resultante**
 
 Substituir `songHeaderHTML` (linhas 63-72) por:
 
@@ -670,12 +670,12 @@ Atualizar as três chamadas:
 - em `cifraImageHTML`: `${songHeaderHTML(song)}` (sem mudança)
 - em `karaokeHTML`: `${songHeaderHTML(song)}` (sem mudança)
 
-- [ ] **Step 5: Verificar sintaxe e a suíte**
+- [x] **Step 5: Verificar sintaxe e a suíte**
 
 Run: `cd app && node --check js/render/play.js && node --check js/state.js && node --test`
 Expected: sem saída do `--check`; suíte PASS.
 
-- [ ] **Step 6: Verificar no navegador**
+- [ ] **Step 6: Verificar no navegador**  ← não rodado: exige navegador, fica com o usuário
 
 ```bash
 cd app && python3 -m http.server 8137
@@ -699,7 +699,7 @@ Se `S` não estiver acessível no console, adicione temporariamente `window.S = 
 
 Testar também numa cifra com tablatura (a linha de acordes anda, a tab não) e numa cifra em imagem (nada muda).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/js/state.js app/js/render/play.js
@@ -722,7 +722,7 @@ git commit -m "feat(transpose): render the chart in the chosen key"
 - Consumes: `tomAtual` (Task 4); `gradeDeTons`, `semitonsEntre` (Task 3); `popPosition` de `render/chordpop.js`
 - Produces: `tomPopHTML(song, tom) → string`; ações `openTomPop`, `closeTomPop`, `transposeBy`, `setTom`, `resetTom`
 
-- [ ] **Step 1: Chaves de tradução nas DUAS tabelas**
+- [x] **Step 1: Chaves de tradução nas DUAS tabelas**
 
 Em `app/js/i18n/pt.js`, junto de `'play.song.key'` (~linha 141):
 
@@ -746,7 +746,7 @@ Em `app/js/i18n/en.js`, nas mesmas posições:
   'play.tom.guess': 'key guessed from the chart — fill the field in edit to confirm',
 ```
 
-- [ ] **Step 2: Criar o popover**
+- [x] **Step 2: Criar o popover**
 
 Criar `app/js/render/tompop.js`:
 
@@ -798,7 +798,7 @@ export function tomPopHTML(song, tom) {
 }
 ```
 
-- [ ] **Step 3: Registrar no SHELL**
+- [x] **Step 3: Registrar no SHELL**
 
 Em `app/sw.js`, junto dos outros `./js/render/`:
 
@@ -806,7 +806,7 @@ Em `app/sw.js`, junto dos outros `./js/render/`:
   './js/render/tompop.js',
 ```
 
-- [ ] **Step 4: A pílula vira botão e o popover entra na tela**
+- [x] **Step 4: A pílula vira botão e o popover entra na tela**
 
 Em `app/js/render/play.js`, importar:
 
@@ -831,7 +831,7 @@ Em `renderPlay`, junto de `${S.chordPop ? chordPopHTML(song) : ''}`:
     ${S.tomPop ? tomPopHTML(song, tomAtual(song)) : ''}
 ```
 
-- [ ] **Step 5: Estado e ações**
+- [x] **Step 5: Estado e ações**
 
 Em `app/js/state.js`, junto de `chordPop`:
 
@@ -880,7 +880,7 @@ Por fim, o clique-fora, junto da linha 947 de `main.js`:
   if (S.tomPop && !e.target.closest('.tom-pop') && !e.target.closest('.tag-tom')) { S.tomPop = null; update(); }
 ```
 
-- [ ] **Step 6: CSS**
+- [x] **Step 6: CSS**
 
 Em `app/css/app.css`, depois da regra `.tag-tom` (linha 297) — que ganha cursor e borda de botão:
 
@@ -898,12 +898,12 @@ Em `app/css/app.css`, depois da regra `.tag-tom` (linha 297) — que ganha curso
 .tom-reset{justify-content:center}
 ```
 
-- [ ] **Step 7: Verificar sintaxe e suíte**
+- [x] **Step 7: Verificar sintaxe e suíte**
 
 Run: `cd app && node --check js/render/tompop.js && node --check js/render/play.js && node --check js/main.js && node --test`
 Expected: sem saída dos `--check`; suíte PASS — incluindo `shell.test.js` (módulo novo no SHELL) e `i18n.test.js` (paridade das tabelas).
 
-- [ ] **Step 8: Verificar no navegador**
+- [ ] **Step 8: Verificar no navegador**  ← não rodado: exige navegador, fica com o usuário
 
 Com o servidor rodando, numa música com cifra em texto:
 
@@ -919,7 +919,7 @@ Com o servidor rodando, numa música com cifra em texto:
 - em cifra de imagem e no karaokê, a pílula continua não sendo botão
 - trocar o idioma em Ajustes troca os rótulos do popover
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/js/render/tompop.js app/js/render/play.js app/js/main.js app/js/state.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css app/sw.js
@@ -939,7 +939,7 @@ git commit -m "feat(transpose): the key popover, in the shape musicians already 
 - Consumes: `S.transpose`, `parsedCifra`
 - Produces: nada consumido adiante.
 
-- [ ] **Step 1: Chaves nas DUAS tabelas**
+- [x] **Step 1: Chaves nas DUAS tabelas**
 
 `pt.js`:
 
@@ -955,7 +955,7 @@ git commit -m "feat(transpose): the key popover, in the shape musicians already 
   'play.tom.warnTab': 'tablature in the original key',
 ```
 
-- [ ] **Step 2: Montar o aviso**
+- [x] **Step 2: Montar o aviso**
 
 Em `app/js/render/play.js`, dentro de `renderPlay`, depois de `const hasMixer = ...`:
 
@@ -976,7 +976,7 @@ Sem ícone: `js/icons.js` não tem `info` nem `warn`, e o aviso é uma pílula d
 
 Inserir `${avisoHTML}` na `.cifra-col`, logo antes de `${scrollCtl}`.
 
-- [ ] **Step 3: CSS**
+- [x] **Step 3: CSS**
 
 O `bottom` tem de limpar o controle de rolagem, que ocupa de 18px a **82px** do fundo
 (`.scroll-ctl` em bottom:18px, com padding 7px, borda 1px e o botão `.pp` de 48px).
@@ -986,12 +986,12 @@ O `bottom` tem de limpar o controle de rolagem, que ocupa de 18px a **82px** do 
 .tom-warn{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
 ```
 
-- [ ] **Step 4: Verificar sintaxe e suíte**
+- [x] **Step 4: Verificar sintaxe e suíte**
 
 Run: `cd app && node --check js/render/play.js && node --test`
 Expected: PASS.
 
-- [ ] **Step 5: Verificar no navegador**
+- [ ] **Step 5: Verificar no navegador**  ← não rodado: exige navegador, fica com o usuário
 
 - música com stems, transposta: aparece "áudio no tom original"
 - de volta ao tom original: some
@@ -1000,7 +1000,7 @@ Expected: PASS.
 - música sem áudio e sem tab: nada aparece nunca
 - o aviso não cobre o controle de rolagem nem some atrás do mixer
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/js/render/play.js app/js/i18n/pt.js app/js/i18n/en.js app/css/app.css
@@ -1021,7 +1021,7 @@ git commit -m "feat(transpose): say plainly what the transposition left behind"
 - Consumes: `transporLinha`, `transporAcorde`, `tomDeSemitons`, `tituloNoTom` (Tasks 2 e 3); `blobIdsDasMusicas`, `saveSong`, `uid` de `state.js`/`db.js`
 - Produces: `duplicarMusicaNoTom(song, semitons, tomBase) → Promise<string>` (id da música nova)
 
-- [ ] **Step 1: Chaves nas DUAS tabelas**
+- [x] **Step 1: Chaves nas DUAS tabelas**
 
 `pt.js`:
 
@@ -1037,7 +1037,7 @@ git commit -m "feat(transpose): say plainly what the transposition left behind"
   'play.tom.duplicated': 'Song duplicated in {tom}',
 ```
 
-- [ ] **Step 2: Write the failing test — a cifra inteira transposta**
+- [x] **Step 2: Write the failing test — a cifra inteira transposta**
 
 Transpor uma cifra inteira **não** é aplicar `transporLinha` em toda linha: só as linhas de acorde andam, e quem sabe quais são é o parser. Isso é lógica pura e pertence a `transpose.js`, não a `state.js` (que toca o banco e não é testável em node).
 
@@ -1069,7 +1069,7 @@ test('transpor a cifra de zero devolve o texto intacto', () => {
 Run: `cd app && node --test test/transpose.test.js`
 Expected: FAIL — `textoTransposto is not a function`
 
-- [ ] **Step 3: Implementar `textoTransposto`**
+- [x] **Step 3: Implementar `textoTransposto`**
 
 Ajustar o import de `app/js/transpose.js` para incluir `parseCifraText`:
 
@@ -1100,7 +1100,7 @@ export function textoTransposto(texto, semitons) {
 Run: `cd app && node --test test/transpose.test.js`
 Expected: PASS.
 
-- [ ] **Step 4: A duplicação**
+- [x] **Step 4: A duplicação**
 
 Em `app/js/state.js`, acrescentar junto de `saveSong` (~linha 425). `DB` e `uid` já estão importados no topo do arquivo; falta só a linha de `./transpose.js`:
 
@@ -1162,7 +1162,7 @@ export async function duplicarMusicaNoTom(song, semitons, tomBase) {
 }
 ```
 
-- [ ] **Step 5: O botão no popover**
+- [x] **Step 5: O botão no popover**
 
 Em `app/js/render/tompop.js`, antes do `tom-reset`:
 
@@ -1170,7 +1170,7 @@ Em `app/js/render/tompop.js`, antes do `tom-reset`:
     <button class="btn-primary small tom-dup" data-a="duplicateInKey" ${S.transpose ? '' : 'disabled'}>${t('play.tom.duplicate')}</button>
 ```
 
-- [ ] **Step 6: A ação**
+- [x] **Step 6: A ação**
 
 Em `app/js/main.js`, junto das outras ações do tom:
 
@@ -1191,12 +1191,12 @@ Em `app/js/main.js`, junto das outras ações do tom:
 
 Acrescentar `duplicarMusicaNoTom` ao import de `./state.js` e `tomDeSemitons` ao de `./transpose.js`. `toast` é função local de `main.js` (linha 38) — não precisa de import.
 
-- [ ] **Step 7: Verificar sintaxe e suíte**
+- [x] **Step 7: Verificar sintaxe e suíte**
 
 Run: `cd app && node --check js/state.js && node --check js/main.js && node --check js/render/tompop.js && node --test`
 Expected: PASS.
 
-- [ ] **Step 8: Verificar no navegador**
+- [ ] **Step 8: Verificar no navegador**  ← não rodado: exige navegador, fica com o usuário
 
 Numa música **com áudio** (usar a música de exemplo com stems, ou cadastrar uma):
 
@@ -1209,7 +1209,7 @@ Numa música **com áudio** (usar a música de exemplo com stems, ou cadastrar u
 - exportar as duas num `.somaplay` e reimportar num navegador limpo: as duas chegam íntegras
 - a cifra da cópia mantém letra, seções e tablatura no lugar
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/js/state.js app/js/transpose.js app/test/transpose.test.js app/js/render/tompop.js app/js/main.js app/js/i18n/pt.js app/js/i18n/en.js
@@ -1225,7 +1225,7 @@ git commit -m "feat(transpose): keep a key by duplicating the song, audio and al
 - Modify: `app/sw.js` (linha 2)
 - Modify: `CLAUDE.md`
 
-- [ ] **Step 1: Subir a versão nos dois lugares**
+- [x] **Step 1: Subir a versão nos dois lugares**
 
 `app/js/version.js`:
 
@@ -1241,7 +1241,7 @@ const VERSION = 'somaplay-0.14.0';
 
 MINOR porque é feature nova. Qualquer valor diferente entre os dois reprova em `version.test.js`. O `0.13.0` **já foi usado** pela quebra-na-respiração (PR #25, mergeado em 2026-08-16) — daí o salto para `0.14.0`.
 
-- [ ] **Step 1b: Entrada no CHANGELOG**
+- [x] **Step 1b: Entrada no CHANGELOG**
 
 `version.test.js` exige `## [0.14.0]` em `CHANGELOG.md`. Acrescentar acima da entrada `## [0.13.0]`, seguindo o formato das existentes (Keep a Changelog, em inglês):
 
@@ -1267,7 +1267,7 @@ MINOR porque é feature nova. Qualquer valor diferente entre os dois reprova em 
   you are away from the original key. Image charts are out of scope.
 ```
 
-- [ ] **Step 2: Registrar a exceção no CLAUDE.md**
+- [x] **Step 2: Registrar a exceção no CLAUDE.md**
 
 Na seção "Things that will bite you", logo depois do parágrafo **"Never translate or renotate the user's chart"**, acrescentar:
 
@@ -1281,16 +1281,16 @@ espaço de folga mínima. Fora desse módulo a regra continua valendo inteira.
 Spec: `docs/superpowers/specs/2026-08-16-transposicao-design.md`.
 ```
 
-- [ ] **Step 3: Verificação final completa**
+- [x] **Step 3: Verificação final completa**
 
 Run: `cd app && node --test`
 Expected: toda a suíte PASS, incluindo `version.test.js`, `shell.test.js` e `i18n.test.js`.
 
-- [ ] **Step 4: Verificação de instalação offline**
+- [ ] **Step 4: Verificação de instalação offline**  ← não rodado: exige navegador, fica com o usuário
 
 Com o servidor rodando, abrir o app, confirmar em Ajustes que a versão mostrada é **0.13.0**, desligar a rede (DevTools → Network → Offline), recarregar e confirmar que o app abre e que a transposição funciona. É o que prova que os dois módulos novos entraram no `SHELL` de verdade.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/js/version.js app/sw.js CLAUDE.md
