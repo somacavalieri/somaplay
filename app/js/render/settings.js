@@ -164,15 +164,38 @@ function blocoExportar() {
     </div>`;
   }).join('');
 
-  const acao = n
-    ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
-    : t('settings.export.nothing');
+  // As quatro caixas SÃO o vocabulário de partes, sem tradução de conceito. O
+  // data-id vai cru: nome de parte é constante interna, nunca conteúdo do
+  // usuário, e por isso nunca passa por t().
+  const caixas = [
+    { id: 'cifra', label: t('settings.export.partCifra'), on: S.exportPartes.includes('cifra') },
+    { id: 'audio', label: t('settings.export.partAudio'), on: S.exportPartes.includes('audio') },
+    { id: 'listas', label: t('settings.export.partListas'), on: S.exportListas },
+    { id: 'pessoal', label: t('settings.export.partPessoal'), on: S.exportPartes.includes('pessoal') },
+  ].map((c) => `
+    <button class="check-row" data-a="${c.id === 'listas' ? 'toggleExportListas' : 'toggleExportParte'}" data-id="${c.id}">
+      <span class="checkbox ${c.on ? 'on' : ''}">${c.on ? I.check(15) : ''}</span>
+      <span class="nm">${c.label}</span>
+    </button>`).join('');
+
+  // Cifras e Áudio ambas desmarcadas geram um arquivo sem conteúdo nenhum. É
+  // acidente, não caso de uso — o botão trava, pela mesma regra de "nenhuma
+  // fonte marcada".
+  const temConteudo = S.exportPartes.some((p) => p === 'cifra' || p === 'audio');
+
+  const acao = !temConteudo
+    ? t('settings.export.nothingPart')
+    : n
+      ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
+      : t('settings.export.nothing');
 
   return `<div class="setting-block" style="padding:20px;margin-top:6px">
     <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
     <div style="color:var(--muted);font-size:13px;margin-bottom:10px">${t('settings.export.sub')}</div>
     ${linhas}
-    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n ? '' : 'disabled'}>${I.download()}${acao}</button>
+    <div style="color:var(--muted);font-size:12px;margin:16px 2px 6px;text-transform:uppercase;letter-spacing:.04em">${t('settings.export.what')}</div>
+    ${caixas}
+    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n && temConteudo ? '' : 'disabled'}>${I.download()}${acao}</button>
   </div>`;
 }
 

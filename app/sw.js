@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-0.11.1';
+const VERSION = 'somaplay-0.12.1';
 const SHELL = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const SHELL = [
   './js/scroll-speed.js',
   './js/backup.js',
   './js/merge.js',
+  './js/partes.js',
   './js/icons.js',
   './js/initials.js',
   './js/samples.js',
@@ -33,6 +34,7 @@ const SHELL = [
   './js/render/chordbookscreen.js',
   './js/render/addedit.js',
   './js/render/settings.js',
+  './js/render/sharesheet.js',
   './js/render/estilo.js',
   './js/render/popover.js',
   './js/render/fontestrip.js',

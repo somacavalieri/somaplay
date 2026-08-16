@@ -675,3 +675,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .chord-pop.car .strip-wrap .pick-opt{scroll-snap-align:center}
 .chord-pop.car .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
 .btn-ghost.sm.danger{color:var(--red)}
+
+/* Folha de compartilhar — backdrop + painel ancorado embaixo, que é onde o
+   polegar chega num tablet na estante. */
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto}
+@media (min-width:560px){.sheet-backdrop{align-items:center}.sheet{border-radius:16px}}
+/* A .check-row foi feita para UMA linha: 52px fixos, nowrap e ellipsis. A folha
+   põe um rótulo de duas linhas dentro dela, e num telefone de 360px o subtítulo
+   era cortado no meio da frase — "Cabe no WhatsApp. O áudio pode ir dep…" —
+   justamente na tela onde a frase é a explicação da escolha. Aqui a linha cresce
+   e o texto quebra. Escopado na .sheet de propósito: o popover "Adicionar à
+   lista" e as linhas de fonte em Configurações dependem da .check-row como está,
+   onde truncar um nome comprido em uma linha é o comportamento certo. */
+.sheet .check-row{height:auto;min-height:52px;padding:9px 12px}
+.sheet .check-row .nm{white-space:normal;overflow:visible;text-overflow:clip}

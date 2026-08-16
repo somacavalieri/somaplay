@@ -18,6 +18,12 @@ export function renderArtist() {
         <div style="color:var(--muted);font-size:13px;margin-top:3px">${songs.length} ${songs.length === 1 ? t('common.song') : t('common.songs')} ${t('common.tapToPlay')}</div>
       </div>
       ${offlineBadge}
+      <div class="menu-wrap">
+        <button class="btn-icon" data-a="toggleArtistMenu" aria-label="${t('common.moreOptions')}">${I.dots(22)}</button>
+        ${S.artistMenuOpen ? `<div class="menu-pop" style="width:218px">
+          <button data-a="openShare" data-id="artist">${I.uploadSm()}${t('common.share')}</button>
+        </div>` : ''}
+      </div>
     </div>
     <div class="content-scroll tight">
       <div class="rows" style="max-width:840px">
