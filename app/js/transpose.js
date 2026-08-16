@@ -5,6 +5,8 @@
 // que a reposição por coluna é o que a torna segura — em
 // docs/superpowers/specs/2026-08-16-transposicao-design.md
 
+import { chordLineSegs } from './chords.js';
+
 // Os doze nomes, sempre os mesmos. Não é armadura calculada por ciclo de
 // quintas: é o array que a grade do CifraClub mostra (Am, Bbm, Bm, Cm, C#m, Dm,
 // Ebm, Em, Fm, F#m, Gm, G#m) — bemol no Bb e no Eb, sustenido no C#, F# e G#.
@@ -49,4 +51,36 @@ export function transporAcorde(nome, semitons) {
     if (NOTA.test(partes[k])) partes[k] = transporNota(partes[k], semitons);
   }
   return partes.join('/');
+}
+
+// Transpõe uma linha de acordes REPONDO cada token na coluna original.
+//
+// O alinhamento da cifra é posicional: acorde e sílaba se encontram pela coluna
+// do caractere, e 'C' tem 1 caractere enquanto 'C#' tem 2. Reescrever no lugar
+// empurraria a linha inteira. Aqui cada token volta para a coluna de onde saiu,
+// e só anda quando o vizinho anterior cresceu a ponto de encostar.
+//
+// A folga mínima é UM espaço: sem ela 'C' e 'G' em colunas vizinhas virariam
+// 'C#G#' e deixariam de ser dois acordes — inclusive para o parser, que perderia
+// a linha toda e com ela os acordes que estavam certos.
+//
+// Os segmentos de espaço são descartados de propósito: quem recria o espaçamento
+// é o preenchimento até a coluna alvo. O acorde vem de `sg.name` (o nome limpo) e
+// é costurado de volta em `sg.text`, que pode ter decoração — 'C*', '(Dm', 'Gm7)'.
+export function transporLinha(linha, semitons) {
+  const s = String(linha);
+  if (!semitons) return s;
+  let out = '';
+  let col = 0;
+  for (const sg of chordLineSegs(s)) {
+    const larg = sg.text.length;
+    if (!/\S/.test(sg.text)) { col += larg; continue; }
+    const texto = sg.isChord
+      ? sg.text.replace(sg.name, transporAcorde(sg.name, semitons))
+      : sg.text;
+    const alvo = out.length === 0 ? col : Math.max(col, out.length + 1);
+    out += ' '.repeat(alvo - out.length) + texto;
+    col += larg;
+  }
+  return out;
 }
