@@ -32,6 +32,49 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.12.0] - 2026-08-15
+
+### Added
+
+- A `.somaplay` file now declares which **parts** it carries — `cifra`, `audio`,
+  `pessoal` — and sharing can leave parts out. You can send a repertoire as
+  charts only, small enough for WhatsApp, and send the audio afterwards as a
+  separate pack that finds its own songs.
+
+  New: **Compartilhar** in the ⋯ of a list and of an artist, with the size of
+  each option shown before you choose; and four checkboxes in Settings — Charts,
+  Audio, My lists, My favourites and settings — that are the same vocabulary,
+  so a backup can be narrowed the same way.
+
+  A song that arrives from a share is dated the day it arrives, so it lands at
+  the top of **Recém-adicionadas** for whoever received it. A complete backup
+  still restores the original date.
+
+- **Compartilhar** hands the file to the system share sheet where the browser
+  offers one, so on Android it reaches WhatsApp in a single tap instead of going
+  through Downloads. **Exportar** in Settings still downloads — a backup is a
+  file you keep, not something you send.
+
+- **Substituir tudo** now says what a partial file will cost before it does it.
+  A file that carries no audio, no charts, no favourites and settings, or no
+  lists gets a line of its own in the confirmation, one per missing piece.
+
+  This matters most for the two pieces that do *not* change the file name: an
+  export with **Minhas favoritas e ajustes** and **Minhas listas** unchecked is
+  named exactly like a complete backup, so months later there is nothing in the
+  Downloads folder to tell them apart. Replacing with the wrong one rewrites the
+  library with no favourites, no dates, no settings and no playlists. The
+  warning is the only thing that says so. The lists warning is skipped when the
+  device has no lists to lose.
+
+### Fixed
+
+- Importing a file no longer overwrites what the receiving device did with those
+  songs. The merge now only touches the fields of the parts the file actually
+  declares, so a shared repertoire stops wiping the recipient's favourites, and
+  a chart-only file stops deleting audio that is already there. Absence in a
+  file is no longer read as an instruction to delete.
+
 ## [0.11.0] - 2026-08-15
 
 ### Added

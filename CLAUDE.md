@@ -39,7 +39,10 @@ touching the UI. There is no DOM test harness, on purpose.
 
 ## Language
 
-- **English:** `README.md`, public docs, code comments in new code, commit messages
+- **English:** `README.md`, public docs, commit messages, and **comments in new
+  files**. Comments follow the file they live in: a new module is written in
+  English, and a file that is already commented in Portuguese stays Portuguese —
+  a module that switches language halfway is harder to read than either choice.
 - **Portuguese:** `docs/superpowers/` specs and plans — the honest design history
 - **Both:** the app's interface, via a PT/EN selector
 
@@ -57,9 +60,10 @@ touching the UI. There is no DOM test harness, on purpose.
   has audio `stems`, a karaoke `letra`, an `estilo` and a `favorita` flag.
 - **Audio:** Web Audio API. One gain node per stem, all sharing a single transport clock
   so global play/pause/seek stay in sync.
-- **Storage:** large files (audio, images) in OPFS; metadata in IndexedDB. Backup
-  exports and imports the whole library as one `.somaplay` file, with a merge mode that
-  upserts by id.
+- **Storage:** large files (audio, images) in OPFS; metadata in IndexedDB. A `.somaplay`
+  file declares which `partes` it carries — `cifra`, `audio`, `pessoal` — and the merge
+  only touches the fields of the declared parts. Absence is not deletion, which is what
+  lets a chart-only file and an audio pack merge in either order.
 - **i18n:** `js/i18n.js` exports `t(key, params)`, `setLang`, `getLang`, `detectLang`.
   Tables are `js/i18n/pt.js` and `js/i18n/en.js`, flat key→string, namespaced by screen.
 - **Chord notation:** `js/chord-notation.js` converts chord names between Brazilian
@@ -115,6 +119,13 @@ speaking **visible** positions, and translate in one place (`applyReorder`).
 recordings you do not own. This applies to source code too: the demo songs once embedded
 full lyrics as string constants, and removing them was its own cleanup. The example song
 that ships with the app was written for the project.
+
+**Um campo novo na música precisa entrar em `CAMPOS`, em `app/js/partes.js`.** O mapa
+parte→campos é o que decide o que viaja num arquivo compartilhado. Um campo que não está
+lá viaja no backup completo (que devolve o registro intacto) e **some silenciosamente de
+todo compartilhamento** — o pior tipo de bug, porque o caminho que você testa é o que
+funciona. O mesmo mapa é lido pela poda da exportação e pela fusão da importação, de
+propósito: duas verdades ali é como as duas passam a discordar.
 
 ## How changes get made
 

@@ -6,6 +6,7 @@ import {
   persistCurrentStems, applyVarToSongs, fontesDaBiblioteca, songIdsDasFontes,
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
+  musicasPresentes, songsOfArtist, artistById, matchesLens,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -14,12 +15,14 @@ import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
+import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
 import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, importLibrary, nomeDoExport, stampDeHoje } from './backup.js';
+import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
+import { PARTES_TODAS } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -85,6 +88,7 @@ export function update() {
   else if (scr === 'settings') html = renderSettings();
   else if (scr === 'chordbook') html = renderChordbook();
   html += renderPopover();
+  html += renderShareSheet();
   app.innerHTML = html;
   restoreUI(snap);
   lastScreen = scr;
@@ -240,12 +244,12 @@ const actions = {
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
   goSettings() { S.screen = 'settings'; update(); },
   goAdd() { S.editSongId = null; S.draft = newDraft(null); S.chordEd = null; S.screen = 'addedit'; update(); },
-  openArtist(d) { S.artistId = d.id; S.screen = 'artist'; update(); },
+  openArtist(d) { S.artistId = d.id; S.screen = 'artist'; S.artistMenuOpen = false; update(); },
   openEstilo(d) { S.estiloId = d.id; S.screen = 'estilo'; update(); },
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
   goBack() {
     leavePlay();
-    if (S.backTo === 'artist') S.screen = 'artist';
+    if (S.backTo === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
     else if (S.backTo === 'estilo') S.screen = 'estilo';
     else if (S.backTo === 'list') S.screen = 'list';
     else { S.screen = 'home'; }
@@ -626,6 +630,16 @@ const actions = {
     S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
   },
+  // A remarcação reconstrói a partir de PARTES_TODAS para a ordem do array ser
+  // sempre a canônica — assim o `partes` gravado no arquivo não depende da
+  // ordem em que as caixas foram clicadas.
+  toggleExportParte(d) {
+    S.exportPartes = S.exportPartes.includes(d.id)
+      ? S.exportPartes.filter((p) => p !== d.id)
+      : [...PARTES_TODAS.filter((p) => p === d.id || S.exportPartes.includes(p))];
+    update();
+  },
+  toggleExportListas() { S.exportListas = !S.exportListas; update(); },
   // Apaga todas as músicas de uma fonte. O motor recebe ids: aqui só se traduz
   // o eixo, se confirma e se reconcilia o que ficou apontando para o vazio.
   async deleteFonteAsk(d) {
@@ -662,11 +676,80 @@ const actions = {
   },
   async exportBackup() {
     const fontes = S.exportFontes;
-    const sel = fontes?.length ? { songIds: songIdsDasFontes(S.songs, fontes) } : {};
-    const fileName = nomeDoExport(fontes, stampDeHoje(), t('settings.export.fileMulti'));
+    const partes = S.exportPartes;
+    const sel = {
+      songIds: fontes?.length ? songIdsDasFontes(S.songs, fontes) : null,
+      listIds: S.exportListas ? null : new Set(),
+    };
+    const fileName = nomeDoExport(
+      recorteDeFontes(fontes, t('settings.export.fileMulti')),
+      stampDeHoje(),
+      partes,
+      { cifras: t('share.word.cifras'), audio: t('share.word.audio') },
+    );
     toast(t('msg.backup.exporting'));
-    try { await exportLibrary({ ...sel, fileName }); toast(t('msg.backup.exported')); }
+    try { baixaArquivo(await exportLibrary({ ...sel, partes, fileName })); toast(t('msg.backup.exported')); }
     catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
+  },
+  toggleArtistMenu() { S.artistMenuOpen = !S.artistMenuOpen; update(); },
+
+  // O ⋯ traduz o seu eixo em ids e entrega ao motor, que não sabe o que é lista
+  // nem artista. listIds é o que impede que os outros repertórios do usuário
+  // viajem junto para o amigo — e um artista não leva lista nenhuma.
+  //
+  // O artista passa pela LENTE, porque a tela do artista passa
+  // (artist.js:10): sem isso a tela mostra 3 músicas com o T2 ligado e a folha
+  // se oferece para mandar 40. A lista, não — listas ignoram a lente por
+  // desenho, e musicasPresentes já é exatamente o que aquela tela desenha.
+  async openShare(d) {
+    const daLista = d.id === 'list';
+    const l = daLista ? listById(S.openListId) : null;
+    const a = daLista ? null : artistById(S.artistId);
+    if (daLista && !l) return;
+    if (!daLista && !a) return;
+    const songIds = daLista
+      ? new Set(musicasPresentes(l))
+      : new Set(songsOfArtist(a.id).filter(matchesLens).map((s) => s.id));
+    S.shareSheet = {
+      titulo: daLista ? l.nome : a.name,
+      songIds,
+      listIds: daLista ? new Set([l.id]) : new Set(),
+      opcao: 'cifras',
+      tamanhos: null,
+    };
+    S.listMenuOpen = false;
+    S.artistMenuOpen = false;
+    update();
+    // Os números chegam depois: medir são ~4 handles por música, e a folha não
+    // pode esperar por eles para abrir.
+    const songs = [...songIds].map(songById).filter(Boolean);
+    const tam = await calculaTamanhos(songs);
+    // Identidade pela referência do Set, não pelo título: abrir duas folhas
+    // seguidas com o mesmo nome faria a medição da primeira sobrescrever a
+    // segunda.
+    if (S.shareSheet && S.shareSheet.songIds === songIds) {
+      S.shareSheet.tamanhos = tam;
+      update();
+    }
+  },
+  closeShare() { S.shareSheet = null; update(); },
+  pickShareOpt(d) { if (S.shareSheet) { S.shareSheet.opcao = d.id; update(); } },
+  async doShare() {
+    const sh = S.shareSheet;
+    if (!sh) return;
+    const opt = OPCOES.find((o) => o.id === sh.opcao);
+    if (!opt) return;
+    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), opt.partes, {
+      cifras: t('share.word.cifras'), audio: t('share.word.audio'),
+    });
+    S.shareSheet = null;
+    update();
+    toast(t('msg.backup.exporting'));
+    try {
+      if (await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName }))) {
+        toast(t('msg.backup.exported'));
+      }
+    } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
   },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
   importBackupMerge() { S.importMode = 'merge'; document.getElementById('file-backup').click(); },
@@ -804,8 +887,19 @@ function wireBackupInput() {
     const total = S.songs.length;
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
-    } else if (total > 0 && !confirm(t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') }))) {
-      return;
+    } else if (total > 0) {
+      // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
+      // cabeçalho — alguns KB, não o arquivo.
+      let manifest = null;
+      try { manifest = (await lerManifest(f)).manifest; }
+      catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+      // O manifest inteiro, porque o aviso das listas depende de o arquivo
+      // trazer lista; e o aparelho ter lista, porque não há o que perder quem
+      // não tem nenhuma.
+      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0 })
+        .map((k) => t(k)).join('\n');
+      const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
+      if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
@@ -840,7 +934,7 @@ document.addEventListener('click', (e) => {
       // Testar `t !== e.target` não serve: o alvo real de um botão com ícone é o
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
-      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker') && stop && !stop.contains(t)) return;
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
       actions[name](t.dataset, e, t);
       return;
     }
@@ -849,6 +943,7 @@ document.addEventListener('click', (e) => {
   if (S.sortMenuOpen && !e.target.closest('.sort-wrap')) { S.sortMenuOpen = false; update(); }
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
+  if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
 });
 
@@ -896,10 +991,13 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    // A folha cobre a tela inteira — tem prioridade sobre qualquer coisa por
+    // baixo dela.
+    if (S.shareSheet) { S.shareSheet = null; update(); return; }
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
       update();
     }
   }
