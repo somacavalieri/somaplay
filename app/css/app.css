@@ -409,7 +409,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .scroll-ctl .mid{text-align:center;min-width:108px}
 .scroll-ctl .mid .l1{color:var(--muted);font-size:11px;font-weight:500}
 .scroll-ctl .mid .l2{font-family:var(--f-title);font-weight:700;font-size:15px}
-.tom-warn{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
+.tom-warn{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
 
 /* --- Mixer --- */
 .mixer{width:380px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column}
