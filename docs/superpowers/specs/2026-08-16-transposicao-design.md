@@ -316,13 +316,24 @@ degrada o som de um jeito que ninguém quer no palco.
 
 **Digitações customizadas na cópia.** A cópia nasce com `cifra.digitacoes` **vazio**.
 
-Esta seção dizia o contrário — que o mapa viajaria intacto, as chaves não casariam, e o
-resultado seria "nenhum diagrama errado, só entradas mortas". **A afirmação era falsa**, e a
-revisão da implementação a derrubou. Transpor mapeia nome em nome, e os nomes de destino são
-exatamente os que já são chave: numa cifra em C com C e D, onde o usuário customizou só o D,
-subir dois semitons faz o antigo C virar D e **herdar a digitação do D original**. Como
-`chordSVG` faz `dict[name] || defaultShape(name)`, a forma errada aparece no acorde errado,
-em silêncio.
+Esta seção foi corrigida duas vezes, em direções opostas, e as duas correções vieram de
+revisão. Vale deixar o registro completo, porque o erro do meio é instrutivo.
+
+**Primeira versão (errada por otimismo):** o mapa viajaria intacto, as chaves não casariam, e
+o resultado seria "nenhum diagrama errado, só entradas mortas". Falso. Transpor mapeia nome
+em nome, e os nomes de destino são exatamente os que já são chave: numa cifra em C com C e D,
+onde o usuário customizou só o D, subir dois semitons faz o antigo C virar D e herdar a
+entrada do D. As chaves casam, e casam com o acorde errado.
+
+**Segunda versão (errada por exagero):** que isso produzia "a forma errada no acorde errado".
+Também não. A forma guardada sob `D` foi escolhida *para* um D, então desenhá-la sobre um D é
+musicalmente correto — o diagrama não mente. O que se perde é mais fino: a **intenção** do
+usuário migra de lugar. O voicing que ele escolheu para o que hoje é E aparece no que hoje é
+D, e o E fica sem nada. É preferência aplicada à ocorrência errada, não acorde errado.
+
+Continua sendo motivo suficiente para zerar: uma preferência de digitação amarrada a um nome
+não sobrevive a uma mudança de tom, porque o nome não quer dizer a mesma coisa dos dois
+lados.
 
 Renomear as chaves junto seria pior: digitação é casa absoluta, e a forma de C rotulada D
 continua sendo a forma de C — o erro que esta seção sempre reconheceu. Restava zerar. A
