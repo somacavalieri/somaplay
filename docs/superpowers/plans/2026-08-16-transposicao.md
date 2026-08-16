@@ -623,12 +623,18 @@ Substituir `songHeaderHTML` (linhas 63-72) por:
 // A pílula do tom passa a existir SEMPRE na cifra em texto: hoje ela só aparecia
 // com o campo preenchido, e uma feature cujo botão some na maior parte do acervo
 // não é feature. Vira botão na Task 5.
+// `S.transpose` é guardado em 0–11 (um domínio só; ver Task 5). Para LER, a
+// forma assinada mais curta é a que o músico espera: 11 semitons acima é
+// "−1", não "+11". Só a exibição converte; o estado continua em 0–11.
+export const assinado = (n) => (n > 6 ? n - 12 : n);
+
 function songHeaderHTML(song, tom) {
   const meta = [];
   if (tom && tom.label) {
     meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(tom.label)}${tom.palpite ? ' ?' : ''}</span>`);
   } else if (tom) {
-    meta.push(`<span class="tag-tom">${t('play.song.key')} ${S.transpose ? (S.transpose > 0 ? '+' : '') + S.transpose : '—'}</span>`);
+    const d = assinado(S.transpose);
+    meta.push(`<span class="tag-tom">${t('play.song.key')} ${d ? (d > 0 ? '+' : '') + d : '—'}</span>`);
   } else if (song.tom) {
     meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
@@ -794,7 +800,8 @@ Em `songHeaderHTML`, trocar os dois primeiros ramos do `<span class="tag-tom">` 
   if (tom && tom.label) {
     meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${esc(tom.label)}${tom.palpite ? ' ?' : ''}</button>`);
   } else if (tom) {
-    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${S.transpose ? (S.transpose > 0 ? '+' : '') + S.transpose : '—'}</button>`);
+    const d = assinado(S.transpose);
+    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${d ? (d > 0 ? '+' : '') + d : '—'}</button>`);
   } else if (song.tom) {
 ```
 
