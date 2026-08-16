@@ -40,7 +40,7 @@ export function tomPopHTML(song, tom) {
       <button class="btn-ghost sm" data-a="transposeBy" data-id="1">${t('play.tom.up')}</button>
     </div>
     ${gradeHTML}
-    <button class="btn-primary small tom-dup" data-a="duplicateInKey" ${S.transpose ? '' : 'disabled'}>${t('play.tom.duplicate')}</button>
+    <button class="btn-primary small tom-dup" data-a="duplicateInKey" ${S.transpose && tom.base ? '' : 'disabled'}>${t('play.tom.duplicate')}</button>
     <button class="btn-ghost sm tom-reset" data-a="resetTom" ${S.transpose ? '' : 'disabled'}>${I.undo(16)}${t('play.tom.reset')}</button>
   </div>`;
 }

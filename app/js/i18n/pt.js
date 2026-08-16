@@ -149,6 +149,8 @@ export const PT = {
   'play.tom.warnTab': 'tablatura no tom original',
   'play.tom.duplicate': 'Duplicar neste tom',
   'play.tom.duplicated': 'Música duplicada em {tom}',
+  'play.tom.duplicateFailed': 'Não foi possível duplicar a música',
+  'play.tom.noEditWhileTransposed': 'Volte ao tom original para mudar a digitação',
   'play.chordsGrid.title': 'Acordes desta música',
   'play.chordsGrid.hint': 'Toque a estrela para fixar o acorde na barra do topo',
   'play.chordsGrid.pinTooltip': 'Fixar acorde no topo',

@@ -200,7 +200,14 @@ function syncCE() { syncDraftFromDOM(); syncChordEd(); }
 
 // Grava a forma como digitação do acorde na música inteira — usada pelo
 // picker (pickChordShape) e pelo Aplicar do popover (chordPopApply).
+//
+// Enquanto a cifra está transposta, `name` é o nome TRANSPOSTO — gravar aqui
+// persistiria digitacoes[nome-transposto] na música ORIGINAL: uma digitação
+// para um acorde que ela nem tem no seu próprio tom. A regra é que fingering
+// vira somente-leitura enquanto transposto; o catálogo continua valendo (ver
+// os quatro dict = S.transpose ? ... de render/play.js).
 async function applyShapeToSong(song, name, s) {
+  if (S.transpose) { toast(t('play.tom.noEditWhileTransposed')); return; }
   song.cifra.digitacoes = {
     ...(song.cifra.digitacoes || {}),
     [name]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}), varId: s.id },
@@ -240,6 +247,11 @@ async function gravarNoDestino(st, shape, varId) {
 // diferentes rodam concorrentes, e o segundo S.songs = S.songs.filter(...)
 // escreve por cima do primeiro sem deixar rastro.
 let apagandoFonte = false;
+
+// Mesma guarda, mesmo motivo: duplicateInKey copia áudio no meio de um await, e
+// o botão continua clicável durante ele — sem isto dois toques rápidos criam
+// duas cópias.
+let duplicandoTom = false;
 
 const actions = {
   // navegação
@@ -405,7 +417,11 @@ const actions = {
   openTomPop(d, ev, el) {
     if (S.tomPop) { S.tomPop = null; update(); return; }
     const r = el.getBoundingClientRect();
-    S.tomPop = { anchor: { x: r.left, y: r.top, w: r.width, h: r.height } };
+    const sc = document.querySelector('[data-autoscroll]');
+    S.tomPop = {
+      anchor: { x: r.left, y: r.top, w: r.width, h: r.height },
+      scrollTop: sc ? sc.scrollTop : 0,   // rolagem REAL fecha, igual ao chord-pop
+    };
     update();
   },
   closeTomPop() { S.tomPop = null; update(); },
@@ -422,16 +438,29 @@ const actions = {
   },
   resetTom() { S.transpose = 0; update(); },
   async duplicateInKey() {
+    if (duplicandoTom) return;
     const song = currentSong();
     if (!song || !S.transpose) return;
-    const { base } = tomAtual(song);
-    const tomNovo = tomDeSemitons(base, S.transpose) || '';
-    const novoId = await duplicarMusicaNoTom(song, S.transpose, base);
-    S.tomPop = null;
-    S.transpose = 0;
-    toast(t('play.tom.duplicated', { tom: tomNovo }));
-    goSong(novoId, S.backTo);
-    update();
+    duplicandoTom = true;
+    try {
+      const { base } = tomAtual(song);
+      const tomNovo = tomDeSemitons(base, S.transpose) || '';
+      const novoId = await duplicarMusicaNoTom(song, S.transpose, base);
+      S.tomPop = null;
+      S.transpose = 0;
+      toast(t('play.tom.duplicated', { tom: tomNovo }));
+      // openSongAction (não goSong+update): a cópia tem blobId PRÓPRIO nos
+      // stems/imagens, mas media.songId e media.urls (render/play.js) ainda
+      // apontam para os bytes da ORIGINAL até loadSongMedia rodar. Sem isto o
+      // mixer da cópia toca os bytes certos por coincidência (blobId igual
+      // quando a cópia deu certo) e passa a apontar para bytes apagados assim
+      // que a original for excluída.
+      await openSongAction(novoId, S.backTo);
+    } catch (e) {
+      toast(t('play.tom.duplicateFailed'));
+    } finally {
+      duplicandoTom = false;
+    }
   },
   // ---- popover do acorde na cifra (spec 2026-07-29) ----
   openChordPop(d, ev, el) {

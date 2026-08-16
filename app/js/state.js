@@ -449,8 +449,18 @@ export async function duplicarMusicaNoTom(song, semitons, tomBase) {
     await DB.saveBlob(novo, b);
     mapa.set(id, novo);
   }
-  const remapa = (arr) => (arr || []).map((x) => (x && x.blobId && mapa.has(x.blobId)
-    ? { ...x, blobId: mapa.get(x.blobId) } : { ...x }));
+  // Um id com blobId que NÃO está em `mapa` é bytes que não puderam ser
+  // copiados (DB.getBlob devolveu null — pode ser um blob já órfão, mas
+  // também pode ser uma falha transitória de leitura do OPFS que o
+  // fallback do IndexedDB engole em silêncio). Mantido, x.blobId continuaria
+  // apontando para o blob da ORIGINAL — dono compartilhado, que é exatamente
+  // o que deleteSongs (apaga todo blob das vítimas sem checar quem mais usa)
+  // e o export (não deduplica) não podem receber. A cópia simplesmente perde
+  // aquele item em vez de arriscar levar a original junto quando uma das
+  // duas for apagada.
+  const remapa = (arr) => (arr || [])
+    .filter((x) => !x || !x.blobId || mapa.has(x.blobId))
+    .map((x) => (x && x.blobId ? { ...x, blobId: mapa.get(x.blobId) } : { ...x }));
 
   const tomNovo = tomDeSemitons(tomBase, semitons) || tomBase || '';
   const copia = {

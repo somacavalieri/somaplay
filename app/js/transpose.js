@@ -44,7 +44,10 @@ export function transporAcorde(nome, semitons) {
   // renotava 'Db' para 'C#' — o app reescrevendo a grafia do usuário sem que
   // ninguém tivesse transposto nada. É a mesma guarda que transporLinha tem, e
   // a assimetria entre as duas era o bug.
-  if (!semitons) return String(nome);
+  // Um deslocamento não-inteiro também devolve o nome intacto: sem isto,
+  // `(((i + 1.5) % 12) + 12) % 12` cai fora do índice de NOTAS e transporNota
+  // devolve undefined, que vira o literal 'undefined' no nome do acorde.
+  if (!semitons || !Number.isInteger(semitons)) return String(nome);
   const s = String(nome);
   const partes = s.split('/');
   const m = partes[0].match(RE_FUND);

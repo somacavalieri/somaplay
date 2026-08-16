@@ -104,6 +104,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .btn-ghost{height:46px;padding:0 16px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:10px;font-weight:600;font-size:14px;cursor:pointer}
 .btn-ghost.lg{height:50px;padding:0 22px;border-radius:12px;color:var(--text);font-size:15px}
 .btn-ghost.danger{color:var(--red)}
+.btn-ghost:disabled{opacity:.4;cursor:default}
 
 .tabrow{display:flex;align-items:center;gap:14px;padding:13px 28px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
 .segtab{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px}
@@ -303,6 +304,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .play-title .t{font-family:var(--f-title);font-weight:700;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .play-title .sub{display:flex;align-items:center;gap:8px;margin-top:3px;color:var(--muted);font-size:13px}
 .tag-tom{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;background:var(--accent-tint);color:var(--accent);font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit}
+/* Cifra em imagem: a pílula é um <span> sem popover nenhum atrás dela — desfaz
+   o cursor de botão que a regra acima dá para todo .tag-tom. */
+.tag-tom.static{cursor:default}
 .tom-pop{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 12px 32px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:10px}
 .tom-pop .nm{font-size:13px;color:var(--muted)}
 .tom-pop .nm b{color:var(--accent);font-size:15px}
@@ -312,7 +316,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .tom-cell{height:38px;border-radius:9px;border:1px solid transparent;background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .tom-cell.on{background:var(--text);color:var(--bg)}
 .tom-cell.orig{border-color:var(--muted2)}
-.tom-reset{justify-content:center}
+.tom-reset{display:flex;align-items:center;justify-content:center;gap:6px}
 .mode-switch{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:3px;gap:3px;flex-shrink:0}
 .mode-switch button{height:42px;padding:0 16px;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;background:transparent;color:var(--text);white-space:nowrap}
 .mode-switch button.on{background:var(--accent);color:var(--bg)}

@@ -198,3 +198,21 @@ test('transpor mapeia nome em nome — por isso a digitação não pode viajar',
   assert.deepEqual(transpostos, ['D', 'E']);
   assert.ok(digitacoes[transpostos[0]], 'a colisão que justifica zerar digitacoes deixou de existir');
 });
+
+test('acorde com mais de uma barra desloca todas as notas', () => {
+  assert.equal(transporAcorde('C/E/G', 2), 'D/F#/A');
+});
+
+test('deslocamento não-inteiro devolve o acorde intacto', () => {
+  assert.equal(transporAcorde('C', 1.5), 'C');
+});
+
+test('o palpite ignora token final que não é acorde', () => {
+  assert.equal(deduzTom(parseCifraText('Am7   G   %\nfim')), 'G');
+});
+
+test('token colado ganha um espaço para continuar sendo dois acordes', () => {
+  // Sem o espaço, 'E7(13)E7(b13)' transposto viraria um token só e o parser
+  // perderia a linha inteira. A separação é o preço de manter os dois legíveis.
+  assert.equal(transporLinha('E7(13)E7(b13)  Am', 12), 'E7(13) E7(b13) Am');
+});

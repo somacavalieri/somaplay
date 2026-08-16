@@ -149,6 +149,8 @@ export const EN = {
   'play.tom.warnTab': 'tablature in the original key',
   'play.tom.duplicate': 'Duplicate in this key',
   'play.tom.duplicated': 'Song duplicated in {tom}',
+  'play.tom.duplicateFailed': 'Could not duplicate the song',
+  'play.tom.noEditWhileTransposed': 'Return to the original key to change the fingering',
   'play.chordsGrid.title': 'Chords in this song',
   'play.chordsGrid.hint': 'Tap the star to pin the chord to the top bar',
   'play.chordsGrid.pinTooltip': 'Pin chord to the top bar',
