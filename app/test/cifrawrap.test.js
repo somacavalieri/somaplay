@@ -153,11 +153,25 @@ test('predicado que rejeita tudo não trava', () => {
 });
 
 test('o predicado só é consultado em corte válido', () => {
-  let chamadas = 0;
-  wrapBlock(CH, LY, 40, () => { chamadas++; return true; });
-  // Ordem certa: 2 chamadas. Com `serve` antes dos `ok`, viram 6. O limite
-  // frouxo de antes (< CH.length) deixava as duas passarem.
-  assert.ok(chamadas <= 2, `${chamadas} chamadas; a ordem dos operandos inverteu?`);
+  // O contrato é este: `cabe` nunca é perguntado sobre um pedaço cortado no
+  // MEIO de um acorde. Antes isto era medido pela contagem de chamadas (<= 2),
+  // proxy que caducou quando a busca pela respiração passou a varrer uma janela
+  // de cortes — todos válidos, e por isso muitos. A contagem virou sinal
+  // secundário; o contrato agora é verificado direto.
+  const inteiros = new Set(CH.match(/\S+/g));
+  const vistos = [];
+  wrapBlock(CH, LY, 40, (t) => { vistos.push(t); return true; });
+  assert.ok(vistos.length > 0, 'o predicado tem de ser consultado');
+  for (const pedaco of vistos) {
+    for (const tok of (pedaco.match(/\S+/g) || [])) {
+      assert.ok(inteiros.has(tok),
+        `pedaço cortado no meio de um acorde: ${JSON.stringify(tok)} não é token do original`);
+    }
+  }
+  // Com `serve` antes dos `ok`, o predicado passaria a ser chamado a cada
+  // caractere da varredura — ordem de grandeza da largura da linha.
+  assert.ok(vistos.length < CH.length / 2,
+    `${vistos.length} chamadas; a ordem dos operandos inverteu?`);
 });
 
 test('o atalho testa exatamente o pedaço que devolve', () => {
@@ -186,3 +200,64 @@ test('composição real: linha densa não deixa fileira acima da caixa', () => {
   for (const p of r) if (p.chords) assert.ok(cabe(p.chords), `fileira acima da caixa: ${p.chords}`);
 });
 
+
+// ---- quebra na respiração da frase (spec 2026-08-16) ----
+//
+// O gráfico impresso codifica a frase como VÃO LARGO: onde a música respira, o
+// livro deixa vários espaços. O corte guloso não enxergava isso — parava no
+// primeiro espaço válido, e um espaço simples entre duas palavras valia tanto
+// quanto um vão de nove. Medido no acervo do Caetano vol. 1, 54 das 72 quebras
+// caíam em vão de 1–2 espaços, ou seja no meio da frase.
+
+// Largura do vão de espaços que contém a posição `i`.
+function vao(s, i) {
+  let a = i, b = i;
+  while (a > 0 && s[a - 1] === ' ') a--;
+  while (b < s.length && s[b] === ' ') b++;
+  return b - a;
+}
+
+// Sistema 3 de "Meu bem, meu mal" (livro 93), o caso que motivou a mudança.
+const MB_CH = 'B7(b9)     E7(9)                A7(9)    A/G    F#m7(b5)             B7(b9)       Em(7M/9)     Em7(9)         Gm6';
+const MB_LY = 'mãe   Meu   medo     e meu  champanhe           Visão         do espaço      sideral                          Onde o que  eu sou se';
+
+test('a quebra cai no vão largo, não no espaço simples do meio da frase', () => {
+  const r = wrapBlock(MB_CH, MB_LY, 72);
+  assert.ok(r.length >= 2, 'o sistema não cabe em 72 colunas, tem de quebrar');
+  // O corte guloso terminava a 1ª fileira em "do", partindo "do espaço".
+  assert.ok(!/\bdo$/.test(r[0].lyric),
+    `1ª fileira não pode terminar em "do" (parte "do espaço"): ${JSON.stringify(r[0].lyric)}`);
+  // Deve terminar em "Visão", que é onde o livro deixa nove espaços.
+  assert.match(r[0].lyric, /Visão$/);
+});
+
+test('nenhuma quebra cai em vão de um espaço quando existe vão largo por perto', () => {
+  for (const cols of [60, 66, 72, 80, 90]) {
+    const r = wrapBlock(MB_CH, MB_LY, cols);
+    let pos = 0;
+    for (let i = 0; i < r.length - 1; i++) {
+      pos += r[i].lyric.length;
+      // reencontra a coluna do corte no original é frágil; basta conferir que a
+      // fileira não termina no meio de uma frase com vão de 1
+      assert.ok(!/ \S{1,3}$/.test(r[i].lyric) || vao(MB_LY, pos) > 1,
+        `cols=${cols}, fileira ${i} termina em palavra solta: ${JSON.stringify(r[i].lyric)}`);
+    }
+  }
+});
+
+test('preferir o vão não faz nenhuma fileira passar da largura', () => {
+  for (let cols = 24; cols <= 120; cols += 4) {
+    for (const p of wrapBlock(MB_CH, MB_LY, cols)) {
+      assert.ok(Math.max(p.chords.length, p.lyric.length) <= cols,
+        `cols=${cols}: ${Math.max(p.chords.length, p.lyric.length)}`);
+    }
+  }
+});
+
+test('preferir o vão não perde nem parte acorde nenhum', () => {
+  for (let cols = 24; cols <= 120; cols += 4) {
+    const antes = chordCols(MB_CH).map((x) => x[0]);
+    const depois = wrapBlock(MB_CH, MB_LY, cols).flatMap((p) => chordCols(p.chords).map((x) => x[0]));
+    assert.deepEqual(depois, antes, `cols=${cols}`);
+  }
+});

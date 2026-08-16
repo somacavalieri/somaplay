@@ -436,6 +436,45 @@ export function wrapBlock(chords, lyric, cols, cabe) {
   // primeiro corte válido (que só passa uma palavra e ainda deixa migalha),
   // mira o corte mais perto do MEIO do que sobra — as duas fileiras finais
   // saem parecidas, nenhuma passa de `n`.
+  // Respiração (spec 2026-08-16): o gráfico impresso codifica a frase como VÃO
+  // LARGO — onde a música respira, o livro deixa vários espaços seguidos. O
+  // corte guloso não enxergava isso: parava no primeiro espaço válido, e um
+  // espaço simples entre duas palavras valia tanto quanto um vão de nove. No
+  // acervo do Caetano vol. 1, 54 das 72 quebras caíam em vão de 1–2 espaços,
+  // ou seja no meio da frase ("Visão   do | espaço" na Meu bem, meu mal).
+  const vao = (s, i) => {
+    let a = i, b = i;
+    while (a > 0 && s[a - 1] === ' ') a--;
+    while (b < s.length && s[b] === ' ') b++;
+    return b - a;
+  };
+  // O MENOR dos dois vãos: um vão largo na letra que cai no meio de um acorde
+  // não respira nada — as duas linhas têm de estar folgadas no mesmo ponto.
+  const respiro = (i) => Math.min(vao(c, i), vao(l, i));
+
+  // Entre os cortes válidos perto do limite, o que mais respira. A janela é o
+  // preço da troca: recuar até 25% da largura derrubou aquelas 54 quebras para
+  // 34 e custou ~4 colunas por quebra.
+  const JANELA = 0.25;
+  const naRespiracao = (pos, k) => {
+    if (k >= end) return k;                 // fim da linha já é a melhor quebra
+    const piso = Math.max(pos + 1, k - Math.floor(n * JANELA));
+    let melhor = k, best = respiro(k);
+    for (let k2 = k - 1; k2 >= piso; k2--) {
+      if (!(ok(c, k2) && ok(l, k2) && serve(pos, k2))) continue;
+      const r = respiro(k2);
+      if (r > best) { best = r; melhor = k2; }
+    }
+    return melhor;
+  };
+
+  // Migalha: sobra tão pouco depois do corte guloso que a última fileira do
+  // bloco fica com uma palavra sozinha ("Mesmo" em Meditação, 2026-08-11) —
+  // acontece sempre que o texto passa de `n` por pouco. Em vez de recuar até o
+  // primeiro corte válido (que só passa uma palavra e ainda deixa migalha),
+  // mira o corte mais perto do MEIO do que sobra — as duas fileiras finais
+  // saem parecidas, nenhuma passa de `n`. O equilíbrio continua mandando; a
+  // respiração entra só como desempate, senão as duas regras disputam o corte.
   const MIGALHA = Math.min(12, Math.floor(n * 0.25));
   const semMigalha = (pos, cut) => {
     if (cut >= end) return cut;
@@ -443,11 +482,12 @@ export function wrapBlock(chords, lyric, cols, cabe) {
     if (resto > MIGALHA || resto > n) return cut;
     const alvo = pos + Math.ceil((cut - pos + resto) / 2);
     const piso = Math.max(pos + 1, end - n);
-    let melhor = cut, dist = Infinity;
+    let melhor = cut, dist = Infinity, folga = -1;
     for (let k2 = cut - 1; k2 >= piso; k2--) {
       if (!(ok(c, k2) && ok(l, k2) && serve(pos, k2))) continue;
       const d = Math.abs(k2 - alvo);
-      if (d < dist) { melhor = k2; dist = d; }
+      const r = respiro(k2);
+      if (d < dist || (d === dist && r > folga)) { melhor = k2; dist = d; folga = r; }
     }
     return (end - melhor > resto) ? melhor : cut;
   };
@@ -462,7 +502,7 @@ export function wrapBlock(chords, lyric, cols, cabe) {
     // Não deu para recuar: corta na largura mesmo, para não travar. É a mesma
     // escapatória de sempre — token único mais largo que a tela, ou dois
     // acordes colados na mesma sílaba.
-    const cut = semMigalha(pos, k > pos + 1 ? k : lim);
+    const cut = semMigalha(pos, k > pos + 1 ? naRespiracao(pos, k) : lim);
     const p = peca(pos, cut);
     if (p.chords || p.lyric) out.push(p);
     pos = cut;

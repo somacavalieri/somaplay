@@ -201,10 +201,53 @@ function tabBlockHTML(ln) {
   return `<div class="tabwrap"><div class="tab" style="--cols:${cols}">${acordes}${cordas}</div></div>`;
 }
 
+// Ajustar para caber (spec 2026-08-16). A largura do sistema é a que o livro
+// imprimiu — 127 a 132 colunas nas músicas medidas do Caetano vol. 1 — e
+// quebrar um sistema em dois desfaz o fraseado que o próprio livro escreveu.
+// Então, ANTES de quebrar, encolhe: a fonte cai até o sistema mais largo caber
+// na caixa. O piso existe porque cifra ilegível na estante não serve para nada;
+// abaixo dele a linha quebra mesmo, e aí o `wrapBlock` escolhe a quebra na
+// respiração da frase.
+//
+// O zoom continua sendo o TETO: quem aumentou a fonte não a vê diminuir sozinha
+// além do que já pediu — o ajuste só encolhe.
+//
+// Não resolve o modo miniatura: lá cada diagrama ocupa a mesma largura em px
+// seja qual for a fonte da letra, e é o diagrama que manda na quebra. Encolher
+// a fonte ainda ajuda um pouco (os acordes ficam mais perto uns dos outros),
+// mas em sistema denso a fileira quebra de qualquer forma.
+const CIFRA_PISO_PX = 15;
+
+// Percurso máximo de leitura, em colunas (spec 2026-08-16). Um sistema do
+// songbook tem 127 a 132 colunas; numa tela larga isso cabe inteiro, e foi
+// justamente o que o usuário reprovou — "ocupando toda a tela perde o ritmo e o
+// significado da canção". O olho não acompanha o par acorde/sílaba por 132
+// colunas. Acima daqui a linha quebra mesmo cabendo, e como a quebra procura a
+// respiração da frase, ela cai em fim de frase em vez de partir uma.
+//
+// Cap só na MEDIDA da quebra, não na caixa: capar a caixa faria o `fontQueCabe`
+// enxergar uma caixa menor e encolher a fonte sem necessidade — a caixa é a
+// régua do "cabe inteiro?", o cap é a régua do "vale ler tão largo?".
+const CIFRA_MAX_COLS = 96;
+
+function fontQueCabe(fontPx, parsed, boxPx) {
+  if (!boxPx) return fontPx;              // ainda não medido: fica como está
+  const cols = parsed.reduce((m, ln) => (ln.isTab ? m : Math.max(m,
+    ln.hasChords ? ln.chords.length : 0,
+    ln.hasLyric ? ln.lyric.length : 0)), 0);
+  if (!cols) return fontPx;
+  const mono = getComputedStyle(document.documentElement).getPropertyValue('--f-mono');
+  // Avanço do caractere por px de fonte, medido na fonte real (não os .6 de
+  // chute do CSS): fallback de fonte com avanço diferente sairia estreito.
+  const avanco = textMeasurer(100, mono)('0') / 100;
+  if (!(avanco > 0)) return fontPx;
+  return Math.max(CIFRA_PISO_PX, Math.min(fontPx, Math.floor(boxPx / (cols * avanco))));
+}
+
 function cifraTextHTML(song) {
   const parsed = parsedCifra(song);
   const zoom = S.settings.cifraZoom / 100;
-  const fontPx = Math.round(20 * zoom);
+  const fontPx = fontQueCabe(Math.round(20 * zoom), parsed, cifraBoxPx);
   const mini = S.settings.cifraMiniaturas;
   const dict = song.cifra?.digitacoes || null;
   const meas = mini ? rowMeasurers(fontPx) : null;
@@ -240,8 +283,11 @@ function cifraTextHTML(song) {
     const dedup = !ln.hasLyric;
     // acorde e letra quebram JUNTOS, na mesma coluna — é o que mantém o acorde em
     // cima da sílaba dele quando a linha não cabe na tela
+    // `cifraCols` 0 = ainda não medido, e aí não se quebra nada — o `min` tem de
+    // preservar esse zero, senão a 1ª renderização quebraria em 96 às cegas.
+    const alvo = cifraCols ? Math.min(cifraCols, CIFRA_MAX_COLS) : 0;
     for (const p of wrapBlock(ln.hasChords ? ln.chords : '',
-                              ln.hasLyric ? ln.lyric : '', cifraCols,
+                              ln.hasLyric ? ln.lyric : '', alvo,
                               mini ? (trecho) => cabe(trecho, dedup) : undefined)) {
       if (ln.hasChords && p.chords) {
         h += mini
