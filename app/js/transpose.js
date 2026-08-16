@@ -5,7 +5,7 @@
 // que a reposição por coluna é o que a torna segura — em
 // docs/superpowers/specs/2026-08-16-transposicao-design.md
 
-import { chordLineSegs } from './chords.js';
+import { chordLineSegs, chordName, isChordTok } from './chords.js';
 
 // Os doze nomes, sempre os mesmos. Não é armadura calculada por ciclo de
 // quintas: é o array que a grade do CifraClub mostra (Am, Bbm, Bm, Cm, C#m, Dm,
@@ -83,4 +83,74 @@ export function transporLinha(linha, semitons) {
     col += larg;
   }
   return out;
+}
+
+// Fundamental e modo de um tom. O 'm' do modo menor não pode ser o 'm' de
+// 'maj7' — daí o lookahead negativo.
+const RE_TOM = /^([A-G][#b]?)(m(?!aj))?/;
+
+// O campo `tom` é texto livre (render/addedit.js:160). Só vale o que o parser já
+// reconhece como acorde — 'Am', 'C', 'C#m', 'Am7'. Qualquer outra coisa ('E com
+// capuz na 2ª', vazio) não é tom, e quem chama cai na regra do palpite.
+export function leTom(tom) {
+  const s = String(tom == null ? '' : tom).trim();
+  if (!s || !isChordTok(s)) return null;
+  const m = s.match(RE_TOM);
+  return m ? { raiz: m[1], menor: !!m[2] } : null;
+}
+
+// Rótulo do tom depois de deslocar. Preserva o modo: C#m +2 = Ebm.
+export function tomDeSemitons(tom, semitons) {
+  const p = leTom(tom);
+  if (!p) return null;
+  return transporNota(p.raiz, semitons) + (p.menor ? 'm' : '');
+}
+
+// Ordem ALFABÉTICA, não cromática — é a ordem da grade na referência.
+const ALFABETICA = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#'];
+
+// Os doze tons da grade, no modo do tom original: 'C#m' mostra doze menores.
+export function gradeDeTons(tom) {
+  const p = leTom(tom);
+  if (!p) return [];
+  return ALFABETICA.map((n) => n + (p.menor ? 'm' : ''));
+}
+
+// Quantos semitons separam dois tons, em 0–11. É o que a grade precisa: tocar
+// em 'Ebm' com o original em 'C#m' define S.transpose = 2.
+export function semitonsEntre(tomOrigem, tomDestino) {
+  const a = leTom(tomOrigem);
+  const b = leTom(tomDestino);
+  if (!a || !b) return null;
+  return (((INDICE[b.raiz] - INDICE[a.raiz]) % 12) + 12) % 12;
+}
+
+// Palpite de tom pelo último acorde: cifra popular quase sempre termina no tom.
+// Reduz a fundamental mais modo e descarta o resto — 'G7' vira 'G', 'F#m7(b5)'
+// vira 'F#m'. É palpite de TOM, não catalogação de acorde.
+//
+// Erra na relativa menor: 'Em' e 'G' têm os mesmos acordes, e nada no texto
+// separa os dois. Por isso quem exibe marca como chute — ver render/play.js.
+export function deduzTom(parsed) {
+  const linhas = parsed || [];
+  for (let i = linhas.length - 1; i >= 0; i--) {
+    if (!linhas[i].hasChords) continue;
+    const toks = String(linhas[i].chords).trim().split(/\s+/).filter(Boolean);
+    for (let k = toks.length - 1; k >= 0; k--) {
+      const nome = chordName(toks[k]);
+      if (!isChordTok(nome)) continue;
+      const m = nome.match(RE_TOM);
+      if (m && INDICE[m[1]] !== undefined) return m[1] + (m[2] ? 'm' : '');
+    }
+  }
+  return null;
+}
+
+// Tom entre parênteses no fim do título. SUBSTITUI quando já há um: testar três
+// tons em sequência produziria 'Wave (Bb) (C) (D)'. Só casa o que parece tom —
+// 'Wave (ao vivo)' fica inteiro.
+const RE_TOM_NO_TITULO = /\s*\([A-G][#b]?m?\)\s*$/;
+
+export function tituloNoTom(title, tom) {
+  return `${String(title).replace(RE_TOM_NO_TITULO, '')} (${tom})`;
 }
