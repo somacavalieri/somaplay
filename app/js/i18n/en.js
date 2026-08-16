@@ -145,6 +145,8 @@ export const EN = {
   'play.tom.reset': 'Reset',
   'play.tom.original': 'original key',
   'play.tom.guess': 'key guessed from the chart — fill the field in edit to confirm',
+  'play.tom.warnAudio': 'audio in the original key',
+  'play.tom.warnTab': 'tablature in the original key',
   'play.chordsGrid.title': 'Chords in this song',
   'play.chordsGrid.hint': 'Tap the star to pin the chord to the top bar',
   'play.chordsGrid.pinTooltip': 'Pin chord to the top bar',

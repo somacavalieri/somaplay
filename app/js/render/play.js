@@ -481,6 +481,16 @@ export function renderPlay() {
   const isKar = S.viewMode === 'karaoke';
   const hasKaraoke = !!(song.letra && song.letra.trim());
   const hasMixer = (song.stems || []).length > 0 || (song.full || []).length > 0;
+  // Um mecanismo, dois gatilhos: o que a transposição não consegue levar junto.
+  // Áudio não muda de tom, e tab é casa absoluta. Só aparece quando há o que
+  // avisar — fora do tom original e com a coisa presente na música.
+  const avisos = [];
+  if (S.transpose && !isImg && !isKar) {
+    if (hasMixer) avisos.push(t('play.tom.warnAudio'));
+    if (parsedCifra(song).some((l) => l.isTab)) avisos.push(t('play.tom.warnTab'));
+  }
+  const avisoHTML = avisos.length
+    ? `<div class="tom-warn">${esc(avisos.join(' · '))}</div>` : '';
   const imgs = song.cifra?.imagens || [];
   const variantEnabled = imgs.some((i) => i.tipo === 'aberta') && imgs.some((i) => i.tipo === 'fechada');
   const chordNames = song.cifra?.tipo === 'imagem'
@@ -542,6 +552,7 @@ export function renderPlay() {
       <div class="cifra-col">
         ${pinnedBarHTML(song, chordNames)}
         ${body}
+        ${avisoHTML}
         ${scrollCtl}
       </div>
       ${hasMixer && !S.mixerCollapsed ? mixerHTML(song) : ''}
