@@ -57,6 +57,7 @@ export const S = {
   imgZoom: 1,
   imgInvert: false,
   imgVariant: 'aberta',
+  transpose: 0,            // semitons; efêmero — zera ao trocar de música
   imgMenuOpen: false,
   ctlVisible: true,
   chordFavs: {},           // songId -> [acorde]
@@ -544,6 +545,7 @@ export function openSong(songId, from) {
   const modes = modesOf(s);
   const wantKaraoke = S.modeFilter.includes('T3') && modes.includes('T3') && from !== 'list';
   S.currentSongId = songId;
+  S.transpose = 0;
   S.backTo = from || 'home';
   S.screen = 'play';
   S.viewMode = wantKaraoke ? 'karaoke' : 'cifra';
