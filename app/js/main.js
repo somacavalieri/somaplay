@@ -227,11 +227,25 @@ function shapeAtual(dict, name) {
 }
 
 // Grava a forma no destino do editor (rascunho, música ou nada, no caso do dicionário).
+// A porta 'song' é a mesma que applyShapeToSong guarda: st.name é o nome
+// TRANSPOSTO enquanto a cifra está transposta, e song é o registro ORIGINAL —
+// gravar aqui persistiria a mesma entrada errada que a outra porta recusa. O
+// draft não passa por isto: a tela de adicionar/editar não tem transposição.
+//
+// Devolve false quando a porta 'song' foi recusada, true nos outros dois
+// casos (draft, ou 'song' que gravou). O toast NÃO fica aqui dentro — ao
+// contrário de applyShapeToSong (cujos dois chamadores não tocam o toast
+// depois de chamá-la), ceSave/ceSaveNew sempre disparam o PRÓPRIO toast de
+// sucesso logo depois de chamar isto, e ele substituiria (toast() reseta o
+// texto e o timer) o aviso de somente-leitura antes de alguém o ler. Devolver
+// o sinal e deixar o chamador escolher qual toast mostrar é o que evita a
+// corrida.
 async function gravarNoDestino(st, shape, varId) {
   const dado = { frets: shape.frets.slice(), ...(shape.barre ? { barre: { ...shape.barre } } : {}), varId };
   if (st.origin.kind === 'draft' && S.draft) {
     S.draft.digitacoes = { ...(S.draft.digitacoes || {}), [st.name]: dado };
   } else if (st.origin.kind === 'song') {
+    if (S.transpose) return false;
     const song = songById(st.origin.songId);
     if (song) {
       song.cifra = song.cifra || {};
@@ -239,6 +253,7 @@ async function gravarNoDestino(st, shape, varId) {
       await saveSong(song);
     }
   }
+  return true;
 }
 
 // ---------- ações ----------
@@ -612,11 +627,15 @@ const actions = {
     syncCE();
     const st = S.chordEd;
     const shape = editorShape(st);
+    // upsertVar e applyVarToSongs continuam mesmo transposto: o catálogo não é
+    // por música, e o nome na tela (transposto ou não) é o que o usuário
+    // desenhou — só a gravação NESTA música (gravarNoDestino) é que recusa.
     upsertVar(st.name, { id: st.origin.varId, ...shape });
     const n = await applyVarToSongs(st.name, st.origin.varId, shape);
-    await gravarNoDestino(st, shape, st.origin.varId);
+    const gravou = await gravarNoDestino(st, shape, st.origin.varId);
     S.chordEd = null;
     update();
+    if (!gravou) { toast(t('play.tom.noEditWhileTransposed')); return; }
     toast(n
       ? t(n === 1 ? 'msg.chordbook.variantUpdatedOne' : 'msg.chordbook.variantUpdatedMany', { count: n })
       : t('msg.chordbook.variantUpdated'));
@@ -627,9 +646,10 @@ const actions = {
     const shape = editorShape(st);
     const igual = findShape(st.name, shape.frets, shape.barre);
     const varId = igual ? igual.id : upsertVar(st.name, { ...shape, label: st.label || suggestLabel(st, labelsOf(st.name)) });
-    await gravarNoDestino(st, shape, varId);
+    const gravou = await gravarNoDestino(st, shape, varId);
     S.chordEd = null;
     update();
+    if (!gravou) { toast(t('play.tom.noEditWhileTransposed')); return; }
     toast(igual ? t('msg.chordbook.shapeExists') : t('msg.chordbook.variantSaved'));
   },
   pickImages() { document.getElementById('file-images').click(); },
