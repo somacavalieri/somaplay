@@ -32,6 +32,35 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.13.0] - 2026-08-16
+
+### Changed
+
+- A text chart now has a **maximum reading measure of 96 columns**. A songbook
+  system runs 127 to 132 columns; on a wide screen that fits on one line, and
+  fitting it was the complaint — the eye cannot follow a chord to its syllable
+  across 132 columns. Past 96 the line now breaks even though it would fit, and
+  because the break hunts for the phrase, it lands at the end of one. The cap
+  applies to the wrap measure only, not to the box: capping the box would make
+  the fit-to-width step below see a smaller box and shrink the font for no
+  reason.
+- A text chart now **shrinks to fit before it breaks**. The width of a system is
+  the width the songbook printed — 127 to 132 columns across the Caetano Veloso
+  vol. 1 songs measured so far — and splitting one in two undoes the phrasing
+  the book itself wrote. The chart font now steps down until the widest system
+  fits the column, and only below a legible floor (15px) does a system wrap. On
+  a wide screen nothing wraps at all; the zoom setting stays the ceiling, so the
+  adjustment only ever shrinks.
+- When a system does have to wrap, **it breaks where the song breathes**. The
+  printed chart encodes a phrase as a wide gap — where the music breathes, the
+  book leaves several spaces. The old cut stopped at the first usable space, so
+  a single space between two words counted as much as a gap of nine: across the
+  Caetano vol. 1 library, 54 of 72 breaks landed mid-phrase, splitting things
+  like `Visão   do | espaço`. The cut now looks back up to a quarter of the line
+  for the widest gap common to both the chord and the lyric row. Same corpus at
+  72 columns: 35 mid-phrase instead of 54, and 19 breaks on a real breath
+  instead of 4.
+
 ## [0.12.1] - 2026-08-15
 
 ### Changed

@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-0.12.1';
+const VERSION = 'somaplay-0.13.0';
 const SHELL = [
   './',
   './index.html',
