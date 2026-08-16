@@ -13,6 +13,7 @@ const SHELL = [
   './js/chords-catalog.js',
   './js/chordbook.js',
   './js/chord-notation.js',
+  './js/transpose.js',
   './js/scroll-speed.js',
   './js/backup.js',
   './js/merge.js',
