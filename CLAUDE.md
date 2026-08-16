@@ -95,6 +95,14 @@ applies to what the app generates (the chord dictionary, its search), never to t
 content. Same for the "Acordes desta música" grid and the chord popover: they show the
 name as it appears in the chart.
 
+**A transposição é a única exceção à regra acima, e é deliberada.**
+`app/js/transpose.js` reescreve os acordes da cifra do usuário — porque subir de
+tom é o que o violeiro pediu, e não há como entregar isso sem tocar no texto. O
+que a torna segura é a *reposição por coluna*: cada acorde volta para a coluna
+de onde saiu, e só anda quando o vizinho cresceu a ponto de encostar, com um
+espaço de folga mínima. Fora desse módulo a regra continua valendo inteira.
+Spec: `docs/superpowers/specs/2026-08-16-transposicao-design.md`.
+
 **Never put a `data-*` attribute value behind `t()`.** Values like `data-id="CifraClub"`
 and `data-tipo="aberta"` are persisted into the song record. Translating one makes a
 library saved in English diverge from one saved in Portuguese. Translate the visible
