@@ -1148,6 +1148,13 @@ export async function duplicarMusicaNoTom(song, semitons, tomBase) {
       texto: textoTransposto(song.cifra?.texto || '', semitons),
       imagens: remapa(song.cifra?.imagens),
       acordes: (song.cifra?.acordes || []).map((n) => transporAcorde(n, semitons)),
+      // Digitação é casa ABSOLUTA, e a chave é o nome do acorde. Carregar o mapa
+      // para a cópia transposta não é inofensivo: transpor mapeia nome em nome,
+      // então o antigo C vira D e HERDA a digitação que era do D — forma errada
+      // no acorde errado, em silêncio. Renomear as chaves seria pior ainda: a
+      // forma de C rotulada D continua sendo a forma de C. A cópia começa limpa
+      // e cai no catálogo, que é o certo para um tom que não é o mesmo.
+      digitacoes: {},
     },
   };
   await saveSong(copia);
