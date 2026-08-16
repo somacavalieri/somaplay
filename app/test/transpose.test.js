@@ -29,9 +29,17 @@ test('extensão depois da barra NÃO é baixo e não se desloca', () => {
 });
 
 test('aceita as duas grafias na entrada e canoniza na saída', () => {
-  assert.equal(transporAcorde('Db', 0), 'C#');
-  assert.equal(transporAcorde('A#m', 0), 'Bbm');
-  assert.equal(transporAcorde('Gb7', 0), 'F#7');
+  // 12 e não 0: com a guarda de identidade, zero devolve o nome como está —
+  // a oitava inteira mostra a canonização sem mudar a classe de altura.
+  assert.equal(transporAcorde('Db', 12), 'C#');
+  assert.equal(transporAcorde('A#m', 12), 'Bbm');
+  assert.equal(transporAcorde('Gb7', 12), 'F#7');
+});
+
+test('deslocamento zero devolve o acorde como o usuário escreveu', () => {
+  for (const n of ['Db', 'Ab', 'Gb', 'A#m', 'Dbm7', 'Cb', 'E#7', 'Am', 'C']) {
+    assert.equal(transporAcorde(n, 0), n, `renotou '${n}' sem transpor nada`);
+  }
 });
 
 test('a volta cromática fecha, e ±12 é identidade', () => {

@@ -83,7 +83,11 @@ export function tomAtual(song) {
   const base = declarado || deduzTom(parsedCifra(song));
   const palpite = !declarado && !!base;
   if (!base) return { label: null, palpite: false, base: null };
-  return { label: tomDeSemitons(base, S.transpose) || base, palpite, base };
+  // Em zero, a pílula mostra o tom COMO FOI DECLARADO — 'Db' continua 'Db', e
+  // 'Am7' continua 'Am7'. tomDeSemitons canoniza para fundamental + modo, o que
+  // é certo para o tom RESULTANTE e errado para o tom que o usuário digitou.
+  const label = S.transpose ? (tomDeSemitons(base, S.transpose) || base) : base;
+  return { label, palpite, base };
 }
 
 // -------- blocos --------

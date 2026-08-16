@@ -40,6 +40,11 @@ function transporNota(nota, semitons) {
 // intactos. Corta em TODAS as barras (há acorde com mais de uma) e desloca só
 // os pedaços que são nota sozinha.
 export function transporAcorde(nome, semitons) {
+  // Deslocamento zero devolve o nome COMO ESTÁ. Sem isto, abrir a música já
+  // renotava 'Db' para 'C#' — o app reescrevendo a grafia do usuário sem que
+  // ninguém tivesse transposto nada. É a mesma guarda que transporLinha tem, e
+  // a assimetria entre as duas era o bug.
+  if (!semitons) return String(nome);
   const s = String(nome);
   const partes = s.split('/');
   const m = partes[0].match(RE_FUND);
