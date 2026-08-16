@@ -32,6 +32,7 @@ const SHELL = [
   './js/render/play.js',
   './js/render/chordeditor.js',
   './js/render/chordpop.js',
+  './js/render/tompop.js',
   './js/render/chordbookscreen.js',
   './js/render/addedit.js',
   './js/render/settings.js',

@@ -16,7 +16,7 @@ import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
 import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
-import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
+import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
@@ -27,6 +27,7 @@ import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
+import { semitonsEntre } from './transpose.js';
 import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
 import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
@@ -399,6 +400,26 @@ const actions = {
   },
   openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; S.chordPop = null; update(); },
   closeChordPicker() { S.chordPicker = null; S.chordEd = null; update(); },
+  // ---- popover do tom (spec 2026-08-16) ----
+  openTomPop(d, ev, el) {
+    if (S.tomPop) { S.tomPop = null; update(); return; }
+    const r = el.getBoundingClientRect();
+    S.tomPop = { anchor: { x: r.left, y: r.top, w: r.width, h: r.height } };
+    update();
+  },
+  closeTomPop() { S.tomPop = null; update(); },
+  transposeBy(d) {
+    S.transpose = (((S.transpose + Number(d.id)) % 12) + 12) % 12;
+    update();
+  },
+  setTom(d) {
+    const song = currentSong();
+    if (!song) return;
+    const n = semitonsEntre(tomAtual(song).base, d.id);
+    if (n !== null) S.transpose = n;
+    update();
+  },
+  resetTom() { S.transpose = 0; update(); },
   // ---- popover do acorde na cifra (spec 2026-07-29) ----
   openChordPop(d, ev, el) {
     const r = el.getBoundingClientRect();
@@ -945,6 +966,7 @@ document.addEventListener('click', (e) => {
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
+  if (S.tomPop && !e.target.closest('.tom-pop') && !e.target.closest('.tag-tom')) { S.tomPop = null; update(); }
 });
 
 document.addEventListener('input', (e) => {

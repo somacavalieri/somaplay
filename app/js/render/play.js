@@ -9,6 +9,7 @@ import { transporLinha, tomDeSemitons, deduzTom, transporAcorde } from '../trans
 import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
+import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
@@ -103,10 +104,10 @@ export const assinado = (n) => (n > 6 ? n - 12 : n);
 function songHeaderHTML(song, tom) {
   const meta = [];
   if (tom && tom.label) {
-    meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(tom.label)}${tom.palpite ? ' ?' : ''}</span>`);
+    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${esc(tom.label)}${tom.palpite ? ' ?' : ''}</button>`);
   } else if (tom) {
     const d = assinado(S.transpose);
-    meta.push(`<span class="tag-tom">${t('play.song.key')} ${d ? (d > 0 ? '+' : '') + d : '—'}</span>`);
+    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${d ? (d > 0 ? '+' : '') + d : '—'}</button>`);
   } else if (song.tom) {
     meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
@@ -548,6 +549,7 @@ export function renderPlay() {
     ${hasMixer ? transportHTML() : ''}
     ${S.chordPicker ? chordPickerHTML(song) : ''}
     ${S.chordPop ? chordPopHTML(song) : ''}
+    ${S.tomPop ? tomPopHTML(song, tomAtual(song)) : ''}
   </div>`;
 }
 

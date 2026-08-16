@@ -63,6 +63,7 @@ export const S = {
   chordFavs: {},           // songId -> [acorde]
   chordPicker: null,       // nome do acorde com o seletor de variação aberto
   chordPop: null,          // popover do acorde tocado na cifra: { name, anchor, modo:'mini'|'carrossel', selId, scrollTop }
+  tomPop: null,            // popover do tom aberto: { anchor }
   pinnedOpen: true,
   transportPlaying: false,
   position: 0,
@@ -546,6 +547,7 @@ export function openSong(songId, from) {
   const wantKaraoke = S.modeFilter.includes('T3') && modes.includes('T3') && from !== 'list';
   S.currentSongId = songId;
   S.transpose = 0;
+  S.tomPop = null;
   S.backTo = from || 'home';
   S.screen = 'play';
   S.viewMode = wantKaraoke ? 'karaoke' : 'cifra';
