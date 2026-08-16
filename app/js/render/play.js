@@ -5,9 +5,11 @@ import { S, currentSong, artistName, audio, persistCurrentStems, saveSong } from
 import { DB } from '../db.js';
 import { I, esc, fmtTime } from '../icons.js';
 import { parseCifraText, extractChords, chordSVG, chordDiagWidth, layoutChordRow, chordLineSegs, chordName, wrapBlock } from '../chords.js';
+import { transporLinha, tomDeSemitons, deduzTom, transporAcorde } from '../transpose.js';
 import { shapeById, pickerShapes } from '../chordbook.js';
 import { chordEditorHTML, shapeStripHTML } from './chordeditor.js';
 import { chordPopHTML, popPosition } from './chordpop.js';
+import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
@@ -58,11 +60,61 @@ function parsedCifra(song) {
   return media.parsed;
 }
 
+// A transposição é aplicada DEPOIS do parse, e não invalidando o cache dele: a
+// cifra é parseada uma vez por música e transposta a cada render. A linha de
+// acordes do bloco de tab também anda — senão a cifra ficaria meio transposta,
+// que é pior que qualquer das duas pontas. A tab em si não anda: casa é
+// absoluta (ver o aviso em renderPlay).
+function transposto(parsed, semitons) {
+  if (!semitons) return parsed;
+  return parsed.map((l) => (l.hasChords
+    ? { ...l, chords: transporLinha(l.chords, semitons) }
+    : l));
+}
+
+// O tom que a pílula mostra, e se ele é chute. `base` é o tom original — de
+// onde a grade parte.
+//
+// Recebe a MÚSICA, não o parsed, de propósito: o palpite tem de ler a cifra
+// crua. Deduzir do texto já deslocado e depois deslocar o rótulo transporia
+// duas vezes, e o parâmetro extra seria só o convite para alguém passar o
+// parsed errado — inclusive daqui a seis meses.
+export function tomAtual(song) {
+  const declarado = song.tom && String(song.tom).trim();
+  const base = declarado || deduzTom(parsedCifra(song));
+  const palpite = !declarado && !!base;
+  if (!base) return { label: null, palpite: false, base: null };
+  // Em zero, a pílula mostra o tom COMO FOI DECLARADO — 'Db' continua 'Db', e
+  // 'Am7' continua 'Am7'. tomDeSemitons canoniza para fundamental + modo, o que
+  // é certo para o tom RESULTANTE e errado para o tom que o usuário digitou.
+  const label = S.transpose ? (tomDeSemitons(base, S.transpose) || base) : base;
+  return { label, palpite, base };
+}
+
 // -------- blocos --------
 // Cabeçalho de identidade da música (no topo do conteúdo, rola junto).
-function songHeaderHTML(song) {
+// A pílula do tom passa a existir SEMPRE na cifra em texto: hoje ela só aparecia
+// com o campo preenchido, e uma feature cujo botão some na maior parte do acervo
+// não é feature. Vira botão na Task 5.
+// `S.transpose` é guardado em 0–11 (um domínio só; ver Task 5). Para LER, a
+// forma assinada mais curta é a que o músico espera: 11 semitons acima é
+// "−1", não "+11". Só a exibição converte; o estado continua em 0–11.
+export const assinado = (n) => (n > 6 ? n - 12 : n);
+
+function songHeaderHTML(song, tom) {
   const meta = [];
-  if (song.tom) meta.push(`<span class="tag-tom">${t('play.song.key')} ${esc(song.tom)}</span>`);
+  if (tom && tom.label) {
+    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${esc(tom.label)}${tom.palpite ? ' ?' : ''}</button>`);
+  } else if (tom) {
+    const d = assinado(S.transpose);
+    meta.push(`<button class="tag-tom" data-a="openTomPop" title="${t('play.tom.open')}">${t('play.song.key')} ${d ? (d > 0 ? '+' : '') + d : '—'}</button>`);
+  } else if (song.tom) {
+    // Cifra em imagem: não há tom deduzido nem popover para abrir aqui — a
+    // pílula é um <span> inerte. .tag-tom ganhou cursor:pointer para o caso
+    // clicável (o <button> acima); "static" desfaz isso para este caso, que
+    // não tem data-a nenhum.
+    meta.push(`<span class="tag-tom static">${t('play.song.key')} ${esc(song.tom)}</span>`);
+  }
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
   return `<div class="song-id">
     <div class="ttl">${esc(song.title)}</div>
@@ -74,7 +126,12 @@ function songHeaderHTML(song) {
 function chordsGridHTML(song, chordNames) {
   if (!chordNames.length) return '';
   const favs = S.chordFavs[song.id] || [];
-  const dict = song.cifra?.digitacoes || null;
+  // Digitação é casa ABSOLUTA e a chave é o NOME do acorde. Transposto, o nome
+  // na tela mudou mas o dicionário da música não — ler o dicionário aqui
+  // mostraria a forma customizada do acorde original sob o nome do acorde
+  // transposto (Important 3 do review final). Em zero, sem colisão, o
+  // dicionário volta a valer.
+  const dict = S.transpose ? null : (song.cifra?.digitacoes || null);
   const cards = chordNames.map((n) => {
     const f = favs.includes(n);
     return `<div class="chord-card ${f ? 'pinned' : ''}">
@@ -93,7 +150,8 @@ function chordsGridHTML(song, chordNames) {
 function pinnedBarHTML(song, chordNames) {
   const favs = (S.chordFavs[song.id] || []).filter((n) => chordNames.includes(n));
   if (!favs.length || S.viewMode === 'karaoke') return '';
-  const dict = song.cifra?.digitacoes || null;
+  // Mesma guarda de chordsGridHTML: nome muda no transposto, dicionário não.
+  const dict = S.transpose ? null : (song.cifra?.digitacoes || null);
   const strip = S.pinnedOpen ? `<div class="strip">` + favs.map((n) =>
     `<div class="chord-mini"><div class="nm"><span>${esc(n)}</span><button class="star-btn on" data-a="toggleChordFav" data-id="${esc(n)}" title="${t('list.unpin')}">${I.star(true)}</button></div>
      <div>${chordSVG(n, true, dict)}</div></div>`).join('') + `</div>` : '';
@@ -245,11 +303,12 @@ function fontQueCabe(fontPx, parsed, boxPx) {
 }
 
 function cifraTextHTML(song) {
-  const parsed = parsedCifra(song);
+  const parsed = transposto(parsedCifra(song), S.transpose);
   const zoom = S.settings.cifraZoom / 100;
   const fontPx = fontQueCabe(Math.round(20 * zoom), parsed, cifraBoxPx);
   const mini = S.settings.cifraMiniaturas;
-  const dict = song.cifra?.digitacoes || null;
+  // Mesma guarda de chordsGridHTML: nome muda no transposto, dicionário não.
+  const dict = S.transpose ? null : (song.cifra?.digitacoes || null);
   const meas = mini ? rowMeasurers(fontPx) : null;
 
   // A largura de um bloco da fileira. Uma só, para o desenho e para o predicado.
@@ -298,9 +357,11 @@ function cifraTextHTML(song) {
     }
     return h;
   }).join('');
-  const chordNames = song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsed);
+  const chordNames = song.cifra?.acordes?.length
+    ? song.cifra.acordes.map((n) => transporAcorde(n, S.transpose))
+    : extractChords(parsed);
   return `<div class="cifra-scroll" data-autoscroll="1">
-    ${songHeaderHTML(song)}
+    ${songHeaderHTML(song, tomAtual(song))}
     <div class="cifra-text" style="font-size:${fontPx}px">${lines || `<div class="ly" style="color:var(--muted)">${t('play.cifraText.empty')}</div>`}</div>
     ${chordsGridHTML(song, chordNames)}
   </div>`;
@@ -402,7 +463,8 @@ function transportHTML() {
 
 function chordPickerHTML(song) {
   const name = S.chordPicker;
-  const dict = song.cifra?.digitacoes || {};
+  // Mesma guarda de chordsGridHTML: nome muda no transposto, dicionário não.
+  const dict = S.transpose ? {} : (song.cifra?.digitacoes || {});
   const { shapes, selId } = pickerShapes(name, dict[name] || null);
   const ed = S.chordEd && S.chordEd.origin.kind === 'song' ? S.chordEd : null;
   const corpo = ed
@@ -431,11 +493,23 @@ export function renderPlay() {
   const isKar = S.viewMode === 'karaoke';
   const hasKaraoke = !!(song.letra && song.letra.trim());
   const hasMixer = (song.stems || []).length > 0 || (song.full || []).length > 0;
+  // Um mecanismo, dois gatilhos: o que a transposição não consegue levar junto.
+  // Áudio não muda de tom, e tab é casa absoluta. Só aparece quando há o que
+  // avisar — fora do tom original e com a coisa presente na música.
+  const avisos = [];
+  if (S.transpose && !isImg && !isKar) {
+    if (hasMixer) avisos.push(t('play.tom.warnAudio'));
+    if (parsedCifra(song).some((l) => l.isTab)) avisos.push(t('play.tom.warnTab'));
+  }
+  const avisoHTML = avisos.length
+    ? `<div class="tom-warn">${esc(avisos.join(' · '))}</div>` : '';
   const imgs = song.cifra?.imagens || [];
   const variantEnabled = imgs.some((i) => i.tipo === 'aberta') && imgs.some((i) => i.tipo === 'fechada');
   const chordNames = song.cifra?.tipo === 'imagem'
     ? (song.cifra?.acordes || [])
-    : (song.cifra?.acordes?.length ? song.cifra.acordes : extractChords(parsedCifra(song)));
+    : (song.cifra?.acordes?.length
+        ? song.cifra.acordes.map((n) => transporAcorde(n, S.transpose))
+        : extractChords(transposto(parsedCifra(song), S.transpose)));
 
   const modeSwitch = hasKaraoke ? `<div class="mode-switch">
       <button class="${!isKar ? 'on' : ''}" data-a="setViewMode" data-id="cifra">${I.cifraLines()}${t('play.modeSwitch.chart')}</button>
@@ -490,6 +564,7 @@ export function renderPlay() {
       <div class="cifra-col">
         ${pinnedBarHTML(song, chordNames)}
         ${body}
+        ${avisoHTML}
         ${scrollCtl}
       </div>
       ${hasMixer && !S.mixerCollapsed ? mixerHTML(song) : ''}
@@ -497,6 +572,7 @@ export function renderPlay() {
     ${hasMixer ? transportHTML() : ''}
     ${S.chordPicker ? chordPickerHTML(song) : ''}
     ${S.chordPop ? chordPopHTML(song) : ''}
+    ${S.tomPop ? tomPopHTML(song, tomAtual(song)) : ''}
   </div>`;
 }
 
@@ -551,6 +627,9 @@ export function afterRenderPlay(update) {
       // rolagem real fecha o popover do acorde; o restoreUI do re-render repõe
       // o MESMO scrollTop, então não dispara este fechamento
       if (S.chordPop && Math.abs(el.scrollTop - S.chordPop.scrollTop) > 1) { S.chordPop = null; update(); }
+      // mesma regra para o popover do tom: a pílula que ele ancora mora dentro
+      // deste mesmo container rolável, e rolar afasta o popover fixo do anchor.
+      if (S.tomPop && Math.abs(el.scrollTop - S.tomPop.scrollTop) > 1) { S.tomPop = null; update(); }
     }, { passive: true });
   }
   showControls();
@@ -562,6 +641,15 @@ export function afterRenderPlay(update) {
     const p = popPosition(S.chordPop.anchor, r.width, r.height, window.innerWidth, window.innerHeight);
     pop.style.left = p.left + 'px';
     pop.style.top = p.top + 'px';
+  }
+  // popover do tom: mesma re-clampagem — tompop.js's estimativa (W×H) é só para
+  // o 1º render; aqui o card real já existe no DOM para medir.
+  const tomPop = document.querySelector('.tom-pop');
+  if (tomPop && S.tomPop) {
+    const r = tomPop.getBoundingClientRect();
+    const p = popPosition(S.tomPop.anchor, r.width, r.height, window.innerWidth, window.innerHeight);
+    tomPop.style.left = p.left + 'px';
+    tomPop.style.top = p.top + 'px';
   }
 
   // anima a entrada do bottom sheet só quando ele acabou de abrir (não a cada re-render)

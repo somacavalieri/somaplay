@@ -32,6 +32,26 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.14.0] - 2026-08-16
+
+### Added
+
+- **Key transposition.** Tapping the key pill in a text chart opens a popover
+  with half-step buttons, a twelve-key grid and a reset — the shape musicians
+  already know from CifraClub. Chords are re-placed in their original character
+  columns, so a chord stays over its syllable even when `C` becomes `C#`.
+- A song with no key recorded now shows one **guessed from the last chord of the
+  chart**, marked with `?` until the field is filled in on the edit screen.
+- **Duplicate in this key** saves a transposed chart as a new song named
+  `Title (Key)` — an identical copy, audio included, with its own bytes.
+
+### Notes
+
+- Transposition is ephemeral: it resets when you leave the song, and no field is
+  added to the song record. The `.somaplay` format is unchanged.
+- Audio and tablature do not follow the transposition, and the app says so while
+  you are away from the original key. Image charts are out of scope.
+
 ## [0.13.0] - 2026-08-16
 
 ### Changed

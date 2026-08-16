@@ -97,8 +97,9 @@ A cópia é **idêntica ao original** salvo pelo que a duplicação obriga a mud
 | `tom` | o tom novo |
 | `createdAt` | hoje — é uma música nova, e Recentes tem de mostrá-la |
 | `blobId` de cada mídia | novo, apontando para bytes próprios |
+| `cifra.digitacoes` | vazio — ver *Fora de escopo*, e o porquê de a exceção existir |
 
-Todo o resto vem junto sem exceção: áudio, letra, estilo, fonte, favorita, digitações.
+Todo o resto vem junto: áudio, letra, estilo, fonte, favorita.
 
 Isto é decisão explícita do usuário, e o argumento dele é melhor que a alternativa que este
 spec tinha proposto: *"muitas vezes eu vou duplicar porque eu quero testar um outro tom e,
@@ -313,10 +314,32 @@ recurso diferente: não reescreve nada, só informa. Merece o próprio spec.
 **Áudio transposto.** Pitch shift em tempo real no Web Audio é projeto de outra ordem, e
 degrada o som de um jeito que ninguém quer no palco.
 
-**Digitações customizadas na cópia.** `cifra.digitacoes` viaja intacto para a música nova,
-mas as chaves são os nomes antigos: a busca falha e cai no catálogo. Nenhum diagrama errado
-— só entradas mortas. Deslocar as formas funcionaria em pestana e falharia calado em acorde
-com corda solta, que é justamente onde o violeiro repara.
+**Digitações customizadas na cópia.** A cópia nasce com `cifra.digitacoes` **vazio**.
+
+Esta seção foi corrigida duas vezes, em direções opostas, e as duas correções vieram de
+revisão. Vale deixar o registro completo, porque o erro do meio é instrutivo.
+
+**Primeira versão (errada por otimismo):** o mapa viajaria intacto, as chaves não casariam, e
+o resultado seria "nenhum diagrama errado, só entradas mortas". Falso. Transpor mapeia nome
+em nome, e os nomes de destino são exatamente os que já são chave: numa cifra em C com C e D,
+onde o usuário customizou só o D, subir dois semitons faz o antigo C virar D e herdar a
+entrada do D. As chaves casam, e casam com o acorde errado.
+
+**Segunda versão (errada por exagero):** que isso produzia "a forma errada no acorde errado".
+Também não. A forma guardada sob `D` foi escolhida *para* um D, então desenhá-la sobre um D é
+musicalmente correto — o diagrama não mente. O que se perde é mais fino: a **intenção** do
+usuário migra de lugar. O voicing que ele escolheu para o que hoje é E aparece no que hoje é
+D, e o E fica sem nada. É preferência aplicada à ocorrência errada, não acorde errado.
+
+Continua sendo motivo suficiente para zerar: uma preferência de digitação amarrada a um nome
+não sobrevive a uma mudança de tom, porque o nome não quer dizer a mesma coisa dos dois
+lados.
+
+Renomear as chaves junto seria pior: digitação é casa absoluta, e a forma de C rotulada D
+continua sendo a forma de C — o erro que esta seção sempre reconheceu. Restava zerar. A
+cópia cai no catálogo, que é o comportamento certo para um tom que não é o mesmo, e a perda
+já era aceita aqui desde o início; o que mudou foi descobrir que o caminho alternativo não
+era inofensivo.
 
 **Acordes fixados persistentes.** `S.chordFavs` não é gravado em lugar nenhum hoje: some ao
 recarregar o app. Durante a transposição, um `Am` fixado simplesmente não aparece na barra.

@@ -7,6 +7,7 @@ import {
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
+  duplicarMusicaNoTom,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -16,7 +17,7 @@ import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
 import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
-import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers } from './render/play.js';
+import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
@@ -27,6 +28,7 @@ import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
+import { semitonsEntre, tomDeSemitons } from './transpose.js';
 import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
 import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
@@ -198,7 +200,14 @@ function syncCE() { syncDraftFromDOM(); syncChordEd(); }
 
 // Grava a forma como digitação do acorde na música inteira — usada pelo
 // picker (pickChordShape) e pelo Aplicar do popover (chordPopApply).
+//
+// Enquanto a cifra está transposta, `name` é o nome TRANSPOSTO — gravar aqui
+// persistiria digitacoes[nome-transposto] na música ORIGINAL: uma digitação
+// para um acorde que ela nem tem no seu próprio tom. A regra é que fingering
+// vira somente-leitura enquanto transposto; o catálogo continua valendo (ver
+// os quatro dict = S.transpose ? ... de render/play.js).
 async function applyShapeToSong(song, name, s) {
+  if (S.transpose) { toast(t('play.tom.noEditWhileTransposed')); return; }
   song.cifra.digitacoes = {
     ...(song.cifra.digitacoes || {}),
     [name]: { frets: s.frets.slice(), ...(s.barre ? { barre: { ...s.barre } } : {}), varId: s.id },
@@ -218,11 +227,25 @@ function shapeAtual(dict, name) {
 }
 
 // Grava a forma no destino do editor (rascunho, música ou nada, no caso do dicionário).
+// A porta 'song' é a mesma que applyShapeToSong guarda: st.name é o nome
+// TRANSPOSTO enquanto a cifra está transposta, e song é o registro ORIGINAL —
+// gravar aqui persistiria a mesma entrada errada que a outra porta recusa. O
+// draft não passa por isto: a tela de adicionar/editar não tem transposição.
+//
+// Devolve false quando a porta 'song' foi recusada, true nos outros dois
+// casos (draft, ou 'song' que gravou). O toast NÃO fica aqui dentro — ao
+// contrário de applyShapeToSong (cujos dois chamadores não tocam o toast
+// depois de chamá-la), ceSave/ceSaveNew sempre disparam o PRÓPRIO toast de
+// sucesso logo depois de chamar isto, e ele substituiria (toast() reseta o
+// texto e o timer) o aviso de somente-leitura antes de alguém o ler. Devolver
+// o sinal e deixar o chamador escolher qual toast mostrar é o que evita a
+// corrida.
 async function gravarNoDestino(st, shape, varId) {
   const dado = { frets: shape.frets.slice(), ...(shape.barre ? { barre: { ...shape.barre } } : {}), varId };
   if (st.origin.kind === 'draft' && S.draft) {
     S.draft.digitacoes = { ...(S.draft.digitacoes || {}), [st.name]: dado };
   } else if (st.origin.kind === 'song') {
+    if (S.transpose) return false;
     const song = songById(st.origin.songId);
     if (song) {
       song.cifra = song.cifra || {};
@@ -230,6 +253,7 @@ async function gravarNoDestino(st, shape, varId) {
       await saveSong(song);
     }
   }
+  return true;
 }
 
 // ---------- ações ----------
@@ -238,6 +262,11 @@ async function gravarNoDestino(st, shape, varId) {
 // diferentes rodam concorrentes, e o segundo S.songs = S.songs.filter(...)
 // escreve por cima do primeiro sem deixar rastro.
 let apagandoFonte = false;
+
+// Mesma guarda, mesmo motivo: duplicateInKey copia áudio no meio de um await, e
+// o botão continua clicável durante ele — sem isto dois toques rápidos criam
+// duas cópias.
+let duplicandoTom = false;
 
 const actions = {
   // navegação
@@ -399,6 +428,55 @@ const actions = {
   },
   openChordPicker(d) { S.chordPicker = d.id; S.chordEd = null; S.chordPop = null; update(); },
   closeChordPicker() { S.chordPicker = null; S.chordEd = null; update(); },
+  // ---- popover do tom (spec 2026-08-16) ----
+  openTomPop(d, ev, el) {
+    if (S.tomPop) { S.tomPop = null; update(); return; }
+    const r = el.getBoundingClientRect();
+    const sc = document.querySelector('[data-autoscroll]');
+    S.tomPop = {
+      anchor: { x: r.left, y: r.top, w: r.width, h: r.height },
+      scrollTop: sc ? sc.scrollTop : 0,   // rolagem REAL fecha, igual ao chord-pop
+    };
+    update();
+  },
+  closeTomPop() { S.tomPop = null; update(); },
+  transposeBy(d) {
+    S.transpose = (((S.transpose + Number(d.id)) % 12) + 12) % 12;
+    update();
+  },
+  setTom(d) {
+    const song = currentSong();
+    if (!song) return;
+    const n = semitonsEntre(tomAtual(song).base, d.id);
+    if (n !== null) S.transpose = n;
+    update();
+  },
+  resetTom() { S.transpose = 0; update(); },
+  async duplicateInKey() {
+    if (duplicandoTom) return;
+    const song = currentSong();
+    if (!song || !S.transpose) return;
+    duplicandoTom = true;
+    try {
+      const { base } = tomAtual(song);
+      const tomNovo = tomDeSemitons(base, S.transpose) || '';
+      const novoId = await duplicarMusicaNoTom(song, S.transpose, base);
+      S.tomPop = null;
+      S.transpose = 0;
+      toast(t('play.tom.duplicated', { tom: tomNovo }));
+      // openSongAction (não goSong+update): a cópia tem blobId PRÓPRIO nos
+      // stems/imagens, mas media.songId e media.urls (render/play.js) ainda
+      // apontam para os bytes da ORIGINAL até loadSongMedia rodar. Sem isto o
+      // mixer da cópia toca os bytes certos por coincidência (blobId igual
+      // quando a cópia deu certo) e passa a apontar para bytes apagados assim
+      // que a original for excluída.
+      await openSongAction(novoId, S.backTo);
+    } catch (e) {
+      toast(t('play.tom.duplicateFailed'));
+    } finally {
+      duplicandoTom = false;
+    }
+  },
   // ---- popover do acorde na cifra (spec 2026-07-29) ----
   openChordPop(d, ev, el) {
     const r = el.getBoundingClientRect();
@@ -549,11 +627,15 @@ const actions = {
     syncCE();
     const st = S.chordEd;
     const shape = editorShape(st);
+    // upsertVar e applyVarToSongs continuam mesmo transposto: o catálogo não é
+    // por música, e o nome na tela (transposto ou não) é o que o usuário
+    // desenhou — só a gravação NESTA música (gravarNoDestino) é que recusa.
     upsertVar(st.name, { id: st.origin.varId, ...shape });
     const n = await applyVarToSongs(st.name, st.origin.varId, shape);
-    await gravarNoDestino(st, shape, st.origin.varId);
+    const gravou = await gravarNoDestino(st, shape, st.origin.varId);
     S.chordEd = null;
     update();
+    if (!gravou) { toast(t('play.tom.noEditWhileTransposed')); return; }
     toast(n
       ? t(n === 1 ? 'msg.chordbook.variantUpdatedOne' : 'msg.chordbook.variantUpdatedMany', { count: n })
       : t('msg.chordbook.variantUpdated'));
@@ -564,9 +646,10 @@ const actions = {
     const shape = editorShape(st);
     const igual = findShape(st.name, shape.frets, shape.barre);
     const varId = igual ? igual.id : upsertVar(st.name, { ...shape, label: st.label || suggestLabel(st, labelsOf(st.name)) });
-    await gravarNoDestino(st, shape, varId);
+    const gravou = await gravarNoDestino(st, shape, varId);
     S.chordEd = null;
     update();
+    if (!gravou) { toast(t('play.tom.noEditWhileTransposed')); return; }
     toast(igual ? t('msg.chordbook.shapeExists') : t('msg.chordbook.variantSaved'));
   },
   pickImages() { document.getElementById('file-images').click(); },
@@ -945,6 +1028,7 @@ document.addEventListener('click', (e) => {
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
+  if (S.tomPop && !e.target.closest('.tom-pop') && !e.target.closest('.tag-tom')) { S.tomPop = null; update(); }
 });
 
 document.addEventListener('input', (e) => {

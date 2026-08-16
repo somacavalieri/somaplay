@@ -5,6 +5,7 @@ import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
 import { PARTES_TODAS } from './partes.js';
+import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
 
 export const S = {
   // navegação
@@ -57,11 +58,13 @@ export const S = {
   imgZoom: 1,
   imgInvert: false,
   imgVariant: 'aberta',
+  transpose: 0,            // semitons; efêmero — zera ao trocar de música
   imgMenuOpen: false,
   ctlVisible: true,
   chordFavs: {},           // songId -> [acorde]
   chordPicker: null,       // nome do acorde com o seletor de variação aberto
   chordPop: null,          // popover do acorde tocado na cifra: { name, anchor, modo:'mini'|'carrossel', selId, scrollTop }
+  tomPop: null,            // popover do tom aberto: { anchor }
   pinnedOpen: true,
   transportPlaying: false,
   position: 0,
@@ -424,6 +427,68 @@ export async function saveSong(song) {
   await DB.putSong(normalized);
 }
 
+// Duplica a música num tom novo. A cópia é IDÊNTICA à original salvo pelo que a
+// duplicação obriga a mudar: id, título, a cifra transposta, o tom e os blobs.
+// Isso inclui o áudio — você duplica justamente para testar outro tom, e uma
+// cópia sem os recursos não é cópia.
+//
+// Os bytes são COPIADOS, não referenciados. Compartilhar blobId entre duas
+// músicas quebraria calado duas coisas que assumem dono exclusivo: deleteSongs
+// (apaga todo blob das vítimas sem checar quem mais usa) e o laço do export em
+// backup.js (não deduplica, e gravaria os mesmos bytes duas vezes no arquivo).
+//
+// O mapa de ids vem de blobIdsDasMusicas, que é a definição única de "quais
+// blobs são desta música" — listar stems e full à mão aqui é como duplicar e
+// apagar passariam a discordar.
+export async function duplicarMusicaNoTom(song, semitons, tomBase) {
+  const mapa = new Map();
+  for (const id of blobIdsDasMusicas([song])) {
+    const b = await DB.getBlob(id);
+    if (!b) continue;
+    const novo = uid();
+    await DB.saveBlob(novo, b);
+    mapa.set(id, novo);
+  }
+  // Um id com blobId que NÃO está em `mapa` é bytes que não puderam ser
+  // copiados (DB.getBlob devolveu null — pode ser um blob já órfão, mas
+  // também pode ser uma falha transitória de leitura do OPFS que o
+  // fallback do IndexedDB engole em silêncio). Mantido, x.blobId continuaria
+  // apontando para o blob da ORIGINAL — dono compartilhado, que é exatamente
+  // o que deleteSongs (apaga todo blob das vítimas sem checar quem mais usa)
+  // e o export (não deduplica) não podem receber. A cópia simplesmente perde
+  // aquele item em vez de arriscar levar a original junto quando uma das
+  // duas for apagada.
+  const remapa = (arr) => (arr || [])
+    .filter((x) => !x || !x.blobId || mapa.has(x.blobId))
+    .map((x) => (x && x.blobId ? { ...x, blobId: mapa.get(x.blobId) } : { ...x }));
+
+  const tomNovo = tomDeSemitons(tomBase, semitons) || tomBase || '';
+  const copia = {
+    ...song,
+    id: uid(),
+    title: tomNovo ? tituloNoTom(song.title, tomNovo) : song.title,
+    tom: tomNovo,
+    createdAt: Date.now(),
+    stems: remapa(song.stems),
+    full: remapa(song.full),
+    cifra: {
+      ...(song.cifra || {}),
+      texto: textoTransposto(song.cifra?.texto || '', semitons),
+      imagens: remapa(song.cifra?.imagens),
+      acordes: (song.cifra?.acordes || []).map((n) => transporAcorde(n, semitons)),
+      // Digitação é casa ABSOLUTA, e a chave é o nome do acorde. Carregar o mapa
+      // para a cópia transposta não é inofensivo: transpor mapeia nome em nome,
+      // então o antigo C vira D e HERDA a digitação que era do D — forma errada
+      // no acorde errado, em silêncio. Renomear as chaves seria pior ainda: a
+      // forma de C rotulada D continua sendo a forma de C. A cópia começa limpa
+      // e cai no catálogo, que é o certo para um tom que não é o mesmo.
+      digitacoes: {},
+    },
+  };
+  await saveSong(copia);
+  return copia.id;
+}
+
 // Apaga um conjunto de músicas de uma vez. O motor NÃO sabe o que é fonte:
 // quem chama traduz o eixo dele para ids — songIdsDasFontes, para o eixo fonte.
 //
@@ -544,6 +609,8 @@ export function openSong(songId, from) {
   const modes = modesOf(s);
   const wantKaraoke = S.modeFilter.includes('T3') && modes.includes('T3') && from !== 'list';
   S.currentSongId = songId;
+  S.transpose = 0;
+  S.tomPop = null;
   S.backTo = from || 'home';
   S.screen = 'play';
   S.viewMode = wantKaraoke ? 'karaoke' : 'cifra';
