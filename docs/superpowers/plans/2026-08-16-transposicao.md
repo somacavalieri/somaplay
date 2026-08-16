@@ -18,7 +18,9 @@
 - **Nunca traduzir valor de `data-*`.** A grade emite `data-id="Bb"`, que é dado, não rótulo.
 - **String traduzida é produzida no render**, nunca em constante de módulo — constante congela no import e não acompanha a troca de idioma.
 - **Comentário em arquivo novo é em inglês**; arquivo já comentado em português continua em português. `chords.js`, `chord-notation.js`, `state.js` e `render/play.js` são português. `js/partes.js` é inglês. `transpose.js` e `render/tompop.js` são novos e ficam **em português**, porque vivem colados em `chords.js` e `play.js` e são lidos junto com eles.
-- **A versão sobe uma única vez, na última tarefa:** `0.12.1` → `0.13.0`, em `app/js/version.js` e na linha 2 de `app/sw.js` (`somaplay-0.13.0`). `app/test/version.test.js` cobra a sincronia — mexer num só quebra o teste.
+- **A versão sobe uma única vez, na última tarefa:** `0.13.0` → `0.14.0`, em `app/js/version.js` e na linha 2 de `app/sw.js` (`somaplay-0.14.0`). `app/test/version.test.js` cobra a sincronia — mexer num só quebra o teste.
+- **A versão nova precisa de entrada no `CHANGELOG.md`**, no formato `## [0.14.0] - AAAA-MM-DD`. `version.test.js` também cobra isso: subir o número sem registrar o que mudou reprova a suíte.
+- **Base:** branch `feat/transposicao`, a partir de `5c5ed30` (merge do PR #25). Baseline verificado: **470 testes, 0 falhas**.
 - **Commits em inglês.**
 - Todos os comandos rodam a partir de `app/`.
 
@@ -518,8 +520,8 @@ git commit -m "feat(transpose): key labels, the twelve-key grid, and the guessed
 ### Task 4: A cifra renderiza no tom escolhido
 
 **Files:**
-- Modify: `app/js/state.js` (bloco de estado da tela de toque, ~linha 62; e `openSong`, ~linha 541)
-- Modify: `app/js/render/play.js` (`songHeaderHTML` 63-72; `cifraTextHTML` ~230-262; `renderPlay` ~390)
+- Modify: `app/js/state.js` (bloco de estado da tela de toque, linha 62; e `openSong`, linha 541)
+- Modify: `app/js/render/play.js` (`songHeaderHTML` 63-72; `cifraTextHTML` a partir de 247; `renderPlay` ~436)
 
 **Interfaces:**
 - Consumes: `transporLinha`, `tomDeSemitons`, `deduzTom` (Tasks 2 e 3)
@@ -549,7 +551,7 @@ Em `app/js/render/play.js`, acrescentar ao import de `../chords.js` nada — os 
 import { transporLinha, tomDeSemitons, deduzTom } from '../transpose.js';
 ```
 
-Acrescentar, logo abaixo de `parsedCifra` (~linha 61):
+Acrescentar, logo abaixo de `parsedCifra` (linha 61):
 
 ```js
 // A transposição é aplicada DEPOIS do parse, e não invalidando o cache dele: a
@@ -582,13 +584,15 @@ export function tomAtual(song) {
 
 - [ ] **Step 3: Consumir em `cifraTextHTML`**
 
-Em `cifraTextHTML` (~linha 230), trocar a primeira linha:
+Em `cifraTextHTML` (linha 248), trocar a primeira linha:
 
 ```js
   const parsed = transposto(parsedCifra(song), S.transpose);
 ```
 
-E a linha dos nomes de acorde (~255) — a lista curada `song.cifra.acordes` também precisa acompanhar:
+Isso alimenta também o `fontQueCabe(...)` da linha seguinte, que passa a ajustar a fonte à cifra **já transposta** — correto, porque acorde transposto pode ser mais largo.
+
+E a linha dos nomes de acorde (301) — a lista curada `song.cifra.acordes` também precisa acompanhar:
 
 ```js
   const chordNames = song.cifra?.acordes?.length
@@ -598,7 +602,7 @@ E a linha dos nomes de acorde (~255) — a lista curada `song.cifra.acordes` tam
 
 Acrescentar `transporAcorde` ao import de `../transpose.js`.
 
-Em `renderPlay` (~linha 390), a mesma correção para o cálculo que alimenta a barra de fixados:
+Em `renderPlay` (linha 436), a mesma correção para o cálculo que alimenta a barra de fixados:
 
 ```js
   const chordNames = song.cifra?.tipo === 'imagem'
@@ -1188,16 +1192,42 @@ git commit -m "feat(transpose): keep a key by duplicating the song, audio and al
 `app/js/version.js`:
 
 ```js
-export const VERSION = '0.13.0';
+export const VERSION = '0.14.0';
 ```
 
 `app/sw.js`, linha 2:
 
 ```js
-const VERSION = 'somaplay-0.13.0';
+const VERSION = 'somaplay-0.14.0';
 ```
 
-MINOR porque é feature nova. Qualquer valor diferente entre os dois reprova em `version.test.js`.
+MINOR porque é feature nova. Qualquer valor diferente entre os dois reprova em `version.test.js`. O `0.13.0` **já foi usado** pela quebra-na-respiração (PR #25, mergeado em 2026-08-16) — daí o salto para `0.14.0`.
+
+- [ ] **Step 1b: Entrada no CHANGELOG**
+
+`version.test.js` exige `## [0.14.0]` em `CHANGELOG.md`. Acrescentar acima da entrada `## [0.13.0]`, seguindo o formato das existentes (Keep a Changelog, em inglês):
+
+```markdown
+## [0.14.0] - 2026-08-16
+
+### Added
+
+- **Key transposition.** Tapping the key pill in a text chart opens a popover
+  with half-step buttons, a twelve-key grid and a reset — the shape musicians
+  already know from CifraClub. Chords are re-placed in their original character
+  columns, so a chord stays over its syllable even when `C` becomes `C#`.
+- A song with no key recorded now shows one **guessed from the last chord of the
+  chart**, marked with `?` until the field is filled in on the edit screen.
+- **Duplicate in this key** saves a transposed chart as a new song named
+  `Title (Key)` — an identical copy, audio included, with its own bytes.
+
+### Notes
+
+- Transposition is ephemeral: it resets when you leave the song, and no field is
+  added to the song record. The `.somaplay` format is unchanged.
+- Audio and tablature do not follow the transposition, and the app says so while
+  you are away from the original key. Image charts are out of scope.
+```
 
 - [ ] **Step 2: Registrar a exceção no CLAUDE.md**
 
