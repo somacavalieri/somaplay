@@ -188,3 +188,13 @@ test('transpor a cifra de zero devolve o texto intacto', () => {
   const cifra = 'C       G\nAndei por andar';
   assert.equal(textoTransposto(cifra, 0), cifra);
 });
+
+test('transpor mapeia nome em nome — por isso a digitação não pode viajar', () => {
+  // A cifra tem C e D; o usuário customizou só o D. Subindo 2 semitons, o C
+  // vira D e acharia a digitação do D ORIGINAL. É o motivo de a cópia zerar
+  // `digitacoes` em vez de carregá-lo: ver duplicarMusicaNoTom, em state.js.
+  const digitacoes = { D: { varId: 'forma-do-D' } };
+  const transpostos = ['C', 'D'].map((a) => transporAcorde(a, 2));
+  assert.deepEqual(transpostos, ['D', 'E']);
+  assert.ok(digitacoes[transpostos[0]], 'a colisão que justifica zerar digitacoes deixou de existir');
+});
