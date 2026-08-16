@@ -97,8 +97,9 @@ A cópia é **idêntica ao original** salvo pelo que a duplicação obriga a mud
 | `tom` | o tom novo |
 | `createdAt` | hoje — é uma música nova, e Recentes tem de mostrá-la |
 | `blobId` de cada mídia | novo, apontando para bytes próprios |
+| `cifra.digitacoes` | vazio — ver *Fora de escopo*, e o porquê de a exceção existir |
 
-Todo o resto vem junto sem exceção: áudio, letra, estilo, fonte, favorita, digitações.
+Todo o resto vem junto: áudio, letra, estilo, fonte, favorita.
 
 Isto é decisão explícita do usuário, e o argumento dele é melhor que a alternativa que este
 spec tinha proposto: *"muitas vezes eu vou duplicar porque eu quero testar um outro tom e,
