@@ -261,8 +261,9 @@ Acrescentar a `app/js/transpose.js`, logo abaixo do comentário de cabeçalho:
 import { chordLineSegs } from './chords.js';
 ```
 
-E, ao final do arquivo:
+E, ao final do arquivo (o bloco de comentário faz parte do código — transcreva-o junto):
 
+```js
 // Transpõe uma linha de acordes REPONDO cada token na coluna original.
 //
 // O alinhamento da cifra é posicional: acorde e sílaba se encontram pela coluna
@@ -277,8 +278,6 @@ E, ao final do arquivo:
 // Os segmentos de espaço são descartados de propósito: quem recria o espaçamento
 // é o preenchimento até a coluna alvo. O acorde vem de `sg.name` (o nome limpo) e
 // é costurado de volta em `sg.text`, que pode ter decoração — 'C*', '(Dm', 'Gm7)'.
-
-```js
 export function transporLinha(linha, semitons) {
   const s = String(linha);
   if (!semitons) return s;
