@@ -978,8 +978,12 @@ Inserir `${avisoHTML}` na `.cifra-col`, logo antes de `${scrollCtl}`.
 
 - [ ] **Step 3: CSS**
 
+O `bottom` tem de limpar o controle de rolagem, que ocupa de 18px a **82px** do fundo
+(`.scroll-ctl` em bottom:18px, com padding 7px, borda 1px e o botão `.pp` de 48px).
+90px deixa 8px de folga.
+
 ```css
-.tom-warn{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
+.tom-warn{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
 ```
 
 - [ ] **Step 4: Verificar sintaxe e suíte**
