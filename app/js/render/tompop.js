@@ -4,7 +4,7 @@
 // Spec: docs/superpowers/specs/2026-08-16-transposicao-design.md
 import { S } from '../state.js';
 import { I, esc } from '../icons.js';
-import { gradeDeTons } from '../transpose.js';
+import { gradeDeTons, semitonsEntre } from '../transpose.js';
 import { popPosition } from './chordpop.js';
 import { t } from '../i18n.js';
 
@@ -22,8 +22,12 @@ export function tomPopHTML(song, tom) {
   const grade = gradeDeTons(tom.base);
   const atual = tom.label;
   const gradeHTML = grade.length ? `<div class="tom-grid">${grade.map((n) => {
-    const on = n === atual;
-    const orig = n === tom.base;
+    // Comparar por SEMITOM, não por string: a grade só emite o alfabeto
+    // canônico, e o campo `tom` guarda o que o usuário escreveu — 'Db' nunca
+    // seria igual a 'C#' e a célula não acendia. Nove das vinte e uma grafias
+    // aceitas caíam nisso. A fundamental basta: a grade é homogênea em modo.
+    const on = atual !== null && semitonsEntre(atual, n) === 0;
+    const orig = semitonsEntre(tom.base, n) === 0;
     return `<button class="tom-cell ${on ? 'on' : ''} ${orig && !on ? 'orig' : ''}"
       data-a="setTom" data-id="${esc(n)}"
       ${orig ? `title="${t('play.tom.original')}"` : ''}>${esc(n)}</button>`;
