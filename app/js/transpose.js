@@ -5,7 +5,7 @@
 // que a reposição por coluna é o que a torna segura — em
 // docs/superpowers/specs/2026-08-16-transposicao-design.md
 
-import { chordLineSegs, chordName, isChordTok } from './chords.js';
+import { chordLineSegs, chordName, isChordTok, parseCifraText } from './chords.js';
 
 // Os doze nomes, sempre os mesmos. Não é armadura calculada por ciclo de
 // quintas: é o array que a grade do CifraClub mostra (Am, Bbm, Bm, Cm, C#m, Dm,
@@ -158,4 +158,20 @@ const RE_TOM_NO_TITULO = /\s*\([A-G][#b]?m?\)\s*$/;
 
 export function tituloNoTom(title, tom) {
   return `${String(title).replace(RE_TOM_NO_TITULO, '')} (${tom})`;
+}
+
+// Transpõe uma cifra inteira preservando tudo o que não é linha de acordes.
+// Quem decide o que é linha de acordes é o parser, não uma heurística nova — e
+// ele devolve as linhas normalizadas, então o texto é remontado a partir delas
+// na mesma ordem em que o parser as separa: seção, acordes, tab, letra.
+export function textoTransposto(texto, semitons) {
+  if (!semitons) return texto;
+  return parseCifraText(texto).map((l) => {
+    const partes = [];
+    if (l.isSection) partes.push(l.section);
+    if (l.hasChords) partes.push(transporLinha(l.chords, semitons));
+    if (l.isTab) partes.push(...l.tab);
+    if (l.hasLyric) partes.push(l.lyric);
+    return partes.join('\n');
+  }).join('\n');
 }

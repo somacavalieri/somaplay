@@ -7,6 +7,7 @@ import {
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
+  duplicarMusicaNoTom,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -27,7 +28,7 @@ import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
-import { semitonsEntre } from './transpose.js';
+import { semitonsEntre, tomDeSemitons } from './transpose.js';
 import { clampSpeed } from './scroll-speed.js';
 import { t, setLang as applyLang } from './i18n.js';
 import { wireFonteStrip, refreshFonteCounts } from './render/fontestrip.js';
@@ -420,6 +421,18 @@ const actions = {
     update();
   },
   resetTom() { S.transpose = 0; update(); },
+  async duplicateInKey() {
+    const song = currentSong();
+    if (!song || !S.transpose) return;
+    const { base } = tomAtual(song);
+    const tomNovo = tomDeSemitons(base, S.transpose) || '';
+    const novoId = await duplicarMusicaNoTom(song, S.transpose, base);
+    S.tomPop = null;
+    S.transpose = 0;
+    toast(t('play.tom.duplicated', { tom: tomNovo }));
+    goSong(novoId, S.backTo);
+    update();
+  },
   // ---- popover do acorde na cifra (spec 2026-07-29) ----
   openChordPop(d, ev, el) {
     const r = el.getBoundingClientRect();

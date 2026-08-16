@@ -5,6 +5,7 @@ import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
 import { PARTES_TODAS } from './partes.js';
+import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
 
 export const S = {
   // navegação
@@ -424,6 +425,51 @@ export async function saveSong(song) {
   const i = S.songs.findIndex((s) => s.id === normalized.id);
   if (i >= 0) S.songs[i] = normalized; else S.songs.push(normalized);
   await DB.putSong(normalized);
+}
+
+// Duplica a música num tom novo. A cópia é IDÊNTICA à original salvo pelo que a
+// duplicação obriga a mudar: id, título, a cifra transposta, o tom e os blobs.
+// Isso inclui o áudio — você duplica justamente para testar outro tom, e uma
+// cópia sem os recursos não é cópia.
+//
+// Os bytes são COPIADOS, não referenciados. Compartilhar blobId entre duas
+// músicas quebraria calado duas coisas que assumem dono exclusivo: deleteSongs
+// (apaga todo blob das vítimas sem checar quem mais usa) e o laço do export em
+// backup.js (não deduplica, e gravaria os mesmos bytes duas vezes no arquivo).
+//
+// O mapa de ids vem de blobIdsDasMusicas, que é a definição única de "quais
+// blobs são desta música" — listar stems e full à mão aqui é como duplicar e
+// apagar passariam a discordar.
+export async function duplicarMusicaNoTom(song, semitons, tomBase) {
+  const mapa = new Map();
+  for (const id of blobIdsDasMusicas([song])) {
+    const b = await DB.getBlob(id);
+    if (!b) continue;
+    const novo = uid();
+    await DB.saveBlob(novo, b);
+    mapa.set(id, novo);
+  }
+  const remapa = (arr) => (arr || []).map((x) => (x && x.blobId && mapa.has(x.blobId)
+    ? { ...x, blobId: mapa.get(x.blobId) } : { ...x }));
+
+  const tomNovo = tomDeSemitons(tomBase, semitons) || tomBase || '';
+  const copia = {
+    ...song,
+    id: uid(),
+    title: tomNovo ? tituloNoTom(song.title, tomNovo) : song.title,
+    tom: tomNovo,
+    createdAt: Date.now(),
+    stems: remapa(song.stems),
+    full: remapa(song.full),
+    cifra: {
+      ...(song.cifra || {}),
+      texto: textoTransposto(song.cifra?.texto || '', semitons),
+      imagens: remapa(song.cifra?.imagens),
+      acordes: (song.cifra?.acordes || []).map((n) => transporAcorde(n, semitons)),
+    },
+  };
+  await saveSong(copia);
+  return copia.id;
 }
 
 // Apaga um conjunto de músicas de uma vez. O motor NÃO sabe o que é fonte:

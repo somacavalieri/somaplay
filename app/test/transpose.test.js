@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { transporAcorde, transporLinha, leTom, tomDeSemitons, gradeDeTons, semitonsEntre, deduzTom, tituloNoTom } from '../js/transpose.js';
+import { transporAcorde, transporLinha, leTom, tomDeSemitons, gradeDeTons, semitonsEntre, deduzTom, tituloNoTom, textoTransposto } from '../js/transpose.js';
 import { parseCifraText } from '../js/chords.js';
 
 test('desloca a fundamental', () => {
@@ -166,4 +166,25 @@ test('o tom no título substitui em vez de acumular', () => {
 
 test('parêntese que não é tom é preservado', () => {
   assert.equal(tituloNoTom('Wave (ao vivo)', 'Bb'), 'Wave (ao vivo) (Bb)');
+});
+
+test('a cifra inteira transposta preserva letra, seção e tablatura', () => {
+  const cifra = [
+    '[Intro]',
+    'C       G',
+    '',
+    'C       G',
+    'Andei por andar',
+    'E|--0---2---|',
+  ].join('\n');
+  const out = textoTransposto(cifra, 2);
+  assert.match(out, /^\[Intro\]/);
+  assert.ok(out.includes('D       A'), `linha de acordes não subiu:\n${out}`);
+  assert.ok(out.includes('Andei por andar'), 'a letra foi alterada');
+  assert.ok(out.includes('E|--0---2---|'), 'a tablatura foi alterada');
+});
+
+test('transpor a cifra de zero devolve o texto intacto', () => {
+  const cifra = 'C       G\nAndei por andar';
+  assert.equal(textoTransposto(cifra, 0), cifra);
 });

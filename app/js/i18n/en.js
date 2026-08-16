@@ -147,6 +147,8 @@ export const EN = {
   'play.tom.guess': 'key guessed from the chart — fill the field in edit to confirm',
   'play.tom.warnAudio': 'audio in the original key',
   'play.tom.warnTab': 'tablature in the original key',
+  'play.tom.duplicate': 'Duplicate in this key',
+  'play.tom.duplicated': 'Song duplicated in {tom}',
   'play.chordsGrid.title': 'Chords in this song',
   'play.chordsGrid.hint': 'Tap the star to pin the chord to the top bar',
   'play.chordsGrid.pinTooltip': 'Pin chord to the top bar',

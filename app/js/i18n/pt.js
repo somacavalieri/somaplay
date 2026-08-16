@@ -147,6 +147,8 @@ export const PT = {
   'play.tom.guess': 'tom deduzido da cifra — preencha o campo na edição para confirmar',
   'play.tom.warnAudio': 'áudio no tom original',
   'play.tom.warnTab': 'tablatura no tom original',
+  'play.tom.duplicate': 'Duplicar neste tom',
+  'play.tom.duplicated': 'Música duplicada em {tom}',
   'play.chordsGrid.title': 'Acordes desta música',
   'play.chordsGrid.hint': 'Toque a estrela para fixar o acorde na barra do topo',
   'play.chordsGrid.pinTooltip': 'Fixar acorde no topo',
