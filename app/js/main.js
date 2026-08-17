@@ -174,6 +174,12 @@ function leavePlay() {
 }
 
 async function openSongAction(id, from) {
+  // Trocar de música ESTANDO na tela de toque precisa do mesmo desmonte que
+  // sair dela: sem isto ficam para trás o transporte tocando, os timers de
+  // rolagem e de controles vivos, e a mídia da anterior carregada. Era latente
+  // enquanto duplicateInKey era o único caminho; a gaveta e as setas o tornam
+  // o caminho de todo dia.
+  if (S.screen === 'play') leavePlay();
   goSong(id, from);
   update();
   const song = currentSong();
