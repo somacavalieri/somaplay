@@ -663,6 +663,14 @@ export function openSong(songId, from) {
   S.currentSongId = songId;
   S.transpose = 0;
   S.tomPop = null;
+  // Mesmo motivo do tomPop acima: estado de tela que não pode atravessar uma
+  // troca de música. E aqui não é só ruído visual — chordEd.origin guarda o
+  // songId de ONDE a digitação vai ser gravada, então um editor sobrevivente
+  // grava a forma na música anterior, calado, com a nova na tela. Toda outra
+  // transição de tela já zerava isto (goAdd, goChordbook, cancelAddEdit);
+  // openSong era a única porta que faltava.
+  S.chordPicker = null;
+  S.chordEd = null;
   // O `kind` vem do chamador (os data-from que já existem nas telas); o `id` vem
   // do estado da tela que estava aberta. Nenhum chamador precisou mudar.
   const kind = from || 'home';
