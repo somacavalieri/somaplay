@@ -114,3 +114,21 @@ export function scrollNavAtual() {
   const row = document.querySelector('.songnav-row.now');
   if (row) row.scrollIntoView({ block: 'center' });
 }
+
+// As setas moram na camada flutuante que já aparece ao toque e some em 3,2s
+// (showControls/hideControls, em render/play.js) — e não na top-bar, esvaziada
+// de propósito pela spec 2026-07-06. Ficam coladas nas laterais, com o controle
+// de rolagem seguindo centralizado entre elas.
+//
+// Nas pontas ficam DESABILITADAS, não escondidas: sumir moveria o controle de
+// rolagem de lugar entre uma música e outra, e o dedo aprende posição antes de
+// aprender rótulo.
+export function songNavArrowsHTML() {
+  const songs = songsDoContexto();
+  if (songs.length < 2) return '';
+  const { i } = posicaoNoContexto(songs);
+  const semAnterior = i <= 0;
+  const semProxima = i < 0 || i >= songs.length - 1;
+  return `<button class="songnav-arrow prev" data-a="songPrev" ${semAnterior ? 'disabled' : ''} title="${t('play.nav.prev')}">${I.back(26)}</button>
+    <button class="songnav-arrow next" data-a="songNext" ${semProxima ? 'disabled' : ''} title="${t('play.nav.next')}">${I.chevR(26)}</button>`;
+}

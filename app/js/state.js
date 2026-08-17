@@ -654,6 +654,16 @@ export function posicaoNoContexto(songs = songsDoContexto()) {
   return { i: songs.findIndex((s) => s.id === S.currentSongId), n: songs.length };
 }
 
+// A vizinha `delta` passos adiante, ou null. Não dá a volta de propósito: as
+// setas se desabilitam nas pontas, e a última música de um show não deve
+// reabrir a primeira sozinha.
+export function vizinhaNoContexto(delta) {
+  const songs = songsDoContexto();
+  const { i } = posicaoNoContexto(songs);
+  if (i < 0) return null;
+  return songs[i + delta] || null;
+}
+
 // ---------- tela de toque ----------
 export function openSong(songId, from) {
   const s = songById(songId);

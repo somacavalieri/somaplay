@@ -7,7 +7,7 @@ import {
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
-  duplicarMusicaNoTom,
+  duplicarMusicaNoTom, vizinhaNoContexto,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -309,6 +309,8 @@ const actions = {
   // mesmo destino do botão voltar, e por isso a mesma função.
   navGoToSource() { actions.goBack(); },
   navPick(d) { if (d.id !== S.currentSongId) openSongAction(d.id, S.navCtx?.kind); else actions.closeSongNav(); },
+  songPrev() { const s = vizinhaNoContexto(-1); if (s) openSongAction(s.id, S.navCtx?.kind); },
+  songNext() { const s = vizinhaNoContexto(1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)

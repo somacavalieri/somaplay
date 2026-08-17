@@ -13,7 +13,7 @@ import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
-import { songNavHTML, songNavButtonHTML, scrollNavAtual } from './songnav.js';
+import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML } from './songnav.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -568,6 +568,7 @@ export function renderPlay() {
         ${body}
         ${avisoHTML}
         ${scrollCtl}
+        ${songNavArrowsHTML()}
       </div>
       ${hasMixer && !S.mixerCollapsed ? mixerHTML(song) : ''}
     </div>
@@ -584,6 +585,12 @@ let scrollTimer = null;
 let scrollPos = null;   // posição da rolagem automática, com a fração preservada
 let ctlTimer = null;
 let mixerWasOpen = false;
+
+// Os três elementos da camada flutuante. Uma constante e não três listas soltas:
+// showControls, hideControls e o laço da rolagem automática precisam concordar,
+// e a terceira lista é justamente a que esquece o membro novo — deixando as
+// setas presas na tela durante a rolagem.
+const CTL_SEL = '.scroll-ctl, .zoom-ctl, .songnav-arrow';
 
 export function afterRenderPlay(update) {
   const song = currentSong();
@@ -666,13 +673,13 @@ export function afterRenderPlay(update) {
 }
 
 function showControls() {
-  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.remove('ctl-hidden'));
+  document.querySelectorAll(CTL_SEL).forEach((c) => c.classList.remove('ctl-hidden'));
   clearTimeout(ctlTimer);
   ctlTimer = setTimeout(hideControls, 3200);
 }
 function hideControls() {
   if (S.screen !== 'play') return;
-  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.add('ctl-hidden'));
+  document.querySelectorAll(CTL_SEL).forEach((c) => c.classList.add('ctl-hidden'));
 }
 
 export function manageScroll() {
@@ -687,8 +694,8 @@ export function manageScroll() {
       const el = document.querySelector('[data-autoscroll]');
       if (!el) return;
       // mantém os controles visíveis durante a rolagem (para poder pausar)
-      const ctl = document.querySelector('.scroll-ctl');
-      if (ctl) { ctl.classList.remove('ctl-hidden'); clearTimeout(ctlTimer); }
+      const ctls = document.querySelectorAll(CTL_SEL);
+      if (ctls.length) { ctls.forEach((c) => c.classList.remove('ctl-hidden')); clearTimeout(ctlTimer); }
       if (scrollPos === null || Math.abs(el.scrollTop - scrollPos) > 1.5) scrollPos = el.scrollTop;
       scrollPos += scrollStep(S.scrollSpeed);
       el.scrollTop = scrollPos;

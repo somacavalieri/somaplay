@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  S, listaAberta, songsDaBusca, songsDoContexto, posicaoNoContexto,
+  S, listaAberta, songsDaBusca, songsDoContexto, posicaoNoContexto, vizinhaNoContexto,
 } from '../js/state.js';
 
 // Biblioteca mínima do teste. songById/artistName leem S, então a "biblioteca"
@@ -132,4 +132,29 @@ test('posição: música ausente do contexto devolve i = -1', () => {
   S.songs[0].favorita = true;
   S.currentSongId = 's3';
   assert.deepEqual(posicaoNoContexto(songsDoContexto({ kind: 'list', id: '__fav' })), { i: -1, n: 1 });
+});
+
+test('vizinha: anda para frente e para trás dentro do contexto', () => {
+  biblioteca();
+  S.navCtx = { kind: 'artist', id: 'a1' };   // s2, s1, s3
+  S.currentSongId = 's1';
+  assert.equal(vizinhaNoContexto(-1).id, 's2');
+  assert.equal(vizinhaNoContexto(1).id, 's3');
+});
+
+test('vizinha: null nas pontas — as setas se desabilitam, não dão a volta', () => {
+  biblioteca();
+  S.navCtx = { kind: 'artist', id: 'a1' };   // s2, s1, s3
+  S.currentSongId = 's2';
+  assert.equal(vizinhaNoContexto(-1), null);
+  S.currentSongId = 's3';
+  assert.equal(vizinhaNoContexto(1), null);
+});
+
+test('vizinha: null quando a atual não está no contexto', () => {
+  biblioteca();
+  S.navCtx = { kind: 'list', id: '__fav' };  // nenhuma favorita
+  S.currentSongId = 's1';
+  assert.equal(vizinhaNoContexto(1), null);
+  assert.equal(vizinhaNoContexto(-1), null);
 });

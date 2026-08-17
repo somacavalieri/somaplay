@@ -415,7 +415,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .karaoke .verse div{font-family:var(--f-title);font-weight:600;font-size:34px;line-height:1.45}
 
 .scroll-ctl{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:15px;padding:7px;box-shadow:0 8px 26px rgba(0,0,0,.45);z-index:20;transition:opacity .25s ease}
-.scroll-ctl.ctl-hidden,.zoom-ctl.ctl-hidden{opacity:0;pointer-events:none}
+.scroll-ctl.ctl-hidden,.zoom-ctl.ctl-hidden,.songnav-arrow.ctl-hidden{opacity:0;pointer-events:none}
 .zoom-ctl{transition:opacity .25s ease}
 .scroll-ctl .pp{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--accent);color:var(--bg);border:none;border-radius:12px;cursor:pointer}
 .scroll-ctl .div{width:1px;height:32px;background:var(--border);margin:0 3px}
@@ -423,6 +423,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .scroll-ctl .mid{text-align:center;min-width:108px}
 .scroll-ctl .mid .l1{color:var(--muted);font-size:11px;font-weight:500}
 .scroll-ctl .mid .l2{font-family:var(--f-title);font-weight:700;font-size:15px}
+/* Setas anterior/próxima: mesma altura e mesmo ciclo de aparecer/sumir do
+   controle de rolagem, coladas nas laterais da coluna da cifra. O .ctl-hidden
+   que as apaga é o mesmo, declarado junto com .scroll-ctl. */
+.songnav-arrow{position:absolute;bottom:18px;z-index:20;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:15px;color:var(--text);cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.45);transition:opacity .25s ease}
+.songnav-arrow.prev{left:14px}
+.songnav-arrow.next{right:14px}
+/* Desabilitada se marca por cor, NÃO por opacity: `.ctl-hidden` também usa
+   opacity e tem a mesma especificidade que `:disabled`, então quem viesse
+   depois no arquivo venceria — uma seta desabilitada e escondida reapareceria
+   a 45%. Sem opacity aqui, as duas regras não têm o que disputar. */
+.songnav-arrow:disabled{color:var(--muted3);background:var(--surface);cursor:default}
 .tom-warn{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;white-space:nowrap;pointer-events:none;z-index:5}
 
 /* --- Mixer --- */
