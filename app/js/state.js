@@ -602,6 +602,54 @@ export function favList() {
   };
 }
 
+// ---------- contexto de navegação (spec 2026-08-17) ----------
+// De onde a música foi aberta: o TIPO e QUAL. `S.backTo` guardava só o tipo, que
+// bastava para o botão voltar; a gaveta e as setas precisam saber quais são as
+// irmãs. Uma variável só para as duas coisas porque duas verdades sobre "de onde
+// você veio" é como as duas passam a discordar.
+
+// "Favoritas" não está em S.lists — favList() a monta na hora a partir do campo
+// `favorita` das músicas. Uma única porta para resolver um id de lista; a tela da
+// lista (render/listscreen.js) bebe daqui pelo mesmo motivo.
+export function listaAberta(id) {
+  return id === '__fav' ? favList() : listById(id);
+}
+
+// A ordenação da aba Músicas. Morava dentro do render (render/home.js): a gaveta
+// precisa da MESMA ordem que a tela mostrou, e a regra escrita duas vezes é a
+// regra que vai divergir.
+export function songsDaBusca() {
+  const q = S.query.trim().toLowerCase();
+  const flat = S.songs.filter((s) =>
+    (!q || s.title.toLowerCase().includes(q) || artistName(s).toLowerCase().includes(q)) && matchesLens(s));
+  if (S.sort === 'title') flat.sort((a, b) => a.title.localeCompare(b.title, 'pt'));
+  else if (S.sort === 'artist') flat.sort((a, b) => artistName(a).localeCompare(artistName(b), 'pt') || a.title.localeCompare(b.title, 'pt'));
+  else flat.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return flat;
+}
+
+// As irmãs da música atual, na ordem em que a tela de origem as mostrou.
+export function songsDoContexto(ctx = S.navCtx) {
+  if (!ctx) return [];
+  if (ctx.kind === 'artist') return songsOfArtist(ctx.id).filter(matchesLens);
+  if (ctx.kind === 'estilo') return songsOfEstilo(ctx.id).filter(matchesLens);
+  if (ctx.kind === 'list') {
+    // Sem `matchesLens`: Listas são globais e ignoram a lente (PRD §7) — a gaveta
+    // mostra o show inteiro mesmo com a lente ligada. E `musicasPresentes` é o que
+    // deixa o id órfão de fora, que é o que faz a numeração daqui bater com a da
+    // tela da lista.
+    const l = listaAberta(ctx.id);
+    return l ? musicasPresentes(l).map(songById) : [];
+  }
+  return songsDaBusca();
+}
+
+// Onde a atual está no contexto. `i === -1` quando ela não está mais lá — não é
+// hipotético: desfavoritar a música de dentro dela a tira do contexto Favoritas.
+export function posicaoNoContexto(songs = songsDoContexto()) {
+  return { i: songs.findIndex((s) => s.id === S.currentSongId), n: songs.length };
+}
+
 // ---------- tela de toque ----------
 export function openSong(songId, from) {
   const s = songById(songId);
