@@ -292,6 +292,12 @@ const actions = {
     else { S.screen = 'home'; }
     update();
   },
+  toggleSongNav() { S.navOpen = !S.navOpen; S.imgMenuOpen = false; update(); },
+  closeSongNav() { S.navOpen = false; update(); },
+  // O chevron do cabeçalho da gaveta leva à tela de onde o contexto veio — o
+  // mesmo destino do botão voltar, e por isso a mesma função.
+  navGoToSource() { actions.goBack(); },
+  navPick(d) { if (d.id !== S.currentSongId) openSongAction(d.id, S.navCtx?.kind); else actions.closeSongNav(); },
   setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
@@ -1025,7 +1031,7 @@ document.addEventListener('click', (e) => {
       // Testar `t !== e.target` não serve: o alvo real de um botão com ícone é o
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
-      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeSongNav' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
       actions[name](t.dataset, e, t);
       return;
     }
@@ -1086,6 +1092,7 @@ document.addEventListener('keydown', (e) => {
     // A folha cobre a tela inteira — tem prioridade sobre qualquer coisa por
     // baixo dela.
     if (S.shareSheet) { S.shareSheet = null; update(); return; }
+    if (S.navOpen) { S.navOpen = false; update(); return; }
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
     else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {

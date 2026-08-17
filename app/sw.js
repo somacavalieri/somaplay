@@ -30,6 +30,7 @@ const SHELL = [
   './js/render/listscreen.js',
   './js/render/listdrag.js',
   './js/render/play.js',
+  './js/render/songnav.js',
   './js/render/chordeditor.js',
   './js/render/chordpop.js',
   './js/render/tompop.js',

@@ -13,6 +13,7 @@ import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
+import { songNavHTML, songNavButtonHTML, scrollNavAtual } from './songnav.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -553,6 +554,7 @@ export function renderPlay() {
       ${modeSwitch}
       <span style="flex:1"></span>
       ${zoomCtl}
+      ${songNavButtonHTML()}
       <div class="menu-wrap">
         <button class="btn-icon ${S.imgMenuOpen ? 'accent-on' : ''}" data-a="toggleImgMenu" title="${t('play.menu.options')}">${I.dots()}</button>
         ${menu}
@@ -573,6 +575,7 @@ export function renderPlay() {
     ${S.chordPicker ? chordPickerHTML(song) : ''}
     ${S.chordPop ? chordPopHTML(song) : ''}
     ${S.tomPop ? tomPopHTML(song, tomAtual(song)) : ''}
+    ${songNavHTML()}
   </div>`;
 }
 
@@ -585,6 +588,7 @@ let mixerWasOpen = false;
 export function afterRenderPlay(update) {
   const song = currentSong();
   if (!song) return;
+  scrollNavAtual();
 
   // Reflow: mede a largura real e re-renderiza se mudou. O update() reentra aqui e,
   // com a largura já estável, segue o fluxo normal.

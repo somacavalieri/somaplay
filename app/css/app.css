@@ -433,6 +433,32 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .mixer .hd .collapse{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--muted);cursor:pointer;margin-left:4px}
 .mixer .hd .collapse:hover{color:var(--text)}
 .mixer .body{flex:1;overflow-y:auto;padding:8px 22px}
+
+/* Gaveta de navegação entre músicas (spec 2026-08-17). Sobrepõe a cifra: um
+   painel que empurrasse forçaria o reflow do texto a cada abre/fecha. */
+.songnav-scrim{position:absolute;inset:0;background:rgba(6,6,8,.5);z-index:48}
+.songnav{position:absolute;top:0;right:0;bottom:0;width:min(380px,88vw);z-index:49;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(0,0,0,.5);animation:navIn .24s cubic-bezier(.32,.72,0,1)}
+@keyframes navIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.songnav-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.songnav-head .ic{display:flex;color:var(--accent)}
+.songnav-head .tt{flex:1;min-width:0}
+.songnav-head .tt .k{color:var(--accent);font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.songnav-head .tt .n{font-family:var(--f-title);font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.songnav-head .pos{color:var(--muted);font-size:12px;flex-shrink:0}
+.songnav-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px}
+.songnav-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer}
+.songnav-row:hover{border-color:var(--muted3)}
+.songnav-row.now{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface2))}
+.songnav-row .num{width:18px;text-align:center;color:var(--muted);font-family:var(--f-mono);font-size:13px;flex-shrink:0}
+.songnav-row.now .num{color:var(--accent)}
+.songnav-row .tt{flex:1;min-width:0}
+.songnav-row .tt .t{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.songnav-row.now .tt .t{color:var(--accent)}
+.songnav-row .tt .m{color:var(--muted);font-size:11.5px;margin-top:2px}
+.songnav-row .go{display:flex;color:var(--muted3);flex-shrink:0}
+.songnav-row .now-tag{display:flex;align-items:center;gap:5px;color:var(--accent);font-size:11.5px;font-weight:600;flex-shrink:0}
+.songnav-row .now-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.songnav-empty{color:var(--muted);font-size:13px;text-align:center;padding:28px 12px}
 .mixer-scrim{display:none}
 .sheet-handle{display:none;justify-content:center;padding:10px 0 2px;flex-shrink:0}
 .sheet-handle div{width:40px;height:5px;border-radius:999px;background:var(--knob)}
