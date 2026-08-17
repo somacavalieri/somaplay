@@ -591,6 +591,7 @@ let scrollTimer = null;
 let scrollPos = null;   // posição da rolagem automática, com a fração preservada
 let ctlTimer = null;
 let mixerWasOpen = false;
+let navWasOpen = false;
 
 // Os três elementos da camada flutuante. Uma constante e não três listas soltas:
 // showControls, hideControls e o laço da rolagem automática precisam concordar,
@@ -601,7 +602,6 @@ const CTL_SEL = '.scroll-ctl, .zoom-ctl, .songnav-arrow';
 export function afterRenderPlay(update) {
   const song = currentSong();
   if (!song) return;
-  scrollNavAtual();
 
   // Reflow: mede a largura real e re-renderiza se mudou. O update() reentra aqui e,
   // com a largura já estável, segue o fluxo normal.
@@ -673,6 +673,15 @@ export function afterRenderPlay(update) {
   const mx = document.querySelector('.mixer');
   if (mx && !mixerWasOpen) mx.classList.add('sheet-enter');
   mixerWasOpen = !!mx;
+
+  // Mesmo latch para a gaveta de navegação: o slide-in e o snap de rolagem
+  // para a linha atual (scrollNavAtual) só correm na transição fechado→aberto.
+  // Sem isto, qualquer re-render com a gaveta já aberta — loadSongMedia ainda
+  // em voo, o fim da faixa — repetia a animação E arrancava de volta uma
+  // rolagem que o usuário tinha acabado de fazer com o dedo.
+  const nav = document.querySelector('.songnav');
+  if (nav && !navWasOpen) { nav.classList.add('nav-enter'); scrollNavAtual(); }
+  navWasOpen = !!nav;
 
   setupImgGestures(update);
   applyImgZoom();
@@ -780,6 +789,7 @@ export function stopPlayTimers() {
   scrollPos = null;
   clearTimeout(ctlTimer);
   mixerWasOpen = false;
+  navWasOpen = false;
   audio.onTime = null;
   audio.onEnded = null;
 }

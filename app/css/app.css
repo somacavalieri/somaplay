@@ -448,7 +448,12 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 /* Gaveta de navegação entre músicas (spec 2026-08-17). Sobrepõe a cifra: um
    painel que empurrasse forçaria o reflow do texto a cada abre/fecha. */
 .songnav-scrim{position:absolute;inset:0;background:rgba(6,6,8,.5);z-index:48}
-.songnav{position:absolute;top:0;right:0;bottom:0;width:min(380px,88vw);z-index:49;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(0,0,0,.5);animation:navIn .24s cubic-bezier(.32,.72,0,1)}
+.songnav{position:absolute;top:0;right:0;bottom:0;width:min(380px,88vw);z-index:49;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(0,0,0,.5)}
+/* O slide-in só roda na transição fechado→aberto (classe aplicada por JS em
+   afterRenderPlay, do mesmo jeito que .mixer.sheet-enter) — sem isto, um
+   re-render qualquer com a gaveta já aberta (áudio carregando, fim da faixa)
+   replicaria a animação toda vez que app.innerHTML for reconstruído. */
+.songnav.nav-enter{animation:navIn .24s cubic-bezier(.32,.72,0,1)}
 @keyframes navIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 .songnav-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
 .songnav-head .ic{display:flex;color:var(--accent)}
