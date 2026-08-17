@@ -27,6 +27,11 @@ const TO_BR = {
   maj7: '7M', sus4: '(4)', dim: '°', dim7: '°',
   b13: '(b13)', b5: '(b5)', b9: '(b9)',
   11: '(11)', 13: '(13)', 9: '(9)',
+  // Já em brasileiro: mapeiam para si mesmos. Sem estas três entradas o 'b9' de
+  // 'D7(b9)' casava lá dentro e o toBr embrulhava outra vez — 'D7((b9))', e a
+  // cada passada mais um par de parênteses. O teste de idempotência varre o
+  // catálogo, então o defeito só apareceu quando 'D7(b9)' entrou nele.
+  '(b13)': '(b13)', '(b5)': '(b5)', '(b9)': '(b9)',
 };
 
 // Uma passada só, alternativas mais longas primeiro. Passada única importa: com
@@ -43,7 +48,11 @@ const RE_DIM_O = /^([A-G][#b]?)o$/;
 
 // No sentido inverso os números soltos (9/11/13) só valem no FIM do nome. Sem a
 // âncora, o '9' de 'C7(9-)' — que já é brasileiro — viraria 'C7((9)-)'.
-const RE_INTL = /maj7|sus4|dim7|dim|b13|b5|b9|(?:11|13|9)$/g;
+// As formas já parentetizadas vêm PRIMEIRO na alternância, e mapeiam para si
+// mesmas: é assim que a passada única deixa 'D7(b9)' intacto sem precisar de
+// lookbehind, que o Safari só suporta desde a 16.4 (ver comentário acima — regex
+// não suportada derruba o módulo inteiro, não só a conversão).
+const RE_INTL = /maj7|sus4|dim7|dim|\(b13\)|\(b5\)|\(b9\)|b13|b5|b9|(?:11|13|9)$/g;
 
 // A parte antes de '/' é o acorde; depois de '/' é o baixo e nunca muda.
 function onBody(name, fn) {

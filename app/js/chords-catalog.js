@@ -213,6 +213,53 @@ export const CATALOG = {
   'Gm6':   [{ frets: [3, 1, 0, 0, 3, 0], default: true }],
   'Gm7M':  [{ frets: [3, 1, 0, 0, 3, 2], default: true }],
 
+
+  // — formas acrescentadas para o repertório dos songbooks Chediak (v0.14.3) —
+  // Estas são formas do DICIONÁRIO DO APP, não as digitações que o livro
+  // desenhou: quando a música traz `cifra.digitacoes`, ela ganha destas. Entram
+  // porque o catálogo tinha 80 formas e as 101 do Século XX abriram 31 nomes sem
+  // forma alguma — o "card mudo", um diagrama vazio no popover.
+  // Cada uma foi ESCOLHIDA POR BUSCA e validada pelo `notas_do_nome` de
+  // scripts/new_songbook/measure_diagrams.py: as notas obrigatórias do nome
+  // presentes, nenhuma nota estranha, fundamental no baixo (ou o baixo que o nome
+  // manda), no máximo 4 casas de vão e sem corda muda no meio.
+  // Duas exigiram decisão fora do validador, que tem dois limites conhecidos:
+  //   * `7M` DENTRO de parêntese é lido como `7` simples, então `Am(7M)` passaria
+  //     com Sol natural. A forma abaixo tem Sol# — o certo para a sétima maior.
+  //   * `7(4)` entre parênteses NÃO descarta a terça (só `7/4` fora descarta),
+  //     mas o `⁷₄` empilhado do Chediak é sus4. As três `7(4/9)` abaixo estão sem
+  //     terça, como o impresso pede.
+  'G6/B':       [{ frets: [-1, 2, 0, 0, 0, 0], default: true }],
+  'Dm/F':       [{ frets: [1, 0, 0, 2, 3, 1], default: true }],
+  'Dm/C':       [{ frets: [-1, 3, 0, 2, 1, 1], default: true }],
+  'D/C':        [{ frets: [-1, 3, 0, 2, 3, 2], default: true }],
+  'Gm/F':       [{ frets: [1, 1, 0, 0, 3, 1], default: true }],
+  'E7/G#':      [{ frets: [4, 2, 0, 4, 0, 0], default: true }],
+  'E7/B':       [{ frets: [-1, 2, 0, 1, 0, 0], default: true }],
+  'A7/C#':      [{ frets: [-1, 4, 2, 2, 2, 3], default: true }],
+  'A/G':        [{ frets: [3, 0, 2, 0, 2, 0], default: true }],
+  'Bb(add9)/D': [{ frets: [-1, -1, 0, 3, 1, 1], default: true }],
+  'D7(9)':      [{ frets: [-1, 5, 4, 5, 5, 0], default: true }],
+  'D7(b9)':     [{ frets: [-1, 5, 4, 5, 4, 5], default: true }],
+  'D7(b9/13)':  [{ frets: [-1, 5, 4, 5, 4, 7], default: true }],
+  'D7(#5)':     [{ frets: [-1, -1, 0, 3, 1, 2], default: true }],
+  'E7(b9)':     [{ frets: [0, 2, 0, 1, 0, 1], default: true }],
+  'G7(#5)':     [{ frets: [3, 2, 1, 0, 0, 1], default: true }],
+  'F7(9)':      [{ frets: [1, 0, 1, 0, 1, 1], default: true }],
+  'Gm7(9)':     [{ frets: [3, 0, 3, 3, 3, 3], default: true }],
+  'Cm7(9)':     [{ frets: [-1, 3, 1, 3, 3, 3], default: true }],
+  'Cm7(b5)':    [{ frets: [-1, 3, 1, 3, 1, 2], default: true }],
+  'C7M(9)':     [{ frets: [-1, 3, 0, 0, 0, 0], default: true }],
+  'C6(9)':      [{ frets: [-1, 3, 0, 2, 3, 0], default: true }],
+  'Db7M(9)':    [{ frets: [-1, 4, 1, 1, 1, 1], default: true }],
+  'Bb6(9)':     [{ frets: [-1, 1, 0, 0, 1, 1], default: true }],
+  'A7(13)':     [{ frets: [-1, 0, 2, 0, 2, 2], default: true }],
+  'A7(b13)':    [{ frets: [-1, 0, 2, 0, 2, 1], default: true }],
+  'A7(b9)':     [{ frets: [-1, 0, 2, 3, 2, 3], default: true }],
+  'Am(7M)':     [{ frets: [-1, 0, 2, 1, 1, 0], default: true }],
+  'F7(4/9)':    [{ frets: [1, -1, 1, 3, 1, 3], default: true }],
+  'E7(4/9)':    [{ frets: [0, 0, 0, 2, 0, 2], default: true }],
+  'Bb7(4/9)':   [{ frets: [6, -1, 6, 8, 6, 8], default: true }],
 };
 
 export function catalogShapes(name) {

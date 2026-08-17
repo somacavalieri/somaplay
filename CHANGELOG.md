@@ -32,6 +32,28 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.14.3] - 2026-08-17
+
+### Added
+
+- Chord dictionary: 31 new voicings, covering the names the Chediak songbook
+  repertoire needs — inverted-bass shapes (`G6/B`, `Dm/F`, `E7/G#`, `A7/C#`,
+  `A/G`, `Bb(add9)/D`…) and common extensions (`D7(9)`, `E7(b9)`, `A7(13)`,
+  `C7M(9)`, `C6(9)`, `Cm7(b5)`, `Db7M(9)`, `Am(7M)`…). Before this the catalog
+  had 80 shapes and 31 names in the imported songs opened an empty diagram in
+  the chord popover. Each shape was picked by search and validated against the
+  chord name: required notes present, no foreign note, root (or the named bass)
+  in the bass, at most a 4-fret span, no muted string in the middle.
+
+### Fixed
+
+- `toBr` was not idempotent for names whose alteration is already parenthesized:
+  `D7(b9)` became `D7((b9))`, and one more pair of parentheses on every pass.
+  The alteration matched inside its own parentheses. Now the parenthesized forms
+  are matched first and map to themselves, keeping the single-pass design and
+  avoiding lookbehind, which Safari only supports from 16.4. The idempotency test
+  sweeps the catalog, so the defect only surfaced once `D7(b9)` was added to it.
+
 ## [0.14.2] - 2026-08-17
 
 ### Changed
