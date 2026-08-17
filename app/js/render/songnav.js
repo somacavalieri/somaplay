@@ -102,8 +102,9 @@ export function songNavHTML() {
         </div>
         <div class="pos">${i >= 0 ? t('play.nav.position', { i: i + 1, n }) : ''}</div>
         <button class="btn-icon" data-a="navGoToSource" title="${t('play.nav.goToSource')}">${I.chevR(20)}</button>
+        <button class="btn-icon" data-a="closeSongNav" title="${t('play.nav.close')}">${I.close(20)}</button>
       </div>
-      <div class="songnav-body" id="songnav-body">${linhas}</div>
+      <div class="songnav-body">${linhas}</div>
     </aside>`;
 }
 
