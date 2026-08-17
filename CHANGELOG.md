@@ -32,6 +32,20 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.14.1] - 2026-08-17
+
+### Changed
+
+- **A column of the Songs grid is wider on a wide screen.** At 340px a column
+  left about 120px for the title once the play glyph, the source badge and the
+  two buttons had taken their share — two words fit, and an ellipsis ate the
+  rest. Above 1400px of window the minimum column is now 400px, which returns
+  the title to around 210px: on a 1912px screen the grid goes from five columns
+  to four, 443px each. The cut at 1400px is where the change costs nothing —
+  below it both widths yield the same number of columns, and 400px there would
+  take a whole column from the tablet (three to two in landscape, two to one in
+  portrait). Only the wide screen, which is where the grid was cramped, changes.
+
 ## [0.14.0] - 2026-08-16
 
 ### Added
