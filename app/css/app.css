@@ -647,6 +647,14 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   .play-head{padding:10px 12px;gap:8px}
   .karaoke .verse div{font-size:26px}
 }
+/* Abaixo de ~423px de coluna a seta encosta no controle de rolagem (291px,
+   centralizado, contra 66px de borda que cada seta reivindica) — e a seta ganha
+   o toque, porque vem depois no DOM com o mesmo z-index. Encolher o controle
+   custaria a legibilidade do rótulo de velocidade na estante, então quem sobe
+   é a seta. */
+@media (max-width:520px){
+  .songnav-arrow{width:44px;height:44px;bottom:80px}
+}
 
 /* ---- editor de casas (add/edit) ---- */
 .digchips{display:flex;flex-wrap:wrap;gap:10px}
