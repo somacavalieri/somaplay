@@ -278,9 +278,11 @@ const actions = {
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
   goBack() {
     leavePlay();
-    if (S.backTo === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
-    else if (S.backTo === 'estilo') S.screen = 'estilo';
-    else if (S.backTo === 'list') S.screen = 'list';
+    const kind = S.navCtx?.kind;
+    S.navOpen = false;
+    if (kind === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
+    else if (kind === 'estilo') S.screen = 'estilo';
+    else if (kind === 'list') S.screen = 'list';
     else { S.screen = 'home'; }
     update();
   },
@@ -470,7 +472,7 @@ const actions = {
       // mixer da cópia toca os bytes certos por coincidência (blobId igual
       // quando a cópia deu certo) e passa a apontar para bytes apagados assim
       // que a original for excluída.
-      await openSongAction(novoId, S.backTo);
+      await openSongAction(novoId, S.navCtx?.kind);
     } catch (e) {
       toast(t('play.tom.duplicateFailed'));
     } finally {

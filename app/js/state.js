@@ -11,7 +11,11 @@ export const S = {
   // navegação
   screen: 'home',          // home | artist | list | play | addedit | settings | chordbook
   tab: 'artists',          // artists | songs | estilos | lists
-  backTo: 'home',          // de onde a tela play foi aberta
+  // De onde a tela play foi aberta — o tipo E qual. Só na sessão: um contexto
+  // que sobrevive ao fechar o app é uma promessa que a biblioteca pode não
+  // conseguir cumprir na volta. Spec 2026-08-17.
+  navCtx: null,            // { kind: 'artist'|'estilo'|'list'|'home', id } | null
+  navOpen: false,          // a gaveta de navegação está aberta?
   query: '',
   sort: 'title',           // title | artist | recent
   sortMenuOpen: false,
@@ -659,7 +663,14 @@ export function openSong(songId, from) {
   S.currentSongId = songId;
   S.transpose = 0;
   S.tomPop = null;
-  S.backTo = from || 'home';
+  // O `kind` vem do chamador (os data-from que já existem nas telas); o `id` vem
+  // do estado da tela que estava aberta. Nenhum chamador precisou mudar.
+  const kind = from || 'home';
+  const idDoContexto = kind === 'artist' ? S.artistId
+    : kind === 'estilo' ? S.estiloId
+      : kind === 'list' ? S.openListId : null;
+  S.navCtx = { kind, id: idDoContexto };
+  S.navOpen = false;
   S.screen = 'play';
   S.viewMode = wantKaraoke ? 'karaoke' : 'cifra';
   S.t2Source = (s.stems && s.stems.length) ? 'stems' : (s.full && s.full[0] ? s.full[0].id : 'stems');
