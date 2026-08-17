@@ -13,7 +13,7 @@ import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
-import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML } from './songnav.js';
+import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -117,6 +117,12 @@ function songHeaderHTML(song, tom) {
     meta.push(`<span class="tag-tom static">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
+  // "3 de 24 em Djavan": entra junto de Tom e Fonte, no cabeçalho que já existe
+  // no corpo da cifra. Não vai para a top-bar — ela foi esvaziada de propósito
+  // pela spec 2026-07-06, e a resposta glanceável para "onde eu estou" é a
+  // própria gaveta, a um toque.
+  const pos = posicaoTexto();
+  if (pos) meta.push(`<span class="src">${esc(pos)}</span>`);
   return `<div class="song-id">
     <div class="ttl">${esc(song.title)}</div>
     <div class="art">${esc(artistName(song))}</div>
