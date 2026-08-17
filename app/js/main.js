@@ -292,7 +292,18 @@ const actions = {
     else { S.screen = 'home'; }
     update();
   },
-  toggleSongNav() { S.navOpen = !S.navOpen; S.imgMenuOpen = false; update(); },
+  // A gaveta cobre a cifra, e chordPop, tomPop e o seletor de variação estão
+  // TODOS ancorados nela — um popover apontando para um acorde que não está
+  // mais visível não é sobreposição, é lixo na tela. Some com eles junto com o
+  // menu, pelo mesmo motivo que o menu já sai.
+  toggleSongNav() {
+    S.navOpen = !S.navOpen;
+    S.imgMenuOpen = false;
+    S.chordPop = null;
+    S.tomPop = null;
+    S.chordPicker = null;
+    update();
+  },
   closeSongNav() { S.navOpen = false; update(); },
   // O chevron do cabeçalho da gaveta leva à tela de onde o contexto veio — o
   // mesmo destino do botão voltar, e por isso a mesma função.
@@ -1092,9 +1103,12 @@ document.addEventListener('keydown', (e) => {
     // A folha cobre a tela inteira — tem prioridade sobre qualquer coisa por
     // baixo dela.
     if (S.shareSheet) { S.shareSheet = null; update(); return; }
-    if (S.navOpen) { S.navOpen = false; update(); return; }
+    // A ordem desta cadeia é a ordem de EMPILHAMENTO, não a de importância: Esc
+    // fecha o que está por cima. chord-pop é z-70, o popover de lista vive num
+    // scrim z-60, a gaveta é z-49 e os menus são z-40.
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
+    else if (S.navOpen) { S.navOpen = false; update(); }
     else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
       S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
       update();
