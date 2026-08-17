@@ -43,6 +43,15 @@ export async function loadSongMedia(song) {
     fulls.push({ id: f.id, blobURL: f.blobId ? await DB.blobURL(f.blobId) : null });
   }
   await audio.load(stems, fulls, { source: S.t2Source, channels: song.stems || [] });
+  // Reentrância: um segundo openSongAction pode ter mudado S.currentSongId
+  // enquanto os awaits acima estavam em voo (blobs, AudioEngine.load) — "next,
+  // next, next" batendo rápido chega aqui de sobra. AudioEngine.load já se
+  // protege com o próprio _loadToken, mas setChannels/setMaster não têm token
+  // nenhum: quem chegasse por último aplicaria a mixagem de UMA música (a sua
+  // própria) sobre as faixas de OUTRA, e _applyVolumes, sem achar o canal,
+  // cairia no volume cheio. currentSongId já foi trocado de forma síncrona
+  // pelo goSong do chamador que "venceu", então é ele que decide quem é stale.
+  if (S.currentSongId !== song.id) return;
   audio.setChannels(song.stems || []);
   audio.setMaster(S.settings.masterVol / 100);
 }
