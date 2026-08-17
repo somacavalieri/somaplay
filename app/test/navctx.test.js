@@ -153,8 +153,14 @@ test('vizinha: null nas pontas — as setas se desabilitam, não dão a volta', 
 
 test('vizinha: null quando a atual não está no contexto', () => {
   biblioteca();
-  S.navCtx = { kind: 'list', id: '__fav' };  // nenhuma favorita
-  S.currentSongId = 's1';
+  // Favoritas com UMA música, e a atual não sendo ela — o caso real de
+  // desfavoritar a música de dentro dela. Um contexto VAZIO não serviria de
+  // teste: com songs = [] o acesso songs[i + delta] já devolve undefined
+  // sozinho, e o teste passaria igual com ou sem a guarda `if (i < 0)` que ele
+  // existe justamente para proteger.
+  S.songs[0].favorita = true;            // Favoritas = [s1]
+  S.navCtx = { kind: 'list', id: '__fav' };
+  S.currentSongId = 's3';                // fora do contexto
   assert.equal(vizinhaNoContexto(1), null);
   assert.equal(vizinhaNoContexto(-1), null);
 });
