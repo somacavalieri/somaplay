@@ -50,10 +50,13 @@ export function contextoNome(ctx = S.navCtx) {
 
 // "3 de 24 em Djavan" — ou "3 de 24" quando o contexto não tem nome próprio
 // (a busca). Vazio quando a atual não está no contexto: melhor não dizer nada
-// do que dizer "0 de 24".
+// do que dizer "0 de 24". E vazio também abaixo de duas músicas — mesmo corte
+// que o botão da gaveta (songNavButtonHTML) e as setas (songNavArrowsHTML) já
+// fazem, senão o cabeçalho fica dizendo "1 de 1" num artista com uma música só,
+// quando as outras duas superfícies já concordam que não há para onde navegar.
 export function posicaoTexto() {
   const { i, n } = posicaoNoContexto();
-  if (i < 0 || !n) return '';
+  if (i < 0 || n < 2) return '';
   const nome = contextoNome();
   return nome
     ? t('play.nav.positionIn', { i: i + 1, n, nome })
@@ -93,7 +96,7 @@ export function songNavHTML() {
     : `<div class="songnav-empty">${t('play.nav.empty')}</div>`;
 
   return `<div class="songnav-scrim" data-a="closeSongNav"></div>
-    <aside class="songnav" data-stop="1" data-nopan="1">
+    <aside class="songnav" data-stop="1">
       <div class="songnav-head">
         <div class="ic">${I.listIcon(20)}</div>
         <div class="tt">

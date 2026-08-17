@@ -296,12 +296,18 @@ const actions = {
   // TODOS ancorados nela — um popover apontando para um acorde que não está
   // mais visível não é sobreposição, é lixo na tela. Some com eles junto com o
   // menu, pelo mesmo motivo que o menu já sai.
+  //
+  // chordEd some junto com chordPicker pelo mesmo motivo que em
+  // openChordPicker/closeChordPicker e em openSong (state.js): um chordEd
+  // órfão guarda origin.songId apontando para a música atual, e uma gravação
+  // por ele feita mais tarde vai parar na música errada.
   toggleSongNav() {
     S.navOpen = !S.navOpen;
     S.imgMenuOpen = false;
     S.chordPop = null;
     S.tomPop = null;
     S.chordPicker = null;
+    S.chordEd = null;
     update();
   },
   closeSongNav() { S.navOpen = false; update(); },
@@ -1044,7 +1050,7 @@ document.addEventListener('click', (e) => {
       // Testar `t !== e.target` não serve: o alvo real de um botão com ícone é o
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
-      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeSongNav' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
+      if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
       actions[name](t.dataset, e, t);
       return;
     }
