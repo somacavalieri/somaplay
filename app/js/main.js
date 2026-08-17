@@ -7,7 +7,7 @@ import {
   SEM_FONTE,
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
-  duplicarMusicaNoTom,
+  duplicarMusicaNoTom, vizinhaNoContexto,
 } from './state.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -174,6 +174,12 @@ function leavePlay() {
 }
 
 async function openSongAction(id, from) {
+  // Trocar de música ESTANDO na tela de toque precisa do mesmo desmonte que
+  // sair dela: sem isto ficam para trás o transporte tocando, os timers de
+  // rolagem e de controles vivos, e a mídia da anterior carregada. Era latente
+  // enquanto duplicateInKey era o único caminho; a gaveta e as setas o tornam
+  // o caminho de todo dia.
+  if (S.screen === 'play') leavePlay();
   goSong(id, from);
   update();
   const song = currentSong();
@@ -278,12 +284,39 @@ const actions = {
   openSong(d) { openSongAction(d.id, d.from || 'home'); },
   goBack() {
     leavePlay();
-    if (S.backTo === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
-    else if (S.backTo === 'estilo') S.screen = 'estilo';
-    else if (S.backTo === 'list') S.screen = 'list';
+    const kind = S.navCtx?.kind;
+    S.navOpen = false;
+    if (kind === 'artist') { S.screen = 'artist'; S.artistMenuOpen = false; }
+    else if (kind === 'estilo') S.screen = 'estilo';
+    else if (kind === 'list') S.screen = 'list';
     else { S.screen = 'home'; }
     update();
   },
+  // A gaveta cobre a cifra, e chordPop, tomPop e o seletor de variação estão
+  // TODOS ancorados nela — um popover apontando para um acorde que não está
+  // mais visível não é sobreposição, é lixo na tela. Some com eles junto com o
+  // menu, pelo mesmo motivo que o menu já sai.
+  //
+  // chordEd some junto com chordPicker pelo mesmo motivo que em
+  // openChordPicker/closeChordPicker e em openSong (state.js): um chordEd
+  // órfão guarda origin.songId apontando para a música atual, e uma gravação
+  // por ele feita mais tarde vai parar na música errada.
+  toggleSongNav() {
+    S.navOpen = !S.navOpen;
+    S.imgMenuOpen = false;
+    S.chordPop = null;
+    S.tomPop = null;
+    S.chordPicker = null;
+    S.chordEd = null;
+    update();
+  },
+  closeSongNav() { S.navOpen = false; update(); },
+  // O chevron do cabeçalho da gaveta leva à tela de onde o contexto veio — o
+  // mesmo destino do botão voltar, e por isso a mesma função.
+  navGoToSource() { actions.goBack(); },
+  navPick(d) { if (d.id !== S.currentSongId) openSongAction(d.id, S.navCtx?.kind); else actions.closeSongNav(); },
+  songPrev() { const s = vizinhaNoContexto(-1); if (s) openSongAction(s.id, S.navCtx?.kind); },
+  songNext() { const s = vizinhaNoContexto(1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
@@ -470,7 +503,7 @@ const actions = {
       // mixer da cópia toca os bytes certos por coincidência (blobId igual
       // quando a cópia deu certo) e passa a apontar para bytes apagados assim
       // que a original for excluída.
-      await openSongAction(novoId, S.backTo);
+      await openSongAction(novoId, S.navCtx?.kind);
     } catch (e) {
       toast(t('play.tom.duplicateFailed'));
     } finally {
@@ -1078,8 +1111,12 @@ document.addEventListener('keydown', (e) => {
     // A folha cobre a tela inteira — tem prioridade sobre qualquer coisa por
     // baixo dela.
     if (S.shareSheet) { S.shareSheet = null; update(); return; }
+    // A ordem desta cadeia é a ordem de EMPILHAMENTO, não a de importância: Esc
+    // fecha o que está por cima. chord-pop é z-70, o popover de lista vive num
+    // scrim z-60, a gaveta é z-49 e os menus são z-40.
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
+    else if (S.navOpen) { S.navOpen = false; update(); }
     else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
       S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
       update();

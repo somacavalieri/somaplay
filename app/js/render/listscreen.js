@@ -1,5 +1,5 @@
 // render/listscreen.js — tela de uma lista (ordem manual, tocar, remover, renomear...)
-import { S, listById, favList, songById, artistName, modesOf, musicasPresentes, qualificadorDe, SEM_FONTE } from '../state.js';
+import { S, listaAberta, songById, artistName, modesOf, musicasPresentes, qualificadorDe, SEM_FONTE } from '../state.js';
 import { I, esc } from '../icons.js';
 import { offlineBadge } from './home.js';
 import { t } from '../i18n.js';
@@ -14,8 +14,9 @@ function qualLista(so) {
 }
 
 export function renderListScreen() {
-  const isFav = S.openListId === '__fav';
-  const l = isFav ? favList() : listById(S.openListId);
+  // A resolução do '__fav' virtual mora em state.js — a gaveta de navegação
+  // precisa resolvê-lo do mesmo jeito.
+  const l = listaAberta(S.openListId);
   if (!l) { S.screen = 'home'; S.tab = 'lists'; return '<div></div>'; }
   const cnt = (n) => `${n} ${n === 1 ? t('common.song') : t('common.songs')}`;
   const modeLabel = (so) => modesOf(so).includes('T2') ? t('list.modeChartAccomp') : t('list.modeChart');

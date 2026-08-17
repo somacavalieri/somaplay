@@ -11,7 +11,11 @@ export const S = {
   // navegação
   screen: 'home',          // home | artist | list | play | addedit | settings | chordbook
   tab: 'artists',          // artists | songs | estilos | lists
-  backTo: 'home',          // de onde a tela play foi aberta
+  // De onde a tela play foi aberta — o tipo E qual. Só na sessão: um contexto
+  // que sobrevive ao fechar o app é uma promessa que a biblioteca pode não
+  // conseguir cumprir na volta. Spec 2026-08-17.
+  navCtx: null,            // { kind: 'artist'|'estilo'|'list'|'home', id } | null
+  navOpen: false,          // a gaveta de navegação está aberta?
   query: '',
   sort: 'title',           // title | artist | recent
   sortMenuOpen: false,
@@ -602,6 +606,64 @@ export function favList() {
   };
 }
 
+// ---------- contexto de navegação (spec 2026-08-17) ----------
+// De onde a música foi aberta: o TIPO e QUAL. `S.backTo` guardava só o tipo, que
+// bastava para o botão voltar; a gaveta e as setas precisam saber quais são as
+// irmãs. Uma variável só para as duas coisas porque duas verdades sobre "de onde
+// você veio" é como as duas passam a discordar.
+
+// "Favoritas" não está em S.lists — favList() a monta na hora a partir do campo
+// `favorita` das músicas. Uma única porta para resolver um id de lista; a tela da
+// lista (render/listscreen.js) bebe daqui pelo mesmo motivo.
+export function listaAberta(id) {
+  return id === '__fav' ? favList() : listById(id);
+}
+
+// A ordenação da aba Músicas. Morava dentro do render (render/home.js): a gaveta
+// precisa da MESMA ordem que a tela mostrou, e a regra escrita duas vezes é a
+// regra que vai divergir.
+export function songsDaBusca() {
+  const q = S.query.trim().toLowerCase();
+  const flat = S.songs.filter((s) =>
+    (!q || s.title.toLowerCase().includes(q) || artistName(s).toLowerCase().includes(q)) && matchesLens(s));
+  if (S.sort === 'title') flat.sort((a, b) => a.title.localeCompare(b.title, 'pt'));
+  else if (S.sort === 'artist') flat.sort((a, b) => artistName(a).localeCompare(artistName(b), 'pt') || a.title.localeCompare(b.title, 'pt'));
+  else flat.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return flat;
+}
+
+// As irmãs da música atual, na ordem em que a tela de origem as mostrou.
+export function songsDoContexto(ctx = S.navCtx) {
+  if (!ctx) return [];
+  if (ctx.kind === 'artist') return songsOfArtist(ctx.id).filter(matchesLens);
+  if (ctx.kind === 'estilo') return songsOfEstilo(ctx.id).filter(matchesLens);
+  if (ctx.kind === 'list') {
+    // Sem `matchesLens`: Listas são globais e ignoram a lente (PRD §7) — a gaveta
+    // mostra o show inteiro mesmo com a lente ligada. E `musicasPresentes` é o que
+    // deixa o id órfão de fora, que é o que faz a numeração daqui bater com a da
+    // tela da lista.
+    const l = listaAberta(ctx.id);
+    return l ? musicasPresentes(l).map(songById) : [];
+  }
+  return songsDaBusca();
+}
+
+// Onde a atual está no contexto. `i === -1` quando ela não está mais lá — não é
+// hipotético: desfavoritar a música de dentro dela a tira do contexto Favoritas.
+export function posicaoNoContexto(songs = songsDoContexto()) {
+  return { i: songs.findIndex((s) => s.id === S.currentSongId), n: songs.length };
+}
+
+// A vizinha `delta` passos adiante, ou null. Não dá a volta de propósito: as
+// setas se desabilitam nas pontas, e a última música de um show não deve
+// reabrir a primeira sozinha.
+export function vizinhaNoContexto(delta) {
+  const songs = songsDoContexto();
+  const { i } = posicaoNoContexto(songs);
+  if (i < 0) return null;
+  return songs[i + delta] || null;
+}
+
 // ---------- tela de toque ----------
 export function openSong(songId, from) {
   const s = songById(songId);
@@ -611,7 +673,22 @@ export function openSong(songId, from) {
   S.currentSongId = songId;
   S.transpose = 0;
   S.tomPop = null;
-  S.backTo = from || 'home';
+  // Mesmo motivo do tomPop acima: estado de tela que não pode atravessar uma
+  // troca de música. E aqui não é só ruído visual — chordEd.origin guarda o
+  // songId de ONDE a digitação vai ser gravada, então um editor sobrevivente
+  // grava a forma na música anterior, calado, com a nova na tela. Toda outra
+  // transição de tela já zerava isto (goAdd, goChordbook, cancelAddEdit);
+  // openSong era a única porta que faltava.
+  S.chordPicker = null;
+  S.chordEd = null;
+  // O `kind` vem do chamador (os data-from que já existem nas telas); o `id` vem
+  // do estado da tela que estava aberta. Nenhum chamador precisou mudar.
+  const kind = from || 'home';
+  const idDoContexto = kind === 'artist' ? S.artistId
+    : kind === 'estilo' ? S.estiloId
+      : kind === 'list' ? S.openListId : null;
+  S.navCtx = { kind, id: idDoContexto };
+  S.navOpen = false;
   S.screen = 'play';
   S.viewMode = wantKaraoke ? 'karaoke' : 'cifra';
   S.t2Source = (s.stems && s.stems.length) ? 'stems' : (s.full && s.full[0] ? s.full[0].id : 'stems');

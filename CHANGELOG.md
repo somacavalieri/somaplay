@@ -32,6 +32,69 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.15.0] - 2026-08-17
+
+### Added
+
+- Navigate between songs from inside a song. A drawer lists the songs of the
+  context you came from — artist, style, list, or the search results — with the
+  current one marked and scrolled into view, and previous/next arrows ride the
+  same show-and-fade cycle as the autoscroll control.
+- The chart header now says where you are: `3 of 24 in Djavan`.
+
+### Fixed
+
+- Switching songs while already on the play screen left the previous song's
+  transport running, its scroll and control timers alive, and its media loaded.
+  Only duplicate-in-key reached that path before; the drawer makes it routine.
+- With the chord-shape editor open, switching songs left it pointing at the
+  previous song. A save then wrote the fingering into that song's dictionary,
+  silently, while the screen showed the new one. Every other screen transition
+  already cleared the editor — opening a song was the one door that did not.
+
+## [0.14.3] - 2026-08-17
+
+### Added
+
+- Chord dictionary: 31 new voicings, covering the names the Chediak songbook
+  repertoire needs — inverted-bass shapes (`G6/B`, `Dm/F`, `E7/G#`, `A7/C#`,
+  `A/G`, `Bb(add9)/D`…) and common extensions (`D7(9)`, `E7(b9)`, `A7(13)`,
+  `C7M(9)`, `C6(9)`, `Cm7(b5)`, `Db7M(9)`, `Am(7M)`…). Before this the catalog
+  had 80 shapes and 31 names in the imported songs opened an empty diagram in
+  the chord popover. Each shape was picked by search and validated against the
+  chord name: required notes present, no foreign note, root (or the named bass)
+  in the bass, at most a 4-fret span, no muted string in the middle.
+
+### Fixed
+
+- `toBr` was not idempotent for names whose alteration is already parenthesized:
+  `D7(b9)` became `D7((b9))`, and one more pair of parentheses on every pass.
+  The alteration matched inside its own parentheses. Now the parenthesized forms
+  are matched first and map to themselves, keeping the single-pass design and
+  avoiding lookbehind, which Safari only supports from 16.4. The idempotency test
+  sweeps the catalog, so the defect only surfaced once `D7(b9)` was added to it.
+
+## [0.14.2] - 2026-08-17
+
+### Changed
+
+- **A column of the Songs grid is a reading width, not a fitting width.** The
+  minimum column goes from 340px to 480px. Subtract from a column the play
+  glyph, the source badge, the two buttons and the gaps between them — 248px
+  that do not shrink — and what is left is the title's. At 340px that was about
+  120px: two words, then an ellipsis. At 480px it is around 230px, and since
+  the grid divides the leftover among the columns, in practice the title gets
+  more. A 1912px screen goes from five columns to three, 600px each.
+- **Every break now asks for a bigger screen.** The second column arrives at
+  about 1044px of window, the third at 1552px, the fourth at 2060px. A tablet
+  in portrait stays on a single column on purpose — one wide row reads better
+  than two clipped ones, and the songs a screen holds was never the number that
+  mattered. Below 480px of window the column follows the window instead, so a
+  phone never scrolls sideways.
+
+  *(0.14.1 carried a first pass at this — a 400px column above 1400px of window
+  only. It was superseded before release and its numbers are not in any build.)*
+
 ## [0.14.0] - 2026-08-16
 
 ### Added

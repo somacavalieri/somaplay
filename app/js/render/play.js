@@ -13,6 +13,7 @@ import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
+import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -42,6 +43,15 @@ export async function loadSongMedia(song) {
     fulls.push({ id: f.id, blobURL: f.blobId ? await DB.blobURL(f.blobId) : null });
   }
   await audio.load(stems, fulls, { source: S.t2Source, channels: song.stems || [] });
+  // Reentrância: um segundo openSongAction pode ter mudado S.currentSongId
+  // enquanto os awaits acima estavam em voo (blobs, AudioEngine.load) — "next,
+  // next, next" batendo rápido chega aqui de sobra. AudioEngine.load já se
+  // protege com o próprio _loadToken, mas setChannels/setMaster não têm token
+  // nenhum: quem chegasse por último aplicaria a mixagem de UMA música (a sua
+  // própria) sobre as faixas de OUTRA, e _applyVolumes, sem achar o canal,
+  // cairia no volume cheio. currentSongId já foi trocado de forma síncrona
+  // pelo goSong do chamador que "venceu", então é ele que decide quem é stale.
+  if (S.currentSongId !== song.id) return;
   audio.setChannels(song.stems || []);
   audio.setMaster(S.settings.masterVol / 100);
 }
@@ -116,6 +126,12 @@ function songHeaderHTML(song, tom) {
     meta.push(`<span class="tag-tom static">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
+  // "3 de 24 em Djavan": entra junto de Tom e Fonte, no cabeçalho que já existe
+  // no corpo da cifra. Não vai para a top-bar — ela foi esvaziada de propósito
+  // pela spec 2026-07-06, e a resposta glanceável para "onde eu estou" é a
+  // própria gaveta, a um toque.
+  const pos = posicaoTexto();
+  if (pos) meta.push(`<span class="src">${esc(pos)}</span>`);
   return `<div class="song-id">
     <div class="ttl">${esc(song.title)}</div>
     <div class="art">${esc(artistName(song))}</div>
@@ -553,6 +569,7 @@ export function renderPlay() {
       ${modeSwitch}
       <span style="flex:1"></span>
       ${zoomCtl}
+      ${songNavButtonHTML()}
       <div class="menu-wrap">
         <button class="btn-icon ${S.imgMenuOpen ? 'accent-on' : ''}" data-a="toggleImgMenu" title="${t('play.menu.options')}">${I.dots()}</button>
         ${menu}
@@ -566,6 +583,7 @@ export function renderPlay() {
         ${body}
         ${avisoHTML}
         ${scrollCtl}
+        ${songNavArrowsHTML()}
       </div>
       ${hasMixer && !S.mixerCollapsed ? mixerHTML(song) : ''}
     </div>
@@ -573,6 +591,7 @@ export function renderPlay() {
     ${S.chordPicker ? chordPickerHTML(song) : ''}
     ${S.chordPop ? chordPopHTML(song) : ''}
     ${S.tomPop ? tomPopHTML(song, tomAtual(song)) : ''}
+    ${songNavHTML()}
   </div>`;
 }
 
@@ -581,6 +600,13 @@ let scrollTimer = null;
 let scrollPos = null;   // posição da rolagem automática, com a fração preservada
 let ctlTimer = null;
 let mixerWasOpen = false;
+let navWasOpen = false;
+
+// Os três elementos da camada flutuante. Uma constante e não três listas soltas:
+// showControls, hideControls e o laço da rolagem automática precisam concordar,
+// e a terceira lista é justamente a que esquece o membro novo — deixando as
+// setas presas na tela durante a rolagem.
+const CTL_SEL = '.scroll-ctl, .zoom-ctl, .songnav-arrow';
 
 export function afterRenderPlay(update) {
   const song = currentSong();
@@ -657,18 +683,27 @@ export function afterRenderPlay(update) {
   if (mx && !mixerWasOpen) mx.classList.add('sheet-enter');
   mixerWasOpen = !!mx;
 
+  // Mesmo latch para a gaveta de navegação: o slide-in e o snap de rolagem
+  // para a linha atual (scrollNavAtual) só correm na transição fechado→aberto.
+  // Sem isto, qualquer re-render com a gaveta já aberta — loadSongMedia ainda
+  // em voo, o fim da faixa — repetia a animação E arrancava de volta uma
+  // rolagem que o usuário tinha acabado de fazer com o dedo.
+  const nav = document.querySelector('.songnav');
+  if (nav && !navWasOpen) { nav.classList.add('nav-enter'); scrollNavAtual(); }
+  navWasOpen = !!nav;
+
   setupImgGestures(update);
   applyImgZoom();
 }
 
 function showControls() {
-  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.remove('ctl-hidden'));
+  document.querySelectorAll(CTL_SEL).forEach((c) => c.classList.remove('ctl-hidden'));
   clearTimeout(ctlTimer);
   ctlTimer = setTimeout(hideControls, 3200);
 }
 function hideControls() {
   if (S.screen !== 'play') return;
-  document.querySelectorAll('.scroll-ctl, .zoom-ctl').forEach((c) => c.classList.add('ctl-hidden'));
+  document.querySelectorAll(CTL_SEL).forEach((c) => c.classList.add('ctl-hidden'));
 }
 
 export function manageScroll() {
@@ -683,8 +718,8 @@ export function manageScroll() {
       const el = document.querySelector('[data-autoscroll]');
       if (!el) return;
       // mantém os controles visíveis durante a rolagem (para poder pausar)
-      const ctl = document.querySelector('.scroll-ctl');
-      if (ctl) { ctl.classList.remove('ctl-hidden'); clearTimeout(ctlTimer); }
+      const ctls = document.querySelectorAll(CTL_SEL);
+      if (ctls.length) { ctls.forEach((c) => c.classList.remove('ctl-hidden')); clearTimeout(ctlTimer); }
       if (scrollPos === null || Math.abs(el.scrollTop - scrollPos) > 1.5) scrollPos = el.scrollTop;
       scrollPos += scrollStep(S.scrollSpeed);
       el.scrollTop = scrollPos;
@@ -763,6 +798,7 @@ export function stopPlayTimers() {
   scrollPos = null;
   clearTimeout(ctlTimer);
   mixerWasOpen = false;
+  navWasOpen = false;
   audio.onTime = null;
   audio.onEnded = null;
 }

@@ -1,5 +1,5 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, songsDaBusca } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { iniciais } from '../initials.js';
 import { t } from '../i18n.js';
@@ -125,18 +125,15 @@ function songRow(s, { showArtist = true, from = 'home' } = {}) {
 }
 
 function songsTab() {
-  const q = S.query.trim().toLowerCase();
-  const all = S.songs.slice();
-  let flat = all.filter((s) => (!q || s.title.toLowerCase().includes(q) || artistName(s).toLowerCase().includes(q)) && matchesLens(s));
-  if (S.sort === 'title') flat.sort((a, b) => a.title.localeCompare(b.title, 'pt'));
-  else if (S.sort === 'artist') flat.sort((a, b) => artistName(a).localeCompare(artistName(b), 'pt') || a.title.localeCompare(b.title, 'pt'));
-  else flat.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  // A regra de "quais músicas, nesta ordem" mora em state.js: a gaveta de
+  // navegação precisa da MESMA ordem que esta tela mostra.
+  const flat = songsDaBusca();
 
   const sortLabels = { title: t('home.sort.title'), artist: t('home.sort.artist'), recent: t('home.sort.recent') };
   const menu = S.sortMenuOpen ? `<div class="sort-menu">` + ['title', 'artist', 'recent'].map((k) =>
     `<button class="${S.sort === k ? 'on' : ''}" data-a="setSort" data-id="${k}">${sortLabels[k]} ${S.sort === k ? I.check(16, 2.5) : ''}</button>`).join('') + `</div>` : '';
 
-  const count = t('home.songs.summary', { shown: flat.length, total: all.length, sort: sortLabels[S.sort] })
+  const count = t('home.songs.summary', { shown: flat.length, total: S.songs.length, sort: sortLabels[S.sort] })
     + (lensAtiva() ? t('home.songs.filterSuffix', { filter: esc(filtroAtivoLabel()) }) : '');
 
   const rows = flat.length
