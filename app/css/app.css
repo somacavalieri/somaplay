@@ -209,20 +209,20 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .tag-karaoke{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--gold-tint);color:var(--gold);border:1px solid var(--gold-soft);flex-shrink:0}
 
 /* --- Aba Músicas: grade compacta (spec 2026-08-12-lista-compacta) --- */
-/* O nº de colunas emerge da largura: auto-fill com min(340px,100%) — o min()
+/* O nº de colunas emerge da largura: auto-fill com min(480px,100%) — o min()
    evita coluna mais larga que o viewport no celular. overflow:hidden clipa o
-   hairline ::before fantasma da primeira coluna. Em telas largas a coluna
-   mínima sobe para 400px — ver o @media (min-width:1400px). */
-.songs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));column-gap:28px;overflow:hidden}
-/* Numa coluna de 340px sobram ~120px para o título depois do play, do badge de
-   fonte e dos dois botões — cabem duas palavras. 400px levam esse espaço para
-   ~210px, o suficiente para ler o nome da música. O corte em 1400px é onde a
-   troca sai de graça: até ali as duas larguras dão o mesmo nº de colunas, e
-   abaixo dela 400px custaria uma coluna inteira do tablet (3→2 em 1280px, 2→1
-   em retrato). Só a tela larga, que é onde a grade estava apertada, muda. */
-@media (min-width:1400px){
-  .songs-grid{grid-template-columns:repeat(auto-fill,minmax(min(400px,100%),1fr))}
-}
+   hairline ::before fantasma da primeira coluna.
+
+   480px é largura de leitura, não de encaixe. Desconte da coluna o play, o
+   badge de fonte, os dois botões e os vãos — 248px fixos — e é o que sobra
+   para o título que decide se dá para ler o nome da música ou só duas
+   palavras. 340px deixavam ~120px; 480px deixam ~230px, e numa coluna que
+   sobra (a grade divide o resto entre as colunas) o título passa disso.
+
+   O efeito é que cada quebra pede uma tela maior: a segunda coluna só entra
+   com ~1044px de viewport, a terceira com ~1552px, a quarta com ~2060px.
+   Um tablet em retrato fica numa coluna só, de propósito. */
+.songs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(480px,100%),1fr));column-gap:28px;overflow:hidden}
 .songs-grid .empty{grid-column:1/-1}
 .song-line{position:relative;display:flex;align-items:center;gap:10px;min-height:48px;padding:2px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .song-line:hover{background:var(--surface-hover)}

@@ -32,19 +32,26 @@ Two rules keep the number honest:
 
 Nothing yet.
 
-## [0.14.1] - 2026-08-17
+## [0.14.2] - 2026-08-17
 
 ### Changed
 
-- **A column of the Songs grid is wider on a wide screen.** At 340px a column
-  left about 120px for the title once the play glyph, the source badge and the
-  two buttons had taken their share — two words fit, and an ellipsis ate the
-  rest. Above 1400px of window the minimum column is now 400px, which returns
-  the title to around 210px: on a 1912px screen the grid goes from five columns
-  to four, 443px each. The cut at 1400px is where the change costs nothing —
-  below it both widths yield the same number of columns, and 400px there would
-  take a whole column from the tablet (three to two in landscape, two to one in
-  portrait). Only the wide screen, which is where the grid was cramped, changes.
+- **A column of the Songs grid is a reading width, not a fitting width.** The
+  minimum column goes from 340px to 480px. Subtract from a column the play
+  glyph, the source badge, the two buttons and the gaps between them — 248px
+  that do not shrink — and what is left is the title's. At 340px that was about
+  120px: two words, then an ellipsis. At 480px it is around 230px, and since
+  the grid divides the leftover among the columns, in practice the title gets
+  more. A 1912px screen goes from five columns to three, 600px each.
+- **Every break now asks for a bigger screen.** The second column arrives at
+  about 1044px of window, the third at 1552px, the fourth at 2060px. A tablet
+  in portrait stays on a single column on purpose — one wide row reads better
+  than two clipped ones, and the songs a screen holds was never the number that
+  mattered. Below 480px of window the column follows the window instead, so a
+  phone never scrolls sideways.
+
+  *(0.14.1 carried a first pass at this — a 400px column above 1400px of window
+  only. It was superseded before release and its numbers are not in any build.)*
 
 ## [0.14.0] - 2026-08-16
 

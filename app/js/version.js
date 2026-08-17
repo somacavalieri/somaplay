@@ -8,4 +8,4 @@
 //
 // Regras de quando subir cada dígito, e o que marca a 1.0.0:
 // docs/superpowers/specs/2026-08-14-versionamento-design.md
-export const VERSION = '0.14.1';
+export const VERSION = '0.14.2';
