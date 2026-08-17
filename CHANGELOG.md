@@ -32,6 +32,26 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.15.0] - 2026-08-17
+
+### Added
+
+- Navigate between songs from inside a song. A drawer lists the songs of the
+  context you came from — artist, style, list, or the search results — with the
+  current one marked and scrolled into view, and previous/next arrows ride the
+  same show-and-fade cycle as the autoscroll control.
+- The chart header now says where you are: `3 of 24 in Djavan`.
+
+### Fixed
+
+- Switching songs while already on the play screen left the previous song's
+  transport running, its scroll and control timers alive, and its media loaded.
+  Only duplicate-in-key reached that path before; the drawer makes it routine.
+- With the chord-shape editor open, switching songs left it pointing at the
+  previous song. A save then wrote the fingering into that song's dictionary,
+  silently, while the screen showed the new one. Every other screen transition
+  already cleared the editor — opening a song was the one door that did not.
+
 ## [0.14.3] - 2026-08-17
 
 ### Added
