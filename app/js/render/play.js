@@ -14,6 +14,7 @@ import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
 import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
+import { limpaHTML } from '../anotacoes.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -125,6 +126,7 @@ function songHeaderHTML(song, tom) {
     // não tem data-a nenhum.
     meta.push(`<span class="tag-tom static">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
+  if (temNotas(song)) meta.push(`<button class="tag-tom" data-a="jumpNotas" style="gap:5px">${I.textLines(13)}${t('notas.jump')}</button>`);
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
   // "3 de 24 em Djavan": entra junto de Tom e Fonte, no cabeçalho que já existe
   // no corpo da cifra. Não vai para a top-bar — ela foi esvaziada de propósito
@@ -161,6 +163,25 @@ function chordsGridHTML(song, chordNames) {
     <div class="chords-grid">${cards}</div>
     <div class="chords-hint"><span style="display:flex;color:var(--muted3)">${I.star(false, 13)}</span>${t('play.chordsGrid.hint')}</div>
   </div>`;
+}
+
+export const temNotas = (song) => !!(song && String(song.anotacoes || '').trim());
+
+// O filtro roda AQUI também, e não só na escrita. É barato e é a rede que pega
+// um registro que entrou por outro caminho — um backup antigo, uma escrita
+// direta no IndexedDB.
+export function notasBlockHTML(song) {
+  const tem = temNotas(song);
+  const cabeca = `<div class="blk-hd">
+      <span class="ic" style="color:${tem ? 'var(--accent)' : 'var(--muted2)'};display:flex">${I.textLines(18)}</span>
+      <div class="t"${tem ? '' : ' style="color:var(--muted)"'}>${t('notas.title')}</div>
+      <span class="sp"></span>
+      <button class="btn-ghost" style="height:38px;padding:0 13px;font-size:13px" data-a="editNotas">${I.pencil(14)}${t(tem ? 'notas.edit' : 'notas.write')}</button>
+    </div>`;
+  const corpo = tem
+    ? `<div class="notas-body">${limpaHTML(song.anotacoes)}</div>`
+    : `<div class="notas-vazia"><div class="txt">${t('notas.empty')}</div></div>`;
+  return `<div class="blk notas" id="notas" data-nopan="1">${cabeca}${corpo}</div>`;
 }
 
 function pinnedBarHTML(song, chordNames) {
@@ -380,6 +401,7 @@ function cifraTextHTML(song) {
     ${songHeaderHTML(song, tomAtual(song))}
     <div class="cifra-text" style="font-size:${fontPx}px">${lines || `<div class="ly" style="color:var(--muted)">${t('play.cifraText.empty')}</div>`}</div>
     ${chordsGridHTML(song, chordNames)}
+    ${notasBlockHTML(song)}
   </div>`;
 }
 
@@ -394,7 +416,7 @@ function cifraImageHTML(song) {
     <div class="inner">
       ${songHeaderHTML(song)}
       ${url ? `<img src="${url}" alt="${t('play.cifraImage.alt')}" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : `<div style="padding:60px;color:var(--muted)">${t('play.cifraImage.notFound')}</div>`}
-      ${chordNames.length ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}</div>` : ''}
+      ${chordNames.length || temNotas(song) ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}${notasBlockHTML(song)}</div>` : ''}
     </div>
   </div>`;
 }

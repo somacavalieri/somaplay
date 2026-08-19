@@ -70,6 +70,7 @@ export const S = {
   chordPop: null,          // popover do acorde tocado na cifra: { name, anchor, modo:'mini'|'carrossel', selId, scrollTop }
   tomPop: null,            // popover do tom aberto: { anchor }
   pinnedOpen: true,
+  notasVolta: null,        // scrollTop de onde o salto para as anotações partiu
   transportPlaying: false,
   position: 0,
   duration: 0,
@@ -701,6 +702,9 @@ export function openSong(songId, from) {
   S.imgMenuOpen = false;
   S.ctlVisible = true;
   S.pinnedOpen = true;
+  // Mesmo motivo do tomPop no topo desta função: um "voltar" pendente de outra
+  // música usaria o scrollTop errado se sobrevivesse à troca.
+  S.notasVolta = null;
   S.transportPlaying = false;
   S.position = 0;
   S.duration = 0;

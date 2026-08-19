@@ -574,6 +574,18 @@ const actions = {
     update();
   },
   togglePinnedBar() { S.pinnedOpen = !S.pinnedOpen; update(); },
+  // Ida e volta no mesmo botão (spec 2026-08-18): com a seção já visível, ele
+  // devolve o lugar de onde o salto partiu. Sem update() aqui — mexer na
+  // rolagem não muda estado de tela, e um re-render jogaria a rolagem fora.
+  jumpNotas() {
+    const cx = document.querySelector('[data-autoscroll="1"]');
+    const alvo = document.getElementById('notas');
+    if (cx && alvo) {
+      const jaLa = S.notasVolta !== null && alvo.getBoundingClientRect().top < cx.clientHeight * 0.5;
+      if (jaLa) { cx.scrollTo({ top: S.notasVolta, behavior: 'smooth' }); S.notasVolta = null; }
+      else { S.notasVolta = cx.scrollTop; alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+  },
   toggleScroll() {
     S.scrollPlaying = !S.scrollPlaying;
     manageScroll();
