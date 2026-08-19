@@ -1046,8 +1046,12 @@ function wireBackupInput() {
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }
 
-    // Cancelar mantém as suas: a resposta destrutiva é a afirmativa.
-    const conflitos = conflitosDeNotas(S.songs, manifest.songs, manifest.partes);
+    // Só no merge há o que negociar: no substituir a pessoa já confirmou
+    // trocar a biblioteca inteira (avisosDeSubstituir cobriu a falta de
+    // anotação ali em cima), e "manter a minha" não faz sentido quando ela
+    // está prestes a deixar de existir. Cancelar mantém as suas: a resposta
+    // destrutiva é a afirmativa.
+    const conflitos = merge ? conflitosDeNotas(S.songs, manifest.songs, manifest.partes) : [];
     const decisaoNotas = conflitos.length
       ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
       : 'substituir';

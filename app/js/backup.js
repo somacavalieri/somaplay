@@ -171,6 +171,11 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false }
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
   if (!ps.includes('cifra')) out.push('msg.backup.replaceNoCifra');
   if (!ps.includes('pessoal')) out.push('msg.backup.replaceNoPessoal');
+  // Assimétrico de propósito: o arquivo TRAZER anotação não avisa nada — isso é
+  // substituir normal. O aviso é só para quando ele NÃO traz: aí a anotação
+  // some sem nada para tomar o lugar dela, e substituir não pergunta por
+  // música (essa pergunta é só do merge, em conflitosDeNotas).
+  if (!ps.includes('anotacoes')) out.push('msg.backup.replaceNoAnotacoes');
   // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
   // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
   if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
@@ -183,6 +188,12 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false }
 // Pura e chamada pelo chamador, como avisosDeSubstituir: perguntar de dentro de
 // importLibrary seria tarde demais no modo substituir, onde o DB.wipe() já
 // aconteceu.
+//
+// Na prática só faz sentido perguntar no MERGE — no substituir o aparelho
+// inteiro é apagado antes de gravar (DB.wipe()), então "manter a minha" não
+// tem onde pousar; ali o aviso certo é avisosDeSubstituir, não esta pergunta
+// por música. A função continua total e sem saber de modo, de propósito: quem
+// decide se pergunta é o chamador (main.js), não ela.
 export function conflitosDeNotas(atuais, doArquivo, partes) {
   if (!normalizaPartes(partes).includes('anotacoes')) return [];
   const mapa = new Map((atuais || []).map((s) => [s.id, s]));
@@ -209,16 +220,22 @@ export async function importLibrary(file, { merge = false, decisaoNotas = 'subst
     if (s.anotacoes) s.anotacoes = limpaHTML(s.anotacoes);
   }
   // "Manter as minhas": apaga o campo do ARQUIVO em memória, e não de `partes`.
-  // Tirar 'anotacoes' de `partes` não bastaria, por dois motivos:
-  // (1) no merge, mergePlan relê `manifest.partes` por conta própria — não este
-  //     `partes` local — então a exclusão nunca chegaria lá;
-  // (2) mesmo no substituir, um `partes` de 4 itens menos 'anotacoes' vira
-  //     exatamente PARTES_LEGADO, e fundeMusica trata PARTES_LEGADO como
-  //     "arquivo legado completo" (partes.js) — o Object.assign daquele atalho
-  //     copiaria a anotação de qualquer jeito, porque ele copia a partir do
-  //     objeto, não da lista de partes.
-  // Apagar a chave funciona nos dois modos e nos dois caminhos de fundeMusica,
-  // porque ambos só tocam num campo que existe no objeto de origem.
+  // Tirar 'anotacoes' de `partes` não bastaria: um `partes` de 4 itens menos
+  // 'anotacoes' vira exatamente PARTES_LEGADO, e fundeMusica trata
+  // PARTES_LEGADO como "arquivo legado completo" (partes.js) — o
+  // Object.assign daquele atalho copiaria a anotação de qualquer jeito,
+  // porque ele copia a partir do objeto, não da lista de partes. Apagar a
+  // chave é imune a esse atalho, porque ambos os caminhos de fundeMusica só
+  // tocam num campo que existe no objeto de origem.
+  //
+  // Isto SÓ preserva a anotação local no MERGE. No substituir, `atual` chega
+  // `null` em fundeMusica (a linha do DB.wipe() logo abaixo já rodou por
+  // baixo, e a chamada de replace usa `fundeMusica(null, s, partes, agora)`)
+  // — não há registro local para a anotação apagada "voltar a valer", então
+  // apagar a chave ali só faria a anotação sumir, não mantê-la. main.js sabe
+  // disso e só passa `decisaoNotas: 'manter'` quando `merge` é true; no
+  // substituir o aviso é outro (avisosDeSubstituir → replaceNoAnotacoes),
+  // dado ANTES da troca, porque depois do wipe já é tarde para perguntar.
   if (decisaoNotas === 'manter') {
     for (const s of manifest.songs || []) delete s.anotacoes;
   }

@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, conflitosDeNotas } from '../js/backup.js';
-import { PARTES_TODAS } from '../js/partes.js';
+import { PARTES_TODAS, fundeMusica } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
 // mesmo se os artistas fossem filtrados, e a asserção que mais importa não
@@ -166,20 +166,28 @@ test('arquivo completo não gera aviso nenhum', () => {
 });
 
 test('arquivo sem áudio avisa que o áudio some', () => {
-  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['cifra', 'pessoal'] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['cifra', 'pessoal', 'anotacoes'] }, { temListas: true }),
     ['msg.backup.replaceNoAudio']);
 });
 
 test('pacote só de áudio avisa que as cifras somem', () => {
-  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['audio', 'pessoal'] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['audio', 'pessoal', 'anotacoes'] }, { temListas: true }),
     ['msg.backup.replaceNoCifra']);
 });
 
 // A regra que esta branch fabricou: antes dela todo .somaplay levava as
 // favoritas, então substituir nunca as perdia. Agora perde, e em silêncio.
 test('arquivo sem o pessoal avisa que favoritas e ajustes somem', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio'], lists: [{ id: 'l1' }] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'anotacoes'], lists: [{ id: 'l1' }] }, { temListas: true }),
     ['msg.backup.replaceNoPessoal']);
+});
+
+// Assimétrico de propósito: o arquivo TER anotação e ser substituído não avisa
+// nada — é substituir normal. O aviso é só para quando ele NÃO traz nenhuma, e
+// a de quem já escreveu some sem nada para tomar o lugar.
+test('arquivo sem anotação avisa que a anotação some', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }] }, { temListas: true }),
+    ['msg.backup.replaceNoAnotacoes']);
 });
 
 test('arquivo sem lista avisa quando o aparelho tem listas', () => {
@@ -203,11 +211,13 @@ test('os dois eixos se acumulam, na ordem do dano', () => {
   assert.deepEqual(avisosDeSubstituir({ partes: ['cifra'], lists: [] }, { temListas: true }), [
     'msg.backup.replaceNoAudio',
     'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoAnotacoes',
     'msg.backup.replaceNoLists',
   ]);
   assert.deepEqual(avisosDeSubstituir({ partes: ['audio'], lists: [] }, { temListas: true }), [
     'msg.backup.replaceNoCifra',
     'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoAnotacoes',
     'msg.backup.replaceNoLists',
   ]);
 });
@@ -246,4 +256,18 @@ test('conflito so quando os dois lados tem anotacao e elas diferem', () => {
   assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra', 'anotacoes']), ['a']);
   assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra']), []);
   assert.deepEqual(conflitosDeNotas(atuais, arq, undefined), ['a']);
+});
+
+// A propriedade que a task inteira existe para garantir, e só no merge: quando
+// decisaoNotas === 'manter', importLibrary apaga `anotacoes` do registro que
+// veio do arquivo ANTES de chamar fundeMusica/mergePlan. Aqui está o efeito
+// dessa apagada — `atual` é o registro REAL do aparelho (não null, que é o
+// caso do substituir, onde não há o que manter porque o aparelho já foi
+// apagado): a anotação local tem que sobreviver intacta.
+test('merge com "manter": sem a chave anotacoes no arquivo, a local sobrevive', () => {
+  const atual = { id: 's1', artistId: 'a1', title: 'X', anotacoes: '<p>minha</p>', tom: 'G' };
+  const doArquivo = { id: 's1', artistId: 'a1', title: 'X', tom: 'A' }; // sem 'anotacoes': já apagada
+  const r = fundeMusica(atual, doArquivo, PARTES_TODAS, 1);
+  assert.equal(r.anotacoes, '<p>minha</p>');
+  assert.equal(r.tom, 'A'); // as outras partes continuam sendo fundidas normalmente
 });
