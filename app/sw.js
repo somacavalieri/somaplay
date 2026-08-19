@@ -18,6 +18,7 @@ const SHELL = [
   './js/backup.js',
   './js/merge.js',
   './js/partes.js',
+  './js/anotacoes.js',
   './js/icons.js',
   './js/initials.js',
   './js/samples.js',
