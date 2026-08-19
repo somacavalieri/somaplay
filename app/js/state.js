@@ -71,6 +71,7 @@ export const S = {
   tomPop: null,            // popover do tom aberto: { anchor }
   pinnedOpen: true,
   notasVolta: null,        // scrollTop de onde o salto para as anotações partiu
+  notasEdit: false,        // editor de anotações aberto? enquanto true, nada re-renderiza
   transportPlaying: false,
   position: 0,
   duration: 0,

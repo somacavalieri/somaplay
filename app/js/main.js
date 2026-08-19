@@ -17,7 +17,7 @@ import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
 import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
-import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual } from './render/play.js';
+import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual, salvaNotasPendente } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
@@ -166,6 +166,11 @@ function afterRender() {
 
 // ---------- navegação/áudio ao sair da tela de toque ----------
 function leavePlay() {
+  // Sair da tela com o editor de anotações aberto (voltar, trocar de música,
+  // apagar, editar a música) não passa pelo botão "Pronto" — sem isto o texto
+  // digitado nos últimos 600ms do debounce se perderia, e a próxima música
+  // aberta herdaria S.notasEdit true e abriria já em modo de edição.
+  if (S.notasEdit) { salvaNotasPendente(); S.notasEdit = false; }
   S.transportPlaying = false;
   S.scrollPlaying = false;
   S.chordPop = null;
@@ -574,6 +579,8 @@ const actions = {
     update();
   },
   togglePinnedBar() { S.pinnedOpen = !S.pinnedOpen; update(); },
+  editNotas() { S.notasEdit = true; update(); },
+  closeNotas() { salvaNotasPendente(); S.notasEdit = false; update(); },
   // Ida e volta no mesmo botão (spec 2026-08-18): com a seção já visível, ele
   // devolve o lugar de onde o salto partiu. Sem update() aqui — mexer na
   // rolagem não muda estado de tela, e um re-render jogaria a rolagem fora.

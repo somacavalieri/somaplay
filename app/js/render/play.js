@@ -14,7 +14,7 @@ import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
 import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
-import { limpaHTML } from '../anotacoes.js';
+import { limpaHTML, deTexto } from '../anotacoes.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -167,10 +167,41 @@ function chordsGridHTML(song, chordNames) {
 
 export const temNotas = (song) => !!(song && String(song.anotacoes || '').trim());
 
+// Os treze controles SÃO a lista branca: a barra não pode oferecer o que o filtro
+// apagaria — por isso não há cor, fonte, tamanho nem alinhamento. `opt` marca os
+// cinco que somem abaixo de 700px (spec §9).
+const TB = [
+  [['bold', 'Bold', ''], ['italic', 'Italic', ''], ['underline', 'Underline', 'opt'], ['strikeThrough', 'Strike', 'opt']],
+  [['mark', 'Mark', ''], ['formatBlock:h3', 'Heading', 'opt']],
+  [['insertUnorderedList', 'Ul', ''], ['insertOrderedList', 'Ol', ''], ['formatBlock:blockquote', 'Quote', 'opt']],
+  [['link', 'Link', 'opt'], ['formatBlock:pre', 'Mono', '']],
+  [['undo', 'Undo', ''], ['redo', 'Redo', '']],
+];
+
+function barraHTML() {
+  const grupos = TB.map((g) => g.map(([cmd, icone, cls]) =>
+    `<button class="${cls}" data-cmd="${cmd}" title="${t('notas.tb.' + icone.toLowerCase())}">${I['tb' + icone]()}</button>`
+  ).join('')).join('<span class="sep"></span>');
+  return `<div class="notas-tb"><div class="tb">${grupos}<button class="mais" data-a="notasMais" title="${t('notas.tb.more')}">${I.dots(19)}</button></div></div>`;
+}
+
 // O filtro roda AQUI também, e não só na escrita. É barato e é a rede que pega
 // um registro que entrou por outro caminho — um backup antigo, uma escrita
 // direta no IndexedDB.
 export function notasBlockHTML(song) {
+  if (S.notasEdit) {
+    return `<div class="blk notas" id="notas" data-nopan="1">
+      <div class="blk-hd">
+        <span class="ic" style="color:var(--accent);display:flex">${I.textLines(18)}</span>
+        <div class="t">${t('notas.title')}</div>
+        <span class="sp"></span>
+        <span class="notas-saved" id="notas-saved">${I.check(13, 2.6)}${t('notas.saved')}</span>
+        <button class="btn-ghost" style="height:38px;padding:0 13px;font-size:13px;margin-left:10px;color:var(--text)" data-a="closeNotas">${t('notas.done')}</button>
+      </div>
+      <div class="notas-edit notas-body" id="notas-edit" contenteditable="true">${limpaHTML(song.anotacoes || '')}</div>
+      ${barraHTML()}
+    </div>`;
+  }
   const tem = temNotas(song);
   const cabeca = `<div class="blk-hd">
       <span class="ic" style="color:${tem ? 'var(--accent)' : 'var(--muted2)'};display:flex">${I.textLines(18)}</span>
@@ -182,6 +213,83 @@ export function notasBlockHTML(song) {
     ? `<div class="notas-body">${limpaHTML(song.anotacoes)}</div>`
     : `<div class="notas-vazia"><div class="txt">${t('notas.empty')}</div></div>`;
   return `<div class="blk notas" id="notas" data-nopan="1">${cabeca}${corpo}</div>`;
+}
+
+// Grava na hora, sem esperar o debounce — é o que o "Pronto" chama. Lê o DOM em
+// vez de um estado paralelo: enquanto o editor está aberto, o campo É a verdade.
+// `saveSong` e `currentSong` já são importados por play.js.
+export function salvaNotasPendente() {
+  const campo = document.getElementById('notas-edit');
+  const song = currentSong();
+  if (!campo || !song) return;
+  song.anotacoes = limpaHTML(campo.innerHTML);
+  saveSong(song);
+}
+
+// Tudo aqui é DOM direto, sem update(): um re-render mataria o contenteditable e
+// a posição do cursor junto.
+function ligaEditor(song) {
+  const campo = document.getElementById('notas-edit');
+  if (!campo || campo.dataset.ligado) return;
+  campo.dataset.ligado = '1';
+  campo.focus();
+
+  let timer = null;
+  const salva = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { song.anotacoes = limpaHTML(campo.innerHTML); saveSong(song); }, 600);
+  };
+  campo.addEventListener('input', salva);
+
+  campo.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData('text/html');
+    const puro = e.clipboardData.getData('text/plain');
+    document.execCommand('insertHTML', false, html ? limpaHTML(html) : deTexto(puro));
+    if (html) mostraToastColagem(campo, puro, salva);
+    salva();
+  });
+
+  for (const b of document.querySelectorAll('.notas-tb [data-cmd]')) {
+    // mousedown e não click: o click já teria tirado o foco do campo e perdido a
+    // seleção, que é justamente o que os comandos operam.
+    b.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const cmd = b.dataset.cmd;
+      if (cmd === 'mark') {
+        const sel = String(document.getSelection());
+        // hiliteColor produziria <span style>, que o filtro apaga. <mark> é o que
+        // a lista branca aceita.
+        if (sel) document.execCommand('insertHTML', false, `<mark>${esc(sel)}</mark>`);
+      } else if (cmd === 'link') {
+        const url = prompt(t('notas.tb.linkPrompt'));
+        if (url) document.execCommand('createLink', false, url);
+      } else if (cmd.startsWith('formatBlock:')) {
+        document.execCommand('formatBlock', false, cmd.slice(12));
+      } else {
+        document.execCommand(cmd);
+      }
+      campo.focus();
+      salva();
+    });
+  }
+}
+
+// Vive FORA do app.innerHTML, criado e removido à mão: é o único jeito de um
+// aviso sobreviver sem um re-render, que aqui é proibido.
+function mostraToastColagem(campo, puro, salva) {
+  document.querySelector('.notas-toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'notas-toast';
+  el.innerHTML = `<span class="msg">${t('notas.paste.cleaned')}</span><span class="div"></span><button>${t('notas.paste.plain')}</button>`;
+  el.querySelector('button').addEventListener('click', () => {
+    document.execCommand('undo');
+    document.execCommand('insertHTML', false, deTexto(puro));
+    el.remove();
+    salva();
+  });
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 8000);
 }
 
 function pinnedBarHTML(song, chordNames) {
@@ -717,6 +825,12 @@ export function afterRenderPlay(update) {
 
   setupImgGestures(update);
   applyImgZoom();
+
+  // Liga o editor de anotações depois de tudo o mais: se um dia outra rotina
+  // acima chamar update() por engano enquanto S.notasEdit é true, o campo é
+  // recriado do zero e este `if` religa nele sem duplicar listeners (o
+  // dataset.ligado do próprio ligaEditor cuida disso).
+  if (S.notasEdit) ligaEditor(song);
 }
 
 function showControls() {

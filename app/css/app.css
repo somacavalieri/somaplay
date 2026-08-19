@@ -785,3 +785,20 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .notas-body pre{font-family:var(--f-mono);font-size:14px;line-height:1.65;background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:0 0 14px;overflow-x:auto;white-space:pre;color:var(--text)}
 .notas-body a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .notas-body > :last-child{margin-bottom:0}
+
+.notas-edit{background:var(--bg);border:1px solid var(--accent-soft3);border-radius:12px;padding:16px 18px;min-height:180px;outline:none}
+.notas-edit:focus{border-color:var(--accent-soft2)}
+.notas-tb{position:sticky;bottom:0;z-index:15;display:flex;justify-content:center;padding:10px 0 12px;background:linear-gradient(to top,var(--bg) 72%,transparent)}
+.notas-tb .tb{display:flex;align-items:center;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:5px;box-shadow:var(--shadow)}
+.notas-tb .tb button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:9px;color:var(--text);cursor:pointer}
+.notas-tb .tb button:hover{background:var(--surface2-hover)}
+.notas-tb .tb .sep{width:1px;height:24px;background:var(--border2);margin:0 5px;flex-shrink:0}
+.notas-tb .tb .mais{display:none}
+@media (max-width:700px){
+  .notas-tb .tb .opt{display:none}
+  .notas-tb .tb .mais{display:flex}
+}
+.notas-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:70;display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 12px 11px 15px;box-shadow:var(--shadow)}
+.notas-toast .msg{color:var(--muted);font-size:13px}
+.notas-toast .div{width:1px;height:20px;background:var(--border2)}
+.notas-toast button{background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
