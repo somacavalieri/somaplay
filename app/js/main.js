@@ -1058,7 +1058,7 @@ function wireBackupInput() {
 
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
-      const res = await importLibrary(f, { merge, decisaoNotas });
+      const res = await importLibrary(f, { merge, decisaoNotas, conflitosNotas: conflitos });
       // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
       // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
@@ -1090,6 +1090,15 @@ document.addEventListener('click', (e) => {
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
       if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
+      // Editor de anotações aberto: qualquer ação do chrome — trocar de música,
+      // abrir a gaveta, o mixer, o T1/T2/T3, tocar um acorde — passa por AQUI
+      // antes de rodar. `closeNotas` já grava sozinha (é a ação "dona" do
+      // editor), então fica de fora para não gravar duas vezes. Isto NÃO
+      // bloqueia a ação: quem pediu "próxima música" tem que continuar indo
+      // para a próxima música. Só garante que o que já foi digitado está
+      // gravado ANTES do update() que a ação for disparar — depois dele o
+      // contenteditable já era, e a escrita ficaria só na tela.
+      if (S.notasEdit && name !== 'closeNotas') salvaNotasPendente();
       actions[name](t.dataset, e, t);
       return;
     }
@@ -1184,7 +1193,11 @@ document.addEventListener('keydown', (e) => {
     if (document.activeElement?.id === 'cb-new-name') actions.cbConfirmAdd();
   }
   // espaço = play/pause do transporte na tela de toque (fora de inputs)
-  if (e.key === ' ' && S.screen === 'play' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) {
+  // `isContentEditable` cobre o editor de anotações — um DIV, não INPUT/TEXTAREA —
+  // e qualquer superfície editável futura: sem isso, digitar um espaço nas
+  // notas era engolido pelo atalho e disparava toggleTransport(), cujo
+  // update() destrói o contenteditable no meio da digitação.
+  if (e.key === ' ' && S.screen === 'play' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '') && !document.activeElement?.isContentEditable) {
     const song = currentSong();
     if (song && ((song.stems || []).length || (song.full || []).length)) {
       e.preventDefault();

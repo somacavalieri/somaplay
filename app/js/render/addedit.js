@@ -293,6 +293,12 @@ export async function commitDraft() {
     estilo: d.estilo ? d.estilo.trim() : '',
     favorita: existing ? existing.favorita : false,
     createdAt: existing ? existing.createdAt : Date.now(),
+    // Este formulário só conhece os campos acima — qualquer campo da música que
+    // ele NÃO tem input para é destruído no save (DB.putSong é um `store.put`,
+    // não um merge) a menos que seja resgatado aqui, à mão, do registro
+    // existente. Mesma armadilha que `CAMPOS` resolve em partes.js, só que
+    // este formulário fica fora do alcance daquela regra.
+    anotacoes: existing ? existing.anotacoes : undefined,
     cifra: d.cifraFonte === 'imagem'
       ? { tipo: imagens.length ? 'imagem' : null, imagens, texto: '', acordes: d.acordes.trim() ? d.acordes.trim().split(/\s+/) : [], digitacoes: dig }
       : { tipo: d.cifraTexto.trim() ? 'texto' : null, imagens: [], texto: d.cifraTexto, acordes: [], digitacoes: dig },

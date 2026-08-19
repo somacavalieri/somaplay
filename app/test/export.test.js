@@ -10,7 +10,7 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, conflitosDeNotas } from '../js/backup.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
 import { PARTES_TODAS, fundeMusica } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
@@ -270,4 +270,36 @@ test('merge com "manter": sem a chave anotacoes no arquivo, a local sobrevive', 
   const r = fundeMusica(atual, doArquivo, PARTES_TODAS, 1);
   assert.equal(r.anotacoes, '<p>minha</p>');
   assert.equal(r.tom, 'A'); // as outras partes continuam sendo fundidas normalmente
+});
+
+// I1 do final-review: "manter a minha" apagava anotacoes de TODO o arquivo,
+// não só das músicas que colidiam de verdade — um professor mandando dez
+// músicas com nota, com o aluno tendo nota própria em só uma, recebia ZERO
+// notas de volta. `aplicaDecisaoNotas` é o que importLibrary chama agora, com
+// a lista exata de conflitosDeNotas(); só ela decide quem perde o campo.
+test('"manter a minha": só a música em conflito perde a anotação do arquivo, as outras a recebem', () => {
+  const atuais = [
+    { id: 's1', anotacoes: '<p>minha s1</p>' }, // tem nota local: vai colidir com a do arquivo
+    { id: 's2' },                               // sem nota local: nada para colidir
+  ];
+  const doArquivo = [
+    { id: 's1', anotacoes: '<p>do professor s1</p>' },
+    { id: 's2', anotacoes: '<p>do professor s2</p>' },
+  ];
+  const partes = PARTES_TODAS;
+  const conflitos = conflitosDeNotas(atuais, doArquivo, partes);
+  assert.deepEqual(conflitos, ['s1']);
+
+  aplicaDecisaoNotas(doArquivo, 'manter', conflitos);
+
+  const s1 = fundeMusica(atuais[0], doArquivo.find((s) => s.id === 's1'), partes, 1);
+  const s2 = fundeMusica(atuais[1], doArquivo.find((s) => s.id === 's2'), partes, 1);
+  assert.equal(s1.anotacoes, '<p>minha s1</p>'); // conflitante: fica com a local
+  assert.equal(s2.anotacoes, '<p>do professor s2</p>'); // sem conflito: recebe a do arquivo
+});
+
+test('aplicaDecisaoNotas não mexe em nada quando a decisão é "substituir"', () => {
+  const doArquivo = [{ id: 's1', anotacoes: '<p>do arquivo</p>' }];
+  aplicaDecisaoNotas(doArquivo, 'substituir', ['s1']);
+  assert.equal(doArquivo[0].anotacoes, '<p>do arquivo</p>');
 });

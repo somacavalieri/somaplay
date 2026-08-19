@@ -14,7 +14,7 @@ import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
 import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
-import { limpaHTML, deTexto } from '../anotacoes.js';
+import { limpaHTML, deTexto, hrefSeguro } from '../anotacoes.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -229,6 +229,18 @@ export function salvaNotasPendente() {
   saveSong(song);
 }
 
+// Aparara e completa o esquema que falta ("www.x.com" → "https://www.x.com")
+// antes de virar <a>, para não nascer um link que hrefSeguro vai rejeitar e
+// `filtra()` vai desembrulhar no próximo save. Se mesmo normalizado o esquema
+// continuar inválido (ex.: "javascript:..."), devolve null — melhor não
+// inserir link nenhum do que inserir um que morre em silêncio.
+function normalizaLinkUrl(bruto) {
+  const v = String(bruto ?? '').trim();
+  if (!v) return null;
+  const comEsquema = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v) ? v : `https://${v}`;
+  return hrefSeguro(comEsquema);
+}
+
 // Tudo aqui é DOM direto, sem update(): um re-render mataria o contenteditable e
 // a posição do cursor junto.
 function ligaEditor(song) {
@@ -265,7 +277,12 @@ function ligaEditor(song) {
         // a lista branca aceita.
         if (sel) document.execCommand('insertHTML', false, `<mark>${esc(sel)}</mark>`);
       } else if (cmd === 'link') {
-        const url = prompt(t('notas.tb.linkPrompt'));
+        const digitado = prompt(t('notas.tb.linkPrompt'));
+        // O que a pessoa digita raramente tem esquema ("www.exemplo.com"). Sem
+        // normalizar, createLink insere o link do jeito que veio, hrefSeguro
+        // rejeita por falta de "https:" e o próximo `filtra()` desembrulha o
+        // <a> em texto puro — o link nasce e morre no mesmo save, em silêncio.
+        const url = normalizaLinkUrl(digitado);
         if (url) document.execCommand('createLink', false, url);
       } else if (cmd.startsWith('formatBlock:')) {
         document.execCommand('formatBlock', false, cmd.slice(12));
@@ -783,7 +800,11 @@ export function afterRenderPlay(update) {
       r.value = Math.round(pos);
     }
   };
-  audio.onEnded = () => { S.transportPlaying = false; update(); };
+  // Mesma guarda do dispatcher de data-a em main.js: a música pode terminar
+  // com o editor de anotações aberto, e o update() abaixo destruiria o
+  // contenteditable no meio da digitação. Grava o que já foi escrito primeiro
+  // — não impede o fim da música de atualizar a tela, só garante a ordem.
+  audio.onEnded = () => { if (S.notasEdit) salvaNotasPendente(); S.transportPlaying = false; update(); };
 
   // autoscroll
   manageScroll();

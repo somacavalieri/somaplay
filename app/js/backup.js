@@ -205,7 +205,22 @@ export function conflitosDeNotas(atuais, doArquivo, partes) {
   }).map((f) => f.id);
 }
 
-export async function importLibrary(file, { merge = false, decisaoNotas = 'substituir' } = {}) {
+// "Manter as minhas" só vale para as músicas onde os dois lados de fato
+// colidem — `conflitosNotas` é a lista exata que conflitosDeNotas() já
+// calculou, no chamador, ANTES do import começar. Apagar de TODO
+// `songs` trataria um arquivo de 10 músicas, com 1 em conflito, como se as
+// 10 tivessem colidido: a resposta "manter a minha" apagaria a anotação das
+// outras 9, que nem apareceram na pergunta. Extraída (em vez de inline em
+// importLibrary) para ficar testável sem DOMParser nem IndexedDB.
+export function aplicaDecisaoNotas(songs, decisaoNotas, conflitosNotas) {
+  if (decisaoNotas !== 'manter') return;
+  const emConflito = new Set(conflitosNotas);
+  for (const s of songs || []) {
+    if (emConflito.has(s.id)) delete s.anotacoes;
+  }
+}
+
+export async function importLibrary(file, { merge = false, decisaoNotas = 'substituir', conflitosNotas = [] } = {}) {
   const { manifest, blobsStart } = await lerManifest(file);
   // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —
   // e sem essa guarda o `.includes` mais abaixo lançaria DEPOIS do DB.wipe() no
@@ -236,9 +251,7 @@ export async function importLibrary(file, { merge = false, decisaoNotas = 'subst
   // disso e só passa `decisaoNotas: 'manter'` quando `merge` é true; no
   // substituir o aviso é outro (avisosDeSubstituir → replaceNoAnotacoes),
   // dado ANTES da troca, porque depois do wipe já é tarde para perguntar.
-  if (decisaoNotas === 'manter') {
-    for (const s of manifest.songs || []) delete s.anotacoes;
-  }
+  aplicaDecisaoNotas(manifest.songs, decisaoNotas, conflitosNotas);
 
   // Um relógio só para o import inteiro: uma música que chega sem `createdAt`
   // (todo compartilhamento, porque a data é `pessoal`) nasce com a data de hoje,
