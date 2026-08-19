@@ -360,6 +360,7 @@ export const PT = {
   'msg.backup.replaceNoCifra': 'Este arquivo não tem cifras. Substituir vai apagar as cifras da sua biblioteca.',
   'msg.backup.replaceNoPessoal': 'Este arquivo não tem suas favoritas nem seus ajustes. Substituir vai apagá-los.',
   'msg.backup.replaceNoLists': 'Este arquivo não tem listas. Substituir vai apagar todas as suas.',
+  'msg.notas.confirmReplace': 'Este arquivo traz anotações para {n} música(s) em que você já escreveu.\n\nOK substitui pelas do arquivo · Cancelar mantém as suas.\n\nAs cifras e o áudio entram de qualquer jeito.',
   'msg.fonte.confirmDelete': 'Excluir as {count} {song} da fonte "{name}" deste aparelho? As cifras, os áudios e as imagens vão junto, e não dá para desfazer. Exporte antes se quiser guardar.',
   'msg.fonte.deleting': 'Excluindo...',
   'msg.fonte.deleted': 'Fonte excluída: {name} · {count} {song}',

@@ -7,6 +7,7 @@ import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
 import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { limpaHTML } from './anotacoes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -176,12 +177,52 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false }
   return out;
 }
 
-export async function importLibrary(file, { merge = false } = {}) {
+// A anotação é o único campo que o merge sobrescreve e que foi digitado à mão.
+// Sem anotação de um dos lados, ou com as duas iguais, não há o que perguntar.
+//
+// Pura e chamada pelo chamador, como avisosDeSubstituir: perguntar de dentro de
+// importLibrary seria tarde demais no modo substituir, onde o DB.wipe() já
+// aconteceu.
+export function conflitosDeNotas(atuais, doArquivo, partes) {
+  if (!normalizaPartes(partes).includes('anotacoes')) return [];
+  const mapa = new Map((atuais || []).map((s) => [s.id, s]));
+  return (doArquivo || []).filter((f) => {
+    const a = mapa.get(f.id);
+    const minha = String((a && a.anotacoes) || '').trim();
+    const dela = String(f.anotacoes || '').trim();
+    return minha && dela && minha !== dela;
+  }).map((f) => f.id);
+}
+
+export async function importLibrary(file, { merge = false, decisaoNotas = 'substituir' } = {}) {
   const { manifest, blobsStart } = await lerManifest(file);
   // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —
   // e sem essa guarda o `.includes` mais abaixo lançaria DEPOIS do DB.wipe() no
   // modo substituir. Tratar como "completo" é a mesma regra de "partes ausente".
   const partes = normalizaPartes(manifest.partes);
+
+  // Antes de qualquer gravação: daqui para baixo a anotação do arquivo já é
+  // confiável, nos dois modos. O .somaplay chegou de fora (WhatsApp, outro
+  // aparelho) e o campo vai direto para um innerHTML — sem isso um arquivo
+  // malicioso ou só malformado escreveria HTML cru na biblioteca.
+  for (const s of manifest.songs || []) {
+    if (s.anotacoes) s.anotacoes = limpaHTML(s.anotacoes);
+  }
+  // "Manter as minhas": apaga o campo do ARQUIVO em memória, e não de `partes`.
+  // Tirar 'anotacoes' de `partes` não bastaria, por dois motivos:
+  // (1) no merge, mergePlan relê `manifest.partes` por conta própria — não este
+  //     `partes` local — então a exclusão nunca chegaria lá;
+  // (2) mesmo no substituir, um `partes` de 4 itens menos 'anotacoes' vira
+  //     exatamente PARTES_LEGADO, e fundeMusica trata PARTES_LEGADO como
+  //     "arquivo legado completo" (partes.js) — o Object.assign daquele atalho
+  //     copiaria a anotação de qualquer jeito, porque ele copia a partir do
+  //     objeto, não da lista de partes.
+  // Apagar a chave funciona nos dois modos e nos dois caminhos de fundeMusica,
+  // porque ambos só tocam num campo que existe no objeto de origem.
+  if (decisaoNotas === 'manter') {
+    for (const s of manifest.songs || []) delete s.anotacoes;
+  }
+
   // Um relógio só para o import inteiro: uma música que chega sem `createdAt`
   // (todo compartilhamento, porque a data é `pessoal`) nasce com a data de hoje,
   // e o repertório inteiro entra JUNTO no topo de Recentes.

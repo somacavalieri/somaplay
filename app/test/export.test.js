@@ -10,7 +10,7 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir } from '../js/backup.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, conflitosDeNotas } from '../js/backup.js';
 import { PARTES_TODAS } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
@@ -230,4 +230,20 @@ test('lists malformado conta como "não traz lista"', () => {
 test('sem argumento nenhum a função é total', () => {
   // Roda ANTES do try do diálogo: quebrar aqui deixaria o import sem caminho.
   assert.deepEqual(avisosDeSubstituir(), []);
+});
+
+test('conflito so quando os dois lados tem anotacao e elas diferem', () => {
+  const atuais = [
+    { id: 'a', anotacoes: '<p>minha</p>' },
+    { id: 'b', anotacoes: '<p>igual</p>' },
+    { id: 'c' },
+  ];
+  const arq = [
+    { id: 'a', anotacoes: '<p>do professor</p>' },
+    { id: 'b', anotacoes: '<p>igual</p>' },
+    { id: 'c', anotacoes: '<p>nova</p>' },
+  ];
+  assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra', 'anotacoes']), ['a']);
+  assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra']), []);
+  assert.deepEqual(conflitosDeNotas(atuais, arq, undefined), ['a']);
 });

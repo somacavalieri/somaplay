@@ -22,7 +22,7 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
+import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir, conflitosDeNotas } from './backup.js';
 import { PARTES_TODAS } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
@@ -1026,14 +1026,17 @@ function wireBackupInput() {
     if (!f) return;
     const merge = S.importMode === 'merge';
     const total = S.songs.length;
+
+    // Só o cabeçalho — alguns KB, não o arquivo. Lido uma vez para os dois
+    // modos: o aviso de substituir precisa dele, e a pergunta das anotações
+    // também, inclusive no merge (que é o caso do professor reenviando).
+    let manifest = null;
+    try { manifest = (await lerManifest(f)).manifest; }
+    catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
     } else if (total > 0) {
-      // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
-      // cabeçalho — alguns KB, não o arquivo.
-      let manifest = null;
-      try { manifest = (await lerManifest(f)).manifest; }
-      catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
       // O manifest inteiro, porque o aviso das listas depende de o arquivo
       // trazer lista; e o aparelho ter lista, porque não há o que perder quem
       // não tem nenhuma.
@@ -1042,9 +1045,16 @@ function wireBackupInput() {
       const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }
+
+    // Cancelar mantém as suas: a resposta destrutiva é a afirmativa.
+    const conflitos = conflitosDeNotas(S.songs, manifest.songs, manifest.partes);
+    const decisaoNotas = conflitos.length
+      ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
+      : 'substituir';
+
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
-      const res = await importLibrary(f, { merge });
+      const res = await importLibrary(f, { merge, decisaoNotas });
       // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
       // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
