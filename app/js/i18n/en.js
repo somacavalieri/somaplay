@@ -180,7 +180,7 @@ export const EN = {
   'notas.tb.ol': 'Numbered list',
   'notas.tb.quote': 'Quote',
   'notas.tb.link': 'Link',
-  'notas.tb.mono': 'Aligned',
+  'notas.tb.mono': 'Aligned block',
   'notas.tb.undo': 'Undo',
   'notas.tb.redo': 'Redo',
   'notas.tb.more': 'More',

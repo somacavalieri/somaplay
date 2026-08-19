@@ -180,7 +180,12 @@ export const PT = {
   'notas.tb.ol': 'Lista numerada',
   'notas.tb.quote': 'Citação',
   'notas.tb.link': 'Link',
-  'notas.tb.mono': 'Alinhado',
+  // Não é "Monoespaçado": o botão insere um bloco de fonte fixa, mas o que
+  // importa para quem toca é o EFEITO — uma progressão como "| Am | F | C | G |"
+  // ou acorde alinhado sobre a sílaba só mantém a coluna numa fonte fixa.
+  // "monoespaçado" é jargão que o usuário (violeiro, não programador) não tem;
+  // "Bloco alinhado" nomeia o que o botão faz por ele. Não trocar de volta.
+  'notas.tb.mono': 'Bloco alinhado',
   'notas.tb.undo': 'Desfazer',
   'notas.tb.redo': 'Refazer',
   'notas.tb.more': 'Mais',

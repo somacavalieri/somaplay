@@ -449,6 +449,11 @@ const actions = {
     const song = currentSong();
     if (!song) return;
     if (!confirm(t('msg.song.confirmDelete', { title: song.title }))) return;
+    // leavePlay() pode disparar um saveSong() (não-esperado) neste MESMO
+    // registro, se o editor de anotações estava aberto. Seguro mesmo sem
+    // await: é a mesma IndexedDB store, e transações na mesma store rodam na
+    // ordem em que foram abertas — o save sempre commita antes do delete que
+    // já está prestes a ser aberto na linha seguinte.
     leavePlay();
     await deleteSong(song.id);
     // Apagar a última música de uma fonte pequena não deixa pílula nenhuma

@@ -182,7 +182,10 @@ function barraHTML() {
   const grupos = TB.map((g) => g.map(([cmd, icone, cls]) =>
     `<button class="${cls}" data-cmd="${cmd}" title="${t('notas.tb.' + icone.toLowerCase())}">${I['tb' + icone]()}</button>`
   ).join('')).join('<span class="sep"></span>');
-  return `<div class="notas-tb"><div class="tb">${grupos}<button class="mais" data-a="notasMais" title="${t('notas.tb.more')}">${I.dots(19)}</button></div></div>`;
+  // Sem data-a: "mais" alterna a classe .aberto no DOM direto, dentro de
+  // ligaEditor — não pelo dispatcher de S/update() do main.js, que
+  // re-renderizaria a tela e mataria o contenteditable.
+  return `<div class="notas-tb"><div class="tb">${grupos}<button class="mais" title="${t('notas.tb.more')}">${I.dots(19)}</button></div></div>`;
 }
 
 // O filtro roda AQUI também, e não só na escrita. É barato e é a rede que pega
@@ -273,6 +276,12 @@ function ligaEditor(song) {
       salva();
     });
   }
+
+  // "mais" (só existe abaixo de 700px, ver CSS): alterna .aberto na .tb para
+  // revelar os cinco .opt escondidos. DOM direto — nada de S/update() aqui,
+  // pela mesma razão de tudo o mais nesta função.
+  const mais = document.querySelector('.notas-tb .mais');
+  if (mais) mais.addEventListener('click', () => mais.closest('.tb')?.classList.toggle('aberto'));
 }
 
 // Vive FORA do app.innerHTML, criado e removido à mão: é o único jeito de um
@@ -383,6 +392,13 @@ function measureCifra() {
 // `cifraBoxPx` pode ficar até a largura de um caractere à frente das fileiras já
 // desenhadas na tela, uma diferença limitada que se corrige sozinha no próximo render.
 function reflowCifra(update) {
+  // Girar o tablet é mudança de LARGURA, e é exatamente o gesto que este
+  // reflow escuta. Com o editor de anotações aberto, chamar update() aqui
+  // destruiria o contenteditable e o caret no meio da digitação — a mesma
+  // regra do resto da Task 4. A cifra só perde a quebra atualizada enquanto
+  // a edição dura, e ninguém está olhando para ela nesse momento; o reflow
+  // roda normalmente assim que closeNotas() chamar update() de volta.
+  if (S.notasEdit) return false;
   const { cols, px } = measureCifra();
   if (px) cifraBoxPx = px;
   if (!cols || cols === cifraCols || cols === cifraColsPrev) return false;
