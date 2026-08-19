@@ -416,7 +416,8 @@ function cifraImageHTML(song) {
     <div class="inner">
       ${songHeaderHTML(song)}
       ${url ? `<img src="${url}" alt="${t('play.cifraImage.alt')}" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : `<div style="padding:60px;color:var(--muted)">${t('play.cifraImage.notFound')}</div>`}
-      ${chordNames.length || temNotas(song) ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}${notasBlockHTML(song)}</div>` : ''}
+      ${chordNames.length ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}</div>` : ''}
+      ${notasBlockHTML(song)}
     </div>
   </div>`;
 }

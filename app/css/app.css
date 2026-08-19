@@ -393,9 +393,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .ch-diag .nm{font-family:var(--f-title);font-weight:700;font-size:13px;line-height:1;color:var(--accent);white-space:nowrap}
 .ch-diag-row .ch-tok{position:absolute;top:0;font-family:var(--f-mono);font-weight:700;font-size:13px;color:var(--accent);white-space:pre}
 
-.chords-block{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
-.chords-block .hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
-.chords-block .hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
+/* .blk / .blk-hd — same divider-style header, reused by the notes section
+   (and, per the plan, by Task 4's editor). Extended on .chords-block's own
+   selectors rather than duplicated: .chords-block IS a .blk, it just also has
+   the count badge (.hd .n) that's chords-only. */
+.chords-block,.blk{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
+.chords-block .hd,.blk-hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
+.chords-block .hd .t,.blk-hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
 .chords-block .hd .n{min-width:22px;height:22px;padding:0 7px;display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--muted);border-radius:999px;font-size:12px;font-weight:700}
 .chords-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:12px}
 .chord-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:11px 8px 9px;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -765,14 +769,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
    onde truncar um nome comprido em uma linha é o comportamento certo. */
 .sheet .check-row{height:auto;min-height:52px;padding:9px 12px}
 .sheet .check-row .nm{white-space:normal;overflow:visible;text-overflow:clip}
-
-/* .blk / .blk-hd — divider-style section below the cifra, same visual language
-   as .chords-block / .chords-block .hd (icon + title + spacer + action, under a
-   border-top). Generic on purpose: the notes section is the first user, and the
-   Task 4 editor reuses the same header. */
-.blk{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
-.blk-hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
-.blk-hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
 
 /* --- Anotações da música --- */
 .notas .sp{flex:1}
