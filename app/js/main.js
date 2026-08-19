@@ -16,7 +16,7 @@ import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
-import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
+import { renderShareSheet, calculaTamanhos, OPCOES, partesDaEscolha } from './render/sharesheet.js';
 import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual, salvaNotasPendente } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
@@ -856,6 +856,7 @@ const actions = {
       listIds: daLista ? new Set([l.id]) : new Set(),
       opcao: 'cifras',
       tamanhos: null,
+      incluirNotas: false,
     };
     S.listMenuOpen = false;
     S.artistMenuOpen = false;
@@ -874,19 +875,19 @@ const actions = {
   },
   closeShare() { S.shareSheet = null; update(); },
   pickShareOpt(d) { if (S.shareSheet) { S.shareSheet.opcao = d.id; update(); } },
+  toggleShareNotas() { if (S.shareSheet) { S.shareSheet.incluirNotas = !S.shareSheet.incluirNotas; update(); } },
   async doShare() {
     const sh = S.shareSheet;
     if (!sh) return;
-    const opt = OPCOES.find((o) => o.id === sh.opcao);
-    if (!opt) return;
-    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), opt.partes, {
+    const partes = partesDaEscolha(sh.opcao, sh.incluirNotas);
+    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), partes, {
       cifras: t('share.word.cifras'), audio: t('share.word.audio'),
     });
     S.shareSheet = null;
     update();
     toast(t('msg.backup.exporting'));
     try {
-      if (await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName }))) {
+      if (await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes, fileName }))) {
         toast(t('msg.backup.exported'));
       }
     } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }

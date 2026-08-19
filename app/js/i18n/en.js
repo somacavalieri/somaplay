@@ -77,6 +77,7 @@ export const EN = {
   'share.opt.audioSub': 'For someone who already has the charts.',
   'share.word.cifras': 'charts',
   'share.word.audio': 'audio',
+  'share.incluirNotas': 'Include my notes',
   'home.tabs.artists': 'Artists',
   'home.tabs.songs': 'Songs',
   'home.tabs.styles': 'Styles',

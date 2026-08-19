@@ -77,6 +77,7 @@ export const PT = {
   'share.opt.audioSub': 'Pra quem já recebeu as cifras.',
   'share.word.cifras': 'cifras',
   'share.word.audio': 'audio',
+  'share.incluirNotas': 'Incluir minhas anotações',
   'home.tabs.artists': 'Artistas',
   'home.tabs.songs': 'Músicas',
   'home.tabs.styles': 'Estilos',
