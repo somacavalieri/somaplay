@@ -393,9 +393,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .ch-diag .nm{font-family:var(--f-title);font-weight:700;font-size:13px;line-height:1;color:var(--accent);white-space:nowrap}
 .ch-diag-row .ch-tok{position:absolute;top:0;font-family:var(--f-mono);font-weight:700;font-size:13px;color:var(--accent);white-space:pre}
 
-.chords-block{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
-.chords-block .hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
-.chords-block .hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
+/* .blk / .blk-hd — same divider-style header, reused by the notes section
+   (and, per the plan, by Task 4's editor). Extended on .chords-block's own
+   selectors rather than duplicated: .chords-block IS a .blk, it just also has
+   the count badge (.hd .n) that's chords-only. */
+.chords-block,.blk{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
+.chords-block .hd,.blk-hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
+.chords-block .hd .t,.blk-hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
 .chords-block .hd .n{min-width:22px;height:22px;padding:0 7px;display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--muted);border-radius:999px;font-size:12px;font-weight:700}
 .chords-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:12px}
 .chord-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:11px 8px 9px;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -765,3 +769,40 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
    onde truncar um nome comprido em uma linha é o comportamento certo. */
 .sheet .check-row{height:auto;min-height:52px;padding:9px 12px}
 .sheet .check-row .nm{white-space:normal;overflow:visible;text-overflow:clip}
+
+/* --- Anotações da música --- */
+.notas .sp{flex:1}
+.notas-vazia{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.notas-vazia .txt{color:var(--muted);font-size:14px;line-height:1.55;max-width:400px}
+.notas-saved{display:flex;align-items:center;gap:5px;color:var(--muted2);font-size:12px;font-weight:600}
+.notas-body{font-size:16px;line-height:1.7;color:var(--text)}
+.notas-body p{margin:0 0 14px}
+.notas-body h3{font-family:var(--f-title);font-weight:600;font-size:16px;margin:20px 0 8px}
+.notas-body ol,.notas-body ul{margin:0 0 14px;padding-left:22px}
+.notas-body li{margin-bottom:5px}
+.notas-body mark{background:var(--accent-tint2);color:var(--accent);padding:1px 4px;border-radius:4px}
+.notas-body blockquote{border-left:2px solid var(--accent-soft);padding-left:14px;margin:0 0 14px;color:var(--muted)}
+.notas-body pre{font-family:var(--f-mono);font-size:14px;line-height:1.65;background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:0 0 14px;overflow-x:auto;white-space:pre;color:var(--text)}
+.notas-body a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.notas-body > :last-child{margin-bottom:0}
+
+.notas-edit{background:var(--bg);border:1px solid var(--accent-soft3);border-radius:12px;padding:16px 18px;min-height:180px;outline:none}
+.notas-edit:focus{border-color:var(--accent-soft2)}
+.notas-tb{position:sticky;bottom:0;z-index:15;display:flex;justify-content:center;padding:10px 0 12px;background:linear-gradient(to top,var(--bg) 72%,transparent)}
+.notas-tb .tb{display:flex;align-items:center;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:5px;box-shadow:var(--shadow)}
+.notas-tb .tb button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:9px;color:var(--text);cursor:pointer}
+.notas-tb .tb button:hover{background:var(--surface2-hover)}
+.notas-tb .tb .sep{width:1px;height:24px;background:var(--border2);margin:0 5px;flex-shrink:0}
+.notas-tb .tb .mais{display:none}
+@media (max-width:700px){
+  .notas-tb .tb .opt{display:none}
+  .notas-tb .tb .mais{display:flex}
+  /* "mais" alterna esta classe via JS direto no DOM (ligaEditor), sem passar
+     por S/update() — reabrir os cinco controles não pode re-renderizar e
+     matar o contenteditable. */
+  .notas-tb .tb.aberto .opt{display:flex}
+}
+.notas-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:70;display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 12px 11px 15px;box-shadow:var(--shadow)}
+.notas-toast .msg{color:var(--muted);font-size:13px}
+.notas-toast .div{width:1px;height:20px;background:var(--border2)}
+.notas-toast button{background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}

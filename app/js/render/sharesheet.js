@@ -21,6 +21,15 @@ export const OPCOES = [
   { id: 'audio', partes: ['audio'] },
 ];
 
+// A caixa acrescenta uma parte à opção escolhida, em vez de a lista ganhar uma
+// linha. A lista de presets cresce por MULTIPLICAÇÃO — uma linha "cifras +
+// anotações" pediria em seguida "cifras + áudio + anotações", e com quatro partes
+// seriam oito linhas. A caixa cresce por soma.
+export function partesDaEscolha(opcaoId, incluirNotas) {
+  const base = (OPCOES.find((o) => o.id === opcaoId) || OPCOES[0]).partes;
+  return incluirNotas && base.includes('cifra') ? [...base, 'anotacoes'] : [...base];
+}
+
 // 1,8 MB reads; 1887436,8 bytes does not. One decimal below ten, none above, and
 // KB always whole — nobody chooses a delivery channel over half a kilobyte.
 // '' means "not measured yet", never 0, which would read as an empty file. The
@@ -95,6 +104,16 @@ export function renderShareSheet() {
       <span class="ct">${formataTamanho(tam[o.id])}</span>
     </button>`).join('');
 
+  // A caixa aparece logo depois da linha da opção ativa, quando **alguma** música
+  // selecionada tem anotação e a opção leva cifra.
+  const temAlguma = songs.some((s) => String(s.anotacoes || '').trim());
+  const levaCifra = partesDaEscolha(sh.opcao, false).includes('cifra');
+  const caixaNotas = (temAlguma && levaCifra) ? `
+    <button class="check-row" data-a="toggleShareNotas" style="margin:2px 0 6px 40px;padding:8px 12px;background:var(--accent-tint);min-height:0">
+      <span class="checkbox ${sh.incluirNotas ? 'on' : ''}" style="width:22px;height:22px;border-radius:7px">${sh.incluirNotas ? I.check(13) : ''}</span>
+      <span class="nm" style="font-size:14px">${t('share.incluirNotas')}</span>
+    </button>` : '';
+
   // The backdrop carries the data-a and the panel carries data-stop="1", the way
   // .scrim and .popover already do: the global delegation (main.js) drops the
   // closeShare when the click was born inside protected content. Testing the
@@ -104,7 +123,7 @@ export function renderShareSheet() {
     <div class="sheet" data-stop="1">
       <div style="font-family:var(--f-title);font-weight:600;font-size:17px">${esc(t('share.title', { name: sh.titulo }))}</div>
       <div style="color:var(--muted);font-size:13px;margin:2px 0 14px">${songs.length} ${t(songs.length === 1 ? 'common.song' : 'common.songs')}</div>
-      ${linhas}
+      ${linhas}${caixaNotas}
       <button class="btn-primary" style="width:100%;margin-top:14px" data-a="doShare">${I.uploadSm()}${t('common.share')}</button>
     </div>
   </div>`;

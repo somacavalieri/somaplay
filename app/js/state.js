@@ -38,7 +38,7 @@ export const S = {
   // folha de compartilhar (contextual, ⋯ da lista e do artista)
   // Vive só na sessão, como exportFontes: uma seleção que sobrevive ao fechar o
   // app vira um arquivo misteriosamente incompleto no próximo ensaio.
-  shareSheet: null,        // { titulo, songIds:Set, listIds:Set|null, opcao, tamanhos }
+  shareSheet: null,        // { titulo, songIds:Set, listIds:Set|null, opcao, tamanhos, incluirNotas }
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
@@ -70,6 +70,8 @@ export const S = {
   chordPop: null,          // popover do acorde tocado na cifra: { name, anchor, modo:'mini'|'carrossel', selId, scrollTop }
   tomPop: null,            // popover do tom aberto: { anchor }
   pinnedOpen: true,
+  notasVolta: null,        // scrollTop de onde o salto para as anotações partiu
+  notasEdit: false,        // editor de anotações aberto? enquanto true, nada re-renderiza
   transportPlaying: false,
   position: 0,
   duration: 0,
@@ -701,6 +703,9 @@ export function openSong(songId, from) {
   S.imgMenuOpen = false;
   S.ctlVisible = true;
   S.pinnedOpen = true;
+  // Mesmo motivo do tomPop no topo desta função: um "voltar" pendente de outra
+  // música usaria o scrollTop errado se sobrevivesse à troca.
+  S.notasVolta = null;
   S.transportPlaying = false;
   S.position = 0;
   S.duration = 0;

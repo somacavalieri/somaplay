@@ -5,7 +5,7 @@
 // teste de UI pega — este pega.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OPCOES, formataTamanho, calculaTamanhos } from '../js/render/sharesheet.js';
+import { OPCOES, formataTamanho, calculaTamanhos, partesDaEscolha } from '../js/render/sharesheet.js';
 import { DB } from '../js/db.js';
 import { setLang } from '../js/i18n.js';
 
@@ -14,6 +14,13 @@ test('cada opção da folha mapeia para as partes certas', () => {
   assert.deepEqual(porId.cifras, ['cifra']);
   assert.deepEqual(porId.ambos, ['cifra', 'audio']);
   assert.deepEqual(porId.audio, ['audio']);
+});
+
+test('a caixa acrescenta anotacoes so onde ha cifra', () => {
+  assert.deepEqual(partesDaEscolha('cifras', false), ['cifra']);
+  assert.deepEqual(partesDaEscolha('cifras', true), ['cifra', 'anotacoes']);
+  assert.deepEqual(partesDaEscolha('ambos', true), ['cifra', 'audio', 'anotacoes']);
+  assert.deepEqual(partesDaEscolha('audio', true), ['audio']);
 });
 
 test('nenhuma opção da folha compartilha o pessoal', () => {
