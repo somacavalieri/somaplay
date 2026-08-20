@@ -9,7 +9,12 @@
 // it is exactly how the two would drift apart.
 // Design: docs/superpowers/specs/2026-08-15-partes-do-arquivo-design.md
 
-export const PARTES_TODAS = ['cifra', 'audio', 'pessoal'];
+export const PARTES_TODAS = ['cifra', 'audio', 'pessoal', 'anotacoes'];
+
+// As partes que existiam antes da 0.16.0. Um arquivo que declara todas ELAS era
+// completo na época em que foi escrito, e continua sendo — completude é
+// propriedade do arquivo, não da versão do código que o lê.
+const PARTES_LEGADO = ['cifra', 'audio', 'pessoal'];
 
 // How the file says "this song". Never pruned: without it an audio-only pack
 // would carry orphan bytes instead of a named song.
@@ -21,6 +26,7 @@ export const CAMPOS = {
   cifra: ['tom', 'cifra', 'letra', 'estilo', 'fonte'],
   audio: ['stems', 'full'],
   pessoal: ['favorita', 'createdAt'],
+  anotacoes: ['anotacoes'],
 };
 
 // Anything that is not a list of parts reads as a complete file: that is what a
@@ -31,7 +37,17 @@ export function normalizaPartes(partes) {
   return Array.isArray(partes) ? partes : PARTES_TODAS;
 }
 
-const todasAsPartes = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
+// Duas perguntas parecidas que NÃO são a mesma.
+//
+// Na saída: "este export é um backup completo?" — escrito por este código, então
+// vale o vocabulário de hoje. Sem isso, um export que declarasse só as três
+// partes antigas cairia no caminho rápido e levaria junto a anotação que não
+// declarou.
+//
+// Na entrada: "este arquivo era completo quando foi escrito?" — e aí vale o
+// vocabulário da época dele.
+const exportCompleto = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
+const arquivoCompleto = (ps) => PARTES_LEGADO.every((p) => ps.includes(p));
 
 // The one copy loop both sides share: identity always, plus the fields of the
 // declared parts. `k in src` and not `src[k] !== undefined`, so a field the
@@ -46,7 +62,7 @@ const copiaCampos = (dest, src, ps) => {
 // the complete-backup path, and the test asserts it rather than hoping for it.
 export function podaPorPartes(songs, partes) {
   const ps = normalizaPartes(partes);
-  if (todasAsPartes(ps)) return (songs || []).slice();
+  if (exportCompleto(ps)) return (songs || []).slice();
   return (songs || []).map((s) => copiaCampos({}, s, ps));
 }
 
@@ -82,7 +98,7 @@ export function fundeMusica(atual, doArquivo, partes, agora = null) {
   // record back WHOLE — including a field this module has never heard of. The
   // copy loop below would drop it silently, and only on the way back IN, which
   // is the direction nobody thinks to check.
-  if (todasAsPartes(ps)) Object.assign(out, doArquivo);
+  if (arquivoCompleto(ps)) Object.assign(out, doArquivo);
   else copiaCampos(out, doArquivo, ps);
   if (!out.cifra) out.cifra = cifraVazia();
   // A shared song must arrive dated TODAY. createdAt sits in `pessoal` so it

@@ -32,6 +32,26 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.16.0] - 2026-08-19
+
+### Added
+
+- Song annotations: a per-song "Anotações" text section, below the chord grid,
+  with a rich-text editor offering bold, italic, underline, strikethrough,
+  highlight, heading styles, bulleted and numbered lists, block quotes, links,
+  monospace blocks, and undo/redo.
+- Annotation content is stored as HTML, restricted to a 14-tag allowlist. Pasting
+  from Word, Google Docs, or WhatsApp preserves structure (headings, lists,
+  emphasis) while dropping foreign fonts, colors, and images — keeping pasted
+  text legible in both light and dark themes.
+- Annotations travel as their own part in a shared `.somaplay` file, selected by
+  checkbox in the share sheet. Correcting a chart and resending it will not
+  overwrite annotations the recipient wrote.
+- On import, annotations are filtered before anything is written. In merge mode
+  the app asks before replacing annotations you already have; in replace mode it
+  warns that yours will be lost. Backups written by earlier versions restore
+  whole, preserving backward compatibility.
+
 ## [0.15.0] - 2026-08-17
 
 ### Added

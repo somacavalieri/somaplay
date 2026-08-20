@@ -14,6 +14,7 @@ import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
 import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
+import { limpaHTML, deTexto, hrefSeguro } from '../anotacoes.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
 const media = { songId: null, urls: new Map(), parsed: null, parsedFor: null };
@@ -125,6 +126,7 @@ function songHeaderHTML(song, tom) {
     // não tem data-a nenhum.
     meta.push(`<span class="tag-tom static">${t('play.song.key')} ${esc(song.tom)}</span>`);
   }
+  if (temNotas(song)) meta.push(`<button class="tag-tom" data-a="jumpNotas" style="gap:5px">${I.textLines(13)}${t('notas.jump')}</button>`);
   if (song.fonte) meta.push(`<span class="src">${esc(song.fonte)}</span>`);
   // "3 de 24 em Djavan": entra junto de Tom e Fonte, no cabeçalho que já existe
   // no corpo da cifra. Não vai para a top-bar — ela foi esvaziada de propósito
@@ -161,6 +163,159 @@ function chordsGridHTML(song, chordNames) {
     <div class="chords-grid">${cards}</div>
     <div class="chords-hint"><span style="display:flex;color:var(--muted3)">${I.star(false, 13)}</span>${t('play.chordsGrid.hint')}</div>
   </div>`;
+}
+
+export const temNotas = (song) => !!(song && String(song.anotacoes || '').trim());
+
+// Os treze controles SÃO a lista branca: a barra não pode oferecer o que o filtro
+// apagaria — por isso não há cor, fonte, tamanho nem alinhamento. `opt` marca os
+// cinco que somem abaixo de 700px (spec §9).
+const TB = [
+  [['bold', 'Bold', ''], ['italic', 'Italic', ''], ['underline', 'Underline', 'opt'], ['strikeThrough', 'Strike', 'opt']],
+  [['mark', 'Mark', ''], ['formatBlock:h3', 'Heading', 'opt']],
+  [['insertUnorderedList', 'Ul', ''], ['insertOrderedList', 'Ol', ''], ['formatBlock:blockquote', 'Quote', 'opt']],
+  [['link', 'Link', 'opt'], ['formatBlock:pre', 'Mono', '']],
+  [['undo', 'Undo', ''], ['redo', 'Redo', '']],
+];
+
+function barraHTML() {
+  const grupos = TB.map((g) => g.map(([cmd, icone, cls]) =>
+    `<button class="${cls}" data-cmd="${cmd}" title="${t('notas.tb.' + icone.toLowerCase())}">${I['tb' + icone]()}</button>`
+  ).join('')).join('<span class="sep"></span>');
+  // Sem data-a: "mais" alterna a classe .aberto no DOM direto, dentro de
+  // ligaEditor — não pelo dispatcher de S/update() do main.js, que
+  // re-renderizaria a tela e mataria o contenteditable.
+  return `<div class="notas-tb"><div class="tb">${grupos}<button class="mais" title="${t('notas.tb.more')}">${I.dots(19)}</button></div></div>`;
+}
+
+// O filtro roda AQUI também, e não só na escrita. É barato e é a rede que pega
+// um registro que entrou por outro caminho — um backup antigo, uma escrita
+// direta no IndexedDB.
+export function notasBlockHTML(song) {
+  if (S.notasEdit) {
+    return `<div class="blk notas" id="notas" data-nopan="1">
+      <div class="blk-hd">
+        <span class="ic" style="color:var(--accent);display:flex">${I.textLines(18)}</span>
+        <div class="t">${t('notas.title')}</div>
+        <span class="sp"></span>
+        <span class="notas-saved" id="notas-saved">${I.check(13, 2.6)}${t('notas.saved')}</span>
+        <button class="btn-ghost" style="height:38px;padding:0 13px;font-size:13px;margin-left:10px;color:var(--text)" data-a="closeNotas">${t('notas.done')}</button>
+      </div>
+      <div class="notas-edit notas-body" id="notas-edit" contenteditable="true">${limpaHTML(song.anotacoes || '')}</div>
+      ${barraHTML()}
+    </div>`;
+  }
+  const tem = temNotas(song);
+  const cabeca = `<div class="blk-hd">
+      <span class="ic" style="color:${tem ? 'var(--accent)' : 'var(--muted2)'};display:flex">${I.textLines(18)}</span>
+      <div class="t"${tem ? '' : ' style="color:var(--muted)"'}>${t('notas.title')}</div>
+      <span class="sp"></span>
+      <button class="btn-ghost" style="height:38px;padding:0 13px;font-size:13px" data-a="editNotas">${I.pencil(14)}${t(tem ? 'notas.edit' : 'notas.write')}</button>
+    </div>`;
+  const corpo = tem
+    ? `<div class="notas-body">${limpaHTML(song.anotacoes)}</div>`
+    : `<div class="notas-vazia"><div class="txt">${t('notas.empty')}</div></div>`;
+  return `<div class="blk notas" id="notas" data-nopan="1">${cabeca}${corpo}</div>`;
+}
+
+// Grava na hora, sem esperar o debounce — é o que o "Pronto" chama. Lê o DOM em
+// vez de um estado paralelo: enquanto o editor está aberto, o campo É a verdade.
+// `saveSong` e `currentSong` já são importados por play.js.
+export function salvaNotasPendente() {
+  const campo = document.getElementById('notas-edit');
+  const song = currentSong();
+  if (!campo || !song) return;
+  song.anotacoes = limpaHTML(campo.innerHTML);
+  saveSong(song);
+}
+
+// Aparara e completa o esquema que falta ("www.x.com" → "https://www.x.com")
+// antes de virar <a>, para não nascer um link que hrefSeguro vai rejeitar e
+// `filtra()` vai desembrulhar no próximo save. Se mesmo normalizado o esquema
+// continuar inválido (ex.: "javascript:..."), devolve null — melhor não
+// inserir link nenhum do que inserir um que morre em silêncio.
+function normalizaLinkUrl(bruto) {
+  const v = String(bruto ?? '').trim();
+  if (!v) return null;
+  const comEsquema = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v) ? v : `https://${v}`;
+  return hrefSeguro(comEsquema);
+}
+
+// Tudo aqui é DOM direto, sem update(): um re-render mataria o contenteditable e
+// a posição do cursor junto.
+function ligaEditor(song) {
+  const campo = document.getElementById('notas-edit');
+  if (!campo || campo.dataset.ligado) return;
+  campo.dataset.ligado = '1';
+  campo.focus();
+
+  let timer = null;
+  const salva = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { song.anotacoes = limpaHTML(campo.innerHTML); saveSong(song); }, 600);
+  };
+  campo.addEventListener('input', salva);
+
+  campo.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData('text/html');
+    const puro = e.clipboardData.getData('text/plain');
+    document.execCommand('insertHTML', false, html ? limpaHTML(html) : deTexto(puro));
+    if (html) mostraToastColagem(campo, puro, salva);
+    salva();
+  });
+
+  for (const b of document.querySelectorAll('.notas-tb [data-cmd]')) {
+    // mousedown e não click: o click já teria tirado o foco do campo e perdido a
+    // seleção, que é justamente o que os comandos operam.
+    b.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const cmd = b.dataset.cmd;
+      if (cmd === 'mark') {
+        const sel = String(document.getSelection());
+        // hiliteColor produziria <span style>, que o filtro apaga. <mark> é o que
+        // a lista branca aceita.
+        if (sel) document.execCommand('insertHTML', false, `<mark>${esc(sel)}</mark>`);
+      } else if (cmd === 'link') {
+        const digitado = prompt(t('notas.tb.linkPrompt'));
+        // O que a pessoa digita raramente tem esquema ("www.exemplo.com"). Sem
+        // normalizar, createLink insere o link do jeito que veio, hrefSeguro
+        // rejeita por falta de "https:" e o próximo `filtra()` desembrulha o
+        // <a> em texto puro — o link nasce e morre no mesmo save, em silêncio.
+        const url = normalizaLinkUrl(digitado);
+        if (url) document.execCommand('createLink', false, url);
+      } else if (cmd.startsWith('formatBlock:')) {
+        document.execCommand('formatBlock', false, cmd.slice(12));
+      } else {
+        document.execCommand(cmd);
+      }
+      campo.focus();
+      salva();
+    });
+  }
+
+  // "mais" (só existe abaixo de 700px, ver CSS): alterna .aberto na .tb para
+  // revelar os cinco .opt escondidos. DOM direto — nada de S/update() aqui,
+  // pela mesma razão de tudo o mais nesta função.
+  const mais = document.querySelector('.notas-tb .mais');
+  if (mais) mais.addEventListener('click', () => mais.closest('.tb')?.classList.toggle('aberto'));
+}
+
+// Vive FORA do app.innerHTML, criado e removido à mão: é o único jeito de um
+// aviso sobreviver sem um re-render, que aqui é proibido.
+function mostraToastColagem(campo, puro, salva) {
+  document.querySelector('.notas-toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'notas-toast';
+  el.innerHTML = `<span class="msg">${t('notas.paste.cleaned')}</span><span class="div"></span><button>${t('notas.paste.plain')}</button>`;
+  el.querySelector('button').addEventListener('click', () => {
+    document.execCommand('undo');
+    document.execCommand('insertHTML', false, deTexto(puro));
+    el.remove();
+    salva();
+  });
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 8000);
 }
 
 function pinnedBarHTML(song, chordNames) {
@@ -254,6 +409,13 @@ function measureCifra() {
 // `cifraBoxPx` pode ficar até a largura de um caractere à frente das fileiras já
 // desenhadas na tela, uma diferença limitada que se corrige sozinha no próximo render.
 function reflowCifra(update) {
+  // Girar o tablet é mudança de LARGURA, e é exatamente o gesto que este
+  // reflow escuta. Com o editor de anotações aberto, chamar update() aqui
+  // destruiria o contenteditable e o caret no meio da digitação — a mesma
+  // regra do resto da Task 4. A cifra só perde a quebra atualizada enquanto
+  // a edição dura, e ninguém está olhando para ela nesse momento; o reflow
+  // roda normalmente assim que closeNotas() chamar update() de volta.
+  if (S.notasEdit) return false;
   const { cols, px } = measureCifra();
   if (px) cifraBoxPx = px;
   if (!cols || cols === cifraCols || cols === cifraColsPrev) return false;
@@ -380,6 +542,7 @@ function cifraTextHTML(song) {
     ${songHeaderHTML(song, tomAtual(song))}
     <div class="cifra-text" style="font-size:${fontPx}px">${lines || `<div class="ly" style="color:var(--muted)">${t('play.cifraText.empty')}</div>`}</div>
     ${chordsGridHTML(song, chordNames)}
+    ${notasBlockHTML(song)}
   </div>`;
 }
 
@@ -395,6 +558,7 @@ function cifraImageHTML(song) {
       ${songHeaderHTML(song)}
       ${url ? `<img src="${url}" alt="${t('play.cifraImage.alt')}" draggable="false" class="${S.imgInvert ? 'inverted' : ''}">` : `<div style="padding:60px;color:var(--muted)">${t('play.cifraImage.notFound')}</div>`}
       ${chordNames.length ? `<div class="chords-under-img" data-nopan="1">${chordsGridHTML(song, chordNames)}</div>` : ''}
+      ${notasBlockHTML(song)}
     </div>
   </div>`;
 }
@@ -636,7 +800,11 @@ export function afterRenderPlay(update) {
       r.value = Math.round(pos);
     }
   };
-  audio.onEnded = () => { S.transportPlaying = false; update(); };
+  // Mesma guarda do dispatcher de data-a em main.js: a música pode terminar
+  // com o editor de anotações aberto, e o update() abaixo destruiria o
+  // contenteditable no meio da digitação. Grava o que já foi escrito primeiro
+  // — não impede o fim da música de atualizar a tela, só garante a ordem.
+  audio.onEnded = () => { if (S.notasEdit) salvaNotasPendente(); S.transportPlaying = false; update(); };
 
   // autoscroll
   manageScroll();
@@ -694,6 +862,12 @@ export function afterRenderPlay(update) {
 
   setupImgGestures(update);
   applyImgZoom();
+
+  // Liga o editor de anotações depois de tudo o mais: se um dia outra rotina
+  // acima chamar update() por engano enquanto S.notasEdit é true, o campo é
+  // recriado do zero e este `if` religa nele sem duplicar listeners (o
+  // dataset.ligado do próprio ligaEditor cuida disso).
+  if (S.notasEdit) ligaEditor(song);
 }
 
 function showControls() {
