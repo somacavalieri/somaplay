@@ -7,6 +7,7 @@ import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
 import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { blobIdsDosLivros } from './books.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -64,7 +65,7 @@ export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
 
 // Sem argumento, o comportamento é o de sempre: a biblioteca inteira, todas as
 // partes.
-export async function exportLibrary({ songIds = null, listIds = null, partes = null, fileName = null } = {}) {
+export async function exportLibrary({ songIds = null, listIds = null, bookIds = null, partes = null, fileName = null } = {}) {
   const ps = partes || PARTES_TODAS;
   const corte = recorteParaExport({ artists: S.artists, songs: S.songs, lists: S.lists }, { songIds, listIds });
   // Podar PRIMEIRO, coletar depois: um pacote só de áudio tem registros sem
@@ -73,7 +74,12 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   // são desta música" (state.js:279), e um segundo eixo de verdade ali é
   // exatamente como apagar e exportar passam a discordar.
   const podadas = podaPorPartes(corte.songs, ps);
-  const blobIds = blobIdsDasMusicas(podadas);
+  // Livro só viaja quando o arquivo declara que fala de livro. Um pacote de
+  // repertório não arrasta 300 MB de songbook junto.
+  const books = ps.includes('livros')
+    ? (bookIds ? S.books.filter((b) => bookIds.has(b.id)) : S.books)
+    : [];
+  const blobIds = [...blobIdsDasMusicas(podadas), ...blobIdsDosLivros(books)];
   const parts = [];
   const manifestBlobs = [];
   for (const id of blobIds) {
@@ -91,6 +97,7 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
     artists: corte.artists,
     songs: podadas,
     lists: corte.lists,
+    books,
     blobs: manifestBlobs,
   };
   if (ps.includes('cifra')) manifest.chordbook = chordbookRecords();
@@ -200,10 +207,11 @@ export async function importLibrary(file, { merge = false } = {}) {
 
   let result;
   if (merge) {
-    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists }, manifest, agora);
+    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists, books: S.books }, manifest, agora);
     for (const a of plan.artists) await DB.putArtist(a);
     for (const s of plan.songs) await DB.putSong(s);
     for (const l of plan.lists) await DB.putList(l);
+    for (const b of plan.books) await DB.putBook(b);
     // Ausência não é deleção, também aqui: um pacote só de áudio não fala do
     // dicionário, e não pode encostar nele.
     if (partes.includes('cifra')) await mergeChordbookRecords(manifest.chordbook || []);
@@ -215,6 +223,7 @@ export async function importLibrary(file, { merge = false } = {}) {
     // assume que existe.
     for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes, agora));
     for (const l of manifest.lists || []) await DB.putList(l);
+    for (const b of manifest.books || []) await DB.putBook(b);
     if (partes.includes('pessoal') && manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas
       const { lang, chordNotation, chordNotationTouched, ...rest } = manifest.settings;

@@ -2,6 +2,7 @@
 // Dado o estado atual e o manifesto de um backup, decide o que gravar (upsert por id),
 // deduplicando artistas por nome e remapeando o artistId das músicas.
 import { fundeMusica, normalizaPartes } from './partes.js';
+import { fundeLivros } from './books.js';
 
 // `agora` é o relógio do import, injetado para o módulo continuar puro. Um só
 // por import, e não um Date.now() por música: um repertório importado junto tem
@@ -45,10 +46,17 @@ export function mergePlan(existing, incoming, agora = null) {
   let added = 0;
   for (const s of songs) if (!exById.has(s.id)) added++;
 
+  // Livro é coleção de topo, como lista: sem parte de música nenhuma para
+  // fundir campo a campo. `fundeLivros` já é a regra inteira (mantém o que o
+  // aparelho tem, soma o que é novo) — mergePlan só liga as duas pontas.
+  const livros = fundeLivros((existing && existing.books) || [], (incoming && incoming.books) || []);
+
   return {
     artists,
     songs,
     lists: (incoming && incoming.lists) || [],
+    books: livros.books,
+    booksAdded: livros.added,
     added,
     updated: songs.length - added,
     remap,

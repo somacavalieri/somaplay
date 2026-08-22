@@ -9,7 +9,18 @@
 // it is exactly how the two would drift apart.
 // Design: docs/superpowers/specs/2026-08-15-partes-do-arquivo-design.md
 
-export const PARTES_TODAS = ['cifra', 'audio', 'pessoal'];
+// As partes de uma MÚSICA. É este conjunto que `todasAsPartes` mede, e mexer
+// nele muda o que "arquivo completo" significa para todo .somaplay já gravado.
+export const PARTES_DE_MUSICA = ['cifra', 'audio', 'pessoal'];
+
+// O que um arquivo pode declarar que carrega. Livro é coleção de topo, como as
+// listas — não é campo de música, e por isso NÃO entra em CAMPOS.
+//
+// Acrescentar 'livros' aqui é seguro porque `todasAsPartes` continua medindo
+// PARTES_DE_MUSICA: um backup antigo, que declara as três, segue sendo lido como
+// completo e volta com o registro intacto. Exigir as quatro faria todo backup já
+// gravado perder campo na restauração — em silêncio, e na direção que ninguém confere.
+export const PARTES_TODAS = [...PARTES_DE_MUSICA, 'livros'];
 
 // How the file says "this song". Never pruned: without it an audio-only pack
 // would carry orphan bytes instead of a named song.
@@ -31,7 +42,7 @@ export function normalizaPartes(partes) {
   return Array.isArray(partes) ? partes : PARTES_TODAS;
 }
 
-const todasAsPartes = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
+const todasAsPartes = (ps) => PARTES_DE_MUSICA.every((p) => ps.includes(p));
 
 // The one copy loop both sides share: identity always, plus the fields of the
 // declared parts. `k in src` and not `src[k] !== undefined`, so a field the

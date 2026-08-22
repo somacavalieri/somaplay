@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tituloDeArquivo, blobIdsDosLivros, fundeLivros } from '../js/books.js';
+import { mergePlan } from '../js/merge.js';
 
 test('tira a extensão e troca separador por espaço', () => {
   assert.equal(tituloDeArquivo('O-Melhor-de-Gonzaguinha.pdf'), 'O Melhor de Gonzaguinha');
@@ -70,4 +71,23 @@ test('fusão: arquivo sem livro nenhum não mexe na estante', () => {
   assert.deepEqual(r.books, atuais);
   const r2 = fundeLivros(atuais, undefined);
   assert.deepEqual(r2.books, atuais);
+});
+
+// --- mergePlan ponta a ponta -------------------------------------------------
+// mergePlan é puro e já é testado assim em test/merge.test.js; aqui é só o eixo
+// dos livros, que fundeLivros sozinho não exercita (mergePlan é quem lê
+// `existing.books` / `incoming.books` e monta o plano inteiro).
+test('mergePlan traz o livro novo e preserva o que o aparelho já tem', () => {
+  const atual = { artists: [], songs: [], lists: [], books: [{ id: 'l1', titulo: 'Meu', ultimaPagina: 88 }] };
+  const arquivo = { artists: [], songs: [], lists: [], partes: ['livros'],
+    books: [{ id: 'l1', titulo: 'Do arquivo', ultimaPagina: 1 }, { id: 'l2', titulo: 'Novo' }] };
+  const plano = mergePlan(atual, arquivo);
+  assert.deepEqual(plano.books.map((b) => b.titulo), ['Meu', 'Novo']);
+  assert.equal(plano.booksAdded, 1);
+});
+
+test('mergePlan de arquivo antigo (sem books) não mexe na estante', () => {
+  const atual = { artists: [], songs: [], lists: [], books: [{ id: 'l1', titulo: 'Meu' }] };
+  const plano = mergePlan(atual, { artists: [], songs: [], lists: [] });
+  assert.deepEqual(plano.books, atual.books);
 });

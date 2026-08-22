@@ -5,7 +5,7 @@
 // usuário já usa — não regrediu quando as partes entraram.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { podaPorPartes, fundeMusica, normalizaPartes, PARTES_TODAS } from '../js/partes.js';
+import { podaPorPartes, fundeMusica, normalizaPartes, PARTES_TODAS, PARTES_DE_MUSICA } from '../js/partes.js';
 import { blobIdsDasMusicas } from '../js/state.js';
 
 const musica = () => ({
@@ -279,4 +279,31 @@ test('o registro devolvido compartilha as estruturas aninhadas com as entradas',
   const out = fundeMusica(atual, pacote, ['audio']);
   assert.equal(out.stems, pacote.stems);   // parte declarada: a referência vem do arquivo
   assert.equal(out.cifra, atual.cifra);    // parte não declarada: fica a do aparelho
+});
+
+// --- livros: um quarto eixo que não é parte de música ----------------------
+// A armadilha inteira desta tarefa: `todasAsPartes` tem que continuar medindo
+// PARTES_DE_MUSICA, e não PARTES_TODAS, ou todo .somaplay já gravado no disco
+// do usuário (que declara três partes, não quatro) cai na cópia campo a campo
+// e perde, EM SILÊNCIO e NA VOLTA, todo campo fora de CAMPOS.
+test('livros é uma parte declarável, mas não é parte de música', () => {
+  assert.deepEqual(PARTES_DE_MUSICA, ['cifra', 'audio', 'pessoal']);
+  assert.ok(PARTES_TODAS.includes('livros'));
+});
+
+test('REGRESSÃO: backup gravado antes dos livros restaura o registro INTACTO', () => {
+  // O .somaplay que já está no disco do usuário declara três partes, não quatro.
+  // Se `todasAsPartes` passar a exigir as quatro, esse arquivo cai na cópia campo
+  // a campo e perde, EM SILÊNCIO e NA VOLTA, todo campo fora de CAMPOS.
+  const antigas = ['cifra', 'audio', 'pessoal'];
+  const registro = { id: 's1', artistId: 'a1', title: 'X', cifra: { tipo: 'texto' },
+    favorita: true, campoQueNinguemConhece: 42 };
+  assert.deepEqual(podaPorPartes([registro], antigas), [registro]);
+  assert.deepEqual(fundeMusica(null, registro, antigas), registro);
+});
+
+test('um arquivo só de livros não poda música nenhuma para dentro', () => {
+  const registro = { id: 's1', artistId: 'a1', title: 'X', cifra: { tipo: 'texto' } };
+  const [saiu] = podaPorPartes([registro], ['livros']);
+  assert.deepEqual(saiu, { id: 's1', artistId: 'a1', title: 'X' });
 });
