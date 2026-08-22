@@ -94,6 +94,25 @@ function agendaMiniaturas(atrasoMs) {
   else setTimeout(() => desenhaMiniaturas(), atrasoMs || 60);
 }
 
+// A placeholder counts as "on screen" with a small margin either side, so a
+// thumbnail is ready slightly before it scrolls fully into view.
+function estaVisivel(el) {
+  const r = el.getBoundingClientRect();
+  return r.bottom > -200 && r.top < window.innerHeight + 200;
+}
+
+// Reentrancy guard: a fling fires a scroll event per frame, and each one calls
+// agendaMiniaturas() unconditionally. Without this, two runs of
+// desenhaMiniaturas() could both be suspended mid-batch at the same time,
+// both having captured the same `pendentes` snapshot (nothing had changed
+// the DOM yet), and both try to render the same page through the same shared
+// `doc` — pdf.js rejects the second concurrent render of one page, and the
+// `catch` below quietly skips it. Net effect without this guard: doubled
+// rasterisation work during exactly the scroll the "must not freeze" ruling
+// is about. Released in `finally` so a thrown render can't wedge the grid
+// closed for the rest of the session.
+let miniaturasEmExecucao = false;
+
 // Draws only the thumbnails currently on screen (plus a small margin), and
 // only a handful per call: rasterising all 401 pages of a songbook up front
 // would freeze the tablet the moment the grid opens, for the sake of
@@ -105,36 +124,50 @@ async function desenhaMiniaturas() {
   if (S.screen !== 'book' || !S.livroGrade) return;
   const b = livroById(S.livroId);
   const caixa = document.querySelector('.book-grid-overlay .minis');
-  if (!b || !caixa || !doc || docId !== b.id) return;
-  if (paginaOcupada) { agendaMiniaturas(120); return; }
-  const pendentes = [...caixa.querySelectorAll('[data-mini]')].filter((el) => {
-    const r = el.getBoundingClientRect();
-    return r.bottom > -200 && r.top < window.innerHeight + 200;
-  }).slice(0, 12);
-  for (const el of pendentes) {
-    if (paginaOcupada) break; // a page turn started mid-batch — stop right away
-    const n = +el.dataset.mini;
-    const chave = `${b.id}:${n}`;
-    if (minis.has(chave)) continue;
-    const canvas = document.createElement('canvas');
-    try { await renderPagina(doc, n, MINI_PX, 1, canvas); }
-    catch (e) { continue; }
-    // The reader may have left the grid, closed the book, or opened a
-    // different one while this thumbnail was rasterising.
-    if (S.screen !== 'book' || !S.livroGrade || S.livroId !== b.id) return;
-    const url = canvas.toDataURL('image/jpeg', 0.7);
-    minis.set(chave, url);
-    const img = new Image();
-    img.alt = '';
-    img.loading = 'lazy';
-    img.src = url;
-    el.replaceWith(img);
+  // No grid mounted for this book — wrong screen, or the overlay isn't in the
+  // DOM. Nothing will make this true later on its own, so stop for good.
+  if (!b || !caixa) return;
+  // A run is already in flight; it will reschedule itself on completion.
+  if (miniaturasEmExecucao) return;
+  // The page draw/prefetch has priority (paginaOcupada), OR the document is
+  // still being opened by abreLivro() — started, not awaited, by
+  // desenhaPagina() elsewhere the moment the book screen opened. Both
+  // conditions are temporary and resolve on their own, so retry shortly
+  // instead of giving up: this is what makes "tap the grid while a
+  // several-hundred-page book is still opening" recover on its own, instead
+  // of leaving nothing but numbered placeholders forever.
+  if (paginaOcupada || !doc || docId !== b.id) { agendaMiniaturas(120); return; }
+  miniaturasEmExecucao = true;
+  try {
+    const pendentes = [...caixa.querySelectorAll('[data-mini]')].filter(estaVisivel).slice(0, 12);
+    for (const el of pendentes) {
+      if (paginaOcupada) break; // a page turn started mid-batch — stop right away
+      if (!estaVisivel(el)) continue; // scrolled away since the batch was built — don't chase it
+      const n = +el.dataset.mini;
+      const chave = `${b.id}:${n}`;
+      if (minis.has(chave)) continue;
+      const canvas = document.createElement('canvas');
+      try { await renderPagina(doc, n, MINI_PX, Math.min(2, window.devicePixelRatio || 1), canvas); }
+      catch (e) { continue; }
+      // The reader may have left the grid, closed the book, or opened a
+      // different one while this thumbnail was rasterising.
+      if (S.screen !== 'book' || !S.livroGrade || S.livroId !== b.id) return;
+      const url = canvas.toDataURL('image/jpeg', 0.7);
+      minis.set(chave, url);
+      const img = new Image();
+      img.alt = '';
+      img.loading = 'lazy';
+      img.src = url;
+      el.replaceWith(img);
+    }
+    // Only reschedule when this batch actually had visible work: an offscreen
+    // placeholder is not this call's concern, and polling for it would just
+    // spin idle callbacks forever while the grid sits open. The scroll
+    // listener (wired in afterRenderBook) wakes this up again once it matters.
+    if (pendentes.length) agendaMiniaturas();
+  } finally {
+    miniaturasEmExecucao = false;
   }
-  // Only reschedule when this batch actually had visible work: an offscreen
-  // placeholder is not this call's concern, and polling for it would just
-  // spin idle callbacks forever while the grid sits open. The scroll listener
-  // (wired in afterRenderBook) is what wakes this up again once it matters.
-  if (pendentes.length) agendaMiniaturas();
 }
 
 function setStatus(msg) {
@@ -320,12 +353,18 @@ export function afterRenderBook(onUpdate) {
     const goto = document.getElementById('f-goto');
     if (goto && !goto._wired) {
       goto._wired = true;
-      goto.addEventListener('change', () => {
+      // `change` alone is not enough to trust: whether an Android numeric
+      // keyboard's "Done" action fires `change` isn't something this code can
+      // verify. Enter/`keydown` shares the exact same commit path, so the two
+      // triggers can never clamp differently from one another.
+      const commitGoto = () => {
         const b = livroById(S.livroId);
         if (!b) return;
         const n = Math.max(1, Math.min(b.paginas, +goto.value || 1));
         S.livroPagina = n; S.livroGrade = false; onUpdate();
-      });
+      };
+      goto.addEventListener('change', commitGoto);
+      goto.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitGoto(); });
     }
     agendaMiniaturas();
   }
