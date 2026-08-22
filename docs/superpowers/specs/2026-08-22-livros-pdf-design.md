@@ -1,6 +1,6 @@
 # Soma_play — Livros em PDF — design
 
-**Data:** 2026-08-22 · **Estado:** especificado
+**Data:** 2026-08-22 · **Estado:** implementado
 **Origem:** pedido do usuário — "eu como usuário gostaria de poder adicionar livros em .pdf
 e transformar eles em arquivo .somaplay igual fazemos com as imagens. Muitas vezes não é
 possível converter o arquivo e isso impede de subir todos os livros." Com dois exemplos:
@@ -155,6 +155,26 @@ tablet mata a aba. A saída conhecida é abrir por URL com leitura por faixa
 primeiro passo do plano, antes de escrever tela. Se falhar, o livro grande recebe uma
 mensagem honesta em vez de travar o app; os dois livros que motivaram o pedido (14,5 MB e
 11,7 MB) não têm esse problema.
+
+**Medido, na Tarefa 1.** O risco não se confirmou: o pdf.js vendorizado, lendo pelo mesmo
+transporte por faixa que o app usa, nunca carregou o Fake Book inteiro em memória.
+
+| Livro | Abre | Lido do disco | Decodifica página | RSS |
+|---|---|---|---|---|
+| Michael Jackson (11,8 MB, 61 p) | 33 ms | 2,3 MB | 4–47 ms | 118 MB |
+| Beatles Essential (14,6 MB, 401 p) | 40 ms | 1,0 MB | 3–32 ms | 98 MB |
+| Beatles Fake Book (301 MB, 176 p) | 40 ms | 5,8 MB | 113–134 ms | 180 MB |
+
+"Lido do disco" é o quanto o range transport efetivamente leu para abrir e decodificar a
+primeira página — não o arquivo inteiro, nem perto. O Fake Book de 301 MB abre em 40 ms
+lendo 5,8 MB, e decodifica cada página em até 134 ms, com RSS de pico em 180 MB — menor
+que o Michael Jackson, que é 25× mais leve em disco.
+
+Dito com a mesma honestidade com que o risco foi levantado: **isso foi medido em Node**,
+contra a mesma biblioteca e o mesmo transporte que o app usa, mas fora do navegador.
+Decodificar e pintar a página num `<canvas>` do Chrome, no tablet Android, é uma etapa
+diferente e **ainda não foi verificada** — continua sendo a checagem manual do usuário,
+listada em Verificação.
 
 ## Telas
 

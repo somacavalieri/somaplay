@@ -65,6 +65,8 @@ content for it.
 
 **Library**
 - Browse by **Artist**, **Song**, **Style**, or **List**
+- **Books**: a songbook PDF goes into the library whole, with a cover, page-by-page
+  reading, and pinch zoom that redraws the page instead of stretching it
 - Setlists with drag-to-reorder, plus favorites
 - Lists are global — they ignore the mode lens, and opening a song from a list plays it
   in its best available mode

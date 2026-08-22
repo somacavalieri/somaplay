@@ -65,6 +65,13 @@ that ships with the app was written for the project. If you need demo material, 
 
 **`chords/` is gitignored and stays that way.** It is the author's local asset library.
 
+## Third-party code
+
+`app/js/vendor/` holds pdf.js, vendored — the project's only third-party dependency.
+It is copied in as-is, not installed by a package manager; **nobody edits anything
+under `vendor/`**. To update it, follow the procedure in
+`app/js/vendor/pdfjs/VERSAO.md`.
+
 ## How changes get made
 
 The project follows **spec → plan → implementation**:

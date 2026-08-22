@@ -32,6 +32,23 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.16.0] - 2026-08-22
+
+### Added
+
+- **Books.** A songbook PDF now goes into the library whole: a Books tab with covers,
+  page-by-page reading, pinch zoom that redraws the page instead of stretching it, a
+  thumbnail grid to jump across hundreds of pages, and the page you stopped on.
+- Books travel in `.somaplay` — in a full backup, or shared one at a time.
+
+### Changed
+
+- pdf.js v6.2.108 is vendored under `app/js/vendor/` — the project's first third-party
+  dependency. The precache goes from ~1 MB to ~5.7 MB; there is still no build step and
+  no package manager.
+- `PARTES_TODAS` gained `livros`; `todasAsPartes()` now measures `PARTES_DE_MUSICA`, so
+  every `.somaplay` written before this release still restores untouched.
+
 ## [0.15.0] - 2026-08-17
 
 ### Added
