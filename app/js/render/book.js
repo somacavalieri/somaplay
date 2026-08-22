@@ -16,6 +16,12 @@ let doc = null;
 let docId = null;
 let desenhando = null;   // page currently being drawn, to drop a superseded call
 
+// True while the main page (or its one-page-ahead prefetch) is actually
+// inside a renderPagina() call. The thumbnail grid checks this before every
+// single thumbnail and bails out — rescheduled for later — so a page turn
+// never has to share the main thread with a thumbnail raster mid-flight.
+let paginaOcupada = false;
+
 export function renderBook() {
   const b = livroById(S.livroId);
   if (!b) return '<div class="screen"></div>';
@@ -43,7 +49,92 @@ export function renderBook() {
         <button data-a="bookZoomIn" title="+">+</button>
       </div>
     </div>
+    ${gradeHTML(b)}
   </div>`;
+}
+
+// Thumbnails at 120 CSS px: small enough that 401 of them are cheap to hold as
+// data URLs, big enough to recognise a title on the page. Kept in memory for
+// the session only — persisting 401 thumbnails per book is an optimisation to
+// make with a measurement in hand, not up front. Keyed by book id AND page,
+// so a book switch can never hand out a stale thumbnail from a different PDF,
+// and cleared whole in sairDoLivro() so nothing survives past the book that
+// made it.
+const MINI_PX = 120;
+const minis = new Map();   // `${livroId}:${n}` → dataURL
+
+function gradeHTML(b) {
+  if (!S.livroGrade) return '';
+  const celulas = [];
+  for (let n = 1; n <= b.paginas; n++) {
+    const url = minis.get(`${b.id}:${n}`);
+    celulas.push(`<button class="mini ${n === S.livroPagina ? 'on' : ''}" data-a="irParaPagina" data-id="${n}">
+      ${url ? `<img src="${url}" alt="" loading="lazy">` : `<span class="ph" data-mini="${n}"></span>`}
+      <span class="n">${n}</span>
+    </button>`);
+  }
+  return `<div class="book-grid-overlay">
+    <div class="hd">
+      <div class="t">${t('book.grid')}</div>
+      <div class="goto"><label for="f-goto">${t('book.goTo')}</label>
+        <input type="number" id="f-goto" min="1" max="${b.paginas}" value="${S.livroPagina}"></div>
+      <button class="btn-icon" data-a="toggleBookGrid">${I.close(20)}</button>
+    </div>
+    <div class="minis" data-autoscroll="1">${celulas.join('')}</div>
+  </div>`;
+}
+
+// Schedules a thumbnail batch at low priority: requestIdleCallback runs it
+// only when the main thread has slack, so it never competes for a frame with
+// a page turn or the pan/zoom gesture handling. Falls back to a short timeout
+// where requestIdleCallback doesn't exist (older Safari).
+function agendaMiniaturas(atrasoMs) {
+  const ric = typeof requestIdleCallback === 'function' ? requestIdleCallback : null;
+  if (ric) ric(() => desenhaMiniaturas(), { timeout: 300 });
+  else setTimeout(() => desenhaMiniaturas(), atrasoMs || 60);
+}
+
+// Draws only the thumbnails currently on screen (plus a small margin), and
+// only a handful per call: rasterising all 401 pages of a songbook up front
+// would freeze the tablet the moment the grid opens, for the sake of
+// thumbnails nobody has scrolled to yet. Recurses at idle priority while the
+// visible batch still has placeholders, and yields immediately — rescheduling
+// itself — the moment the page reader needs the main thread for something
+// that actually matters (see paginaOcupada above).
+async function desenhaMiniaturas() {
+  if (S.screen !== 'book' || !S.livroGrade) return;
+  const b = livroById(S.livroId);
+  const caixa = document.querySelector('.book-grid-overlay .minis');
+  if (!b || !caixa || !doc || docId !== b.id) return;
+  if (paginaOcupada) { agendaMiniaturas(120); return; }
+  const pendentes = [...caixa.querySelectorAll('[data-mini]')].filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > -200 && r.top < window.innerHeight + 200;
+  }).slice(0, 12);
+  for (const el of pendentes) {
+    if (paginaOcupada) break; // a page turn started mid-batch — stop right away
+    const n = +el.dataset.mini;
+    const chave = `${b.id}:${n}`;
+    if (minis.has(chave)) continue;
+    const canvas = document.createElement('canvas');
+    try { await renderPagina(doc, n, MINI_PX, 1, canvas); }
+    catch (e) { continue; }
+    // The reader may have left the grid, closed the book, or opened a
+    // different one while this thumbnail was rasterising.
+    if (S.screen !== 'book' || !S.livroGrade || S.livroId !== b.id) return;
+    const url = canvas.toDataURL('image/jpeg', 0.7);
+    minis.set(chave, url);
+    const img = new Image();
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = url;
+    el.replaceWith(img);
+  }
+  // Only reschedule when this batch actually had visible work: an offscreen
+  // placeholder is not this call's concern, and polling for it would just
+  // spin idle callbacks forever while the grid sits open. The scroll listener
+  // (wired in afterRenderBook) is what wakes this up again once it matters.
+  if (pendentes.length) agendaMiniaturas();
 }
 
 function setStatus(msg) {
@@ -140,6 +231,7 @@ async function adiantaProxima() {
   const el = document.querySelector('[data-bookscroll]');
   if (!el) return;
   const canvas = document.createElement('canvas');
+  paginaOcupada = true;
   try {
     const { w, h } = await renderPagina(doc, n, Math.max(320, el.clientWidth * z), window.devicePixelRatio || 1, canvas);
     const bitmap = await createImageBitmap(canvas);
@@ -148,6 +240,7 @@ async function adiantaProxima() {
     descartaAdiantada();
     adiantada = { id: b.id, n, z, bitmap, w, h };
   } catch (e) { /* mantém o que já estava em cache, se houver algo válido */ }
+  finally { paginaOcupada = false; }
 }
 
 // Draws the current page. Every call carries a token: a fast reader can turn
@@ -183,7 +276,10 @@ export async function desenhaPagina() {
       aplicaTamanhoCanvas(canvas, cache.w, cache.h);
       cache.bitmap.close();
     } else {
-      const { w, h } = await renderPagina(doc, alvo.n, largura, window.devicePixelRatio || 1, canvas);
+      paginaOcupada = true;
+      let w, h;
+      try { ({ w, h } = await renderPagina(doc, alvo.n, largura, window.devicePixelRatio || 1, canvas)); }
+      finally { paginaOcupada = false; }
       if (desenhando !== alvo) return;
       aplicaTamanhoCanvas(canvas, w, h);
     }
@@ -208,7 +304,31 @@ export function afterRenderBook(onUpdate) {
       onSwipe: (dir) => { viraPagina(dir).then((n) => { if (n) onUpdate(); }); },
     });
   }
+  // desenhaPagina() runs first: opening (or re-rendering) the grid replaces
+  // the canvas element, so the current page has to be redrawn either way, and
+  // it must win the race for the main thread. The thumbnail pass is only
+  // *scheduled* here (agendaMiniaturas, not called directly) so it starts at
+  // idle priority, after this redraw has had the chance to claim
+  // paginaOcupada first — see the comment on that flag above.
   desenhaPagina();
+  if (S.livroGrade) {
+    const caixa = document.querySelector('.book-grid-overlay .minis');
+    if (caixa && !caixa._wired) {
+      caixa._wired = true;
+      caixa.addEventListener('scroll', () => agendaMiniaturas(), { passive: true });
+    }
+    const goto = document.getElementById('f-goto');
+    if (goto && !goto._wired) {
+      goto._wired = true;
+      goto.addEventListener('change', () => {
+        const b = livroById(S.livroId);
+        if (!b) return;
+        const n = Math.max(1, Math.min(b.paginas, +goto.value || 1));
+        S.livroPagina = n; S.livroGrade = false; onUpdate();
+      });
+    }
+    agendaMiniaturas();
+  }
 }
 
 function atualizaPct() {
@@ -240,4 +360,5 @@ export async function sairDoLivro() {
   await fecharLivro(doc);
   doc = null; docId = null; desenhando = null;
   descartaAdiantada();
+  minis.clear(); // session cache dies with the book — never hand book A's thumbnail to book B
 }

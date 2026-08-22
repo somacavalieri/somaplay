@@ -503,6 +503,8 @@ const actions = {
   async proximaPagina() { if (await viraPagina(1)) update(); },
   bookZoomIn() { bookZoomBy(0.2); },
   bookZoomOut() { bookZoomBy(-0.2); },
+  toggleBookGrid() { S.livroGrade = !S.livroGrade; update(); },
+  irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; update(); },
 
   // tela de toque
   setViewMode(d) {

@@ -807,3 +807,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   border-radius:8px;min-width:44px;height:40px;font-size:18px}
 .book-hud button[disabled]{opacity:.35}
 .book-hud .pg{min-width:110px;text-align:center;color:var(--muted);font-size:13px}
+
+.book-grid-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column}
+.book-grid-overlay .hd{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.book-grid-overlay .hd .t{font-size:17px;font-weight:700}
+.book-grid-overlay .goto{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.book-grid-overlay .goto input{width:90px;height:38px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:inherit;padding:0 10px;font:inherit}
+.book-grid-overlay .minis{flex:1;overflow:auto;padding:18px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
+.mini{background:transparent;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}
+.mini img,.mini .ph{width:100%;aspect-ratio:1/1.414;object-fit:cover;background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;display:block}
+.mini.on img,.mini.on .ph{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.mini .n{color:var(--muted);font-size:12px}
