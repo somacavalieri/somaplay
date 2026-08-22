@@ -63,17 +63,23 @@ function aplicaTamanhoCanvas(canvas, w, h) {
   canvas.style.height = Math.round(h) + 'px';
 }
 
-// The in-flight document open, keyed by book id. Concurrent desenhaPagina()
-// calls — three fast flicks before the first page has finished opening — used
-// to each see `doc` still null and each call abrirLivro() on the same
-// multi-hundred-MB file; only the last to resolve was ever kept, and the other
-// PDFDocumentProxy instances leaked (~100 MB each, measured). Now every
-// concurrent caller awaits this one promise instead of starting its own.
-let abrindo = null; // { id, promise } | null
+// In-flight document opens, keyed by book id. Concurrent desenhaPagina() calls
+// — three fast flicks before the first page has finished opening — used to
+// each see `doc` still null and each call abrirLivro() on the same
+// multi-hundred-MB file; only the last to resolve was ever kept, and the
+// other PDFDocumentProxy instances leaked (~100 MB each, measured). Now every
+// concurrent caller for the SAME book awaits that book's one promise instead
+// of starting its own. Keyed by id, not a single slot: a single slot can only
+// remember one in-flight open at a time, so opening book B while A is still
+// opening — then going back to A before either resolves — made the slot
+// forget A was already in flight and start a second, undeduped open of it.
+// Deleted on settle either way (success or failure), so a failed open stays
+// retriable.
+const abrindo = new Map(); // id -> Promise<void>
 
 async function abreLivro(b) {
-  if (abrindo && abrindo.id === b.id) { await abrindo.promise; return; }
-  if (doc && docId === b.id) return; // another caller finished opening it while we were about to start
+  if (abrindo.has(b.id)) { await abrindo.get(b.id); return; }
+  if (doc && docId === b.id) return; // already open — nothing to do
   const antigo = doc;
   doc = null; docId = null;
   const promise = (async () => {
@@ -88,6 +94,13 @@ async function abreLivro(b) {
     // (S.screen is no longer 'book') — either way, installing it here would
     // leak it, since nothing else still holds a reference to close it later.
     if (S.livroId === b.id && S.screen === 'book') {
+      // Nothing overwrites `doc` without closing what was there first. The
+      // per-id map above is what should prevent two independent opens of the
+      // SAME book from both reaching here, but this is the backstop: if a
+      // future variant of the race ever lets two opens of one book both pass
+      // the check above, this is what stops whichever installs second from
+      // dropping the first document unclosed.
+      if (doc && doc !== novoDoc) await fecharLivro(doc);
       doc = novoDoc;
       docId = b.id;
       if (paginasDe(doc) !== b.paginas) await salvaLivro({ ...b, paginas: paginasDe(doc) });
@@ -95,11 +108,11 @@ async function abreLivro(b) {
       await fecharLivro(novoDoc);
     }
   })();
-  abrindo = { id: b.id, promise };
+  abrindo.set(b.id, promise);
   try {
     await promise;
   } finally {
-    if (abrindo && abrindo.promise === promise) abrindo = null;
+    abrindo.delete(b.id);
   }
 }
 
