@@ -171,7 +171,7 @@ export async function lerManifest(file) {
 // normalizaPartes o lê como completo — a mesma leitura de importLibrary. A
 // guarda mora aqui, e não em quem chama, para a função ser total: ela roda ANTES
 // do try do diálogo.
-export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false } = {}) {
+export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false, temLivros = false } = {}) {
   const ps = normalizaPartes(partes);
   const out = [];
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
@@ -180,6 +180,12 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false }
   // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
   // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
   if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
+  // Mesma regra dos dois eixos acima: `livros` é campo DECLARADO (como cifra,
+  // áudio, pessoal), mas só vale avisar quando o aparelho tem o que perder —
+  // um aparelho sem livro nenhum não é avisado de nada. `DB.wipe()` apaga a
+  // estante inteira e os blobs dos PDFs no modo substituir, e sem este aviso
+  // esse era o único eixo dos quatro sem sinal nenhum antes do "Substituir".
+  if (!ps.includes('livros') && temLivros) out.push('msg.backup.replaceNoBooks');
   return out;
 }
 

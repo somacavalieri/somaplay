@@ -531,12 +531,19 @@ const actions = {
     if (!b) return;
     S.livroMenu = false;
     const nome = nomeDoExport(`livro-${b.titulo}`, stampDeHoje(), ['livros'], {});
-    const file = await exportLibrary({
-      songIds: new Set(), listIds: new Set(), bookIds: new Set([b.id]),
-      partes: ['livros'], fileName: nome,
-    });
-    await entregaArquivo(file);
-    toast(t('book.exported'));
+    // Mesma forma de doShare (main.js) e do export de Configurações: o toast de
+    // sucesso só dispara quando entregaArquivo() de fato entrega algo — ela
+    // devolve false, sem lançar, quando a pessoa desiste na folha do sistema
+    // (AbortError), e nesse caso o silêncio é o comportamento certo, não um
+    // "Livro exportado." mentindo sobre um arquivo que não saiu. O try/catch é
+    // o que dá uma mensagem a uma falha de verdade, em vez de nada.
+    try {
+      const file = await exportLibrary({
+        songIds: new Set(), listIds: new Set(), bookIds: new Set([b.id]),
+        partes: ['livros'], fileName: nome,
+      });
+      if (await entregaArquivo(file)) toast(t('book.exported'));
+    } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
     update();
   },
 
@@ -1207,18 +1214,23 @@ function wireBackupInput() {
     if (!f) return;
     const merge = S.importMode === 'merge';
     const total = S.songs.length;
+    // Um aparelho pode ser só uma estante de songbooks e não ter música
+    // nenhuma — exatamente o que a tarefa dos livros tornou possível. Sem
+    // contar `S.books` aqui, esse aparelho passava direto para o wipe() do
+    // "Substituir tudo" sem confirm nenhum, porque o portão só olhava músicas.
+    const temAlgoAPerder = total > 0 || S.books.length > 0;
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
-    } else if (total > 0) {
+    } else if (temAlgoAPerder) {
       // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
       // cabeçalho — alguns KB, não o arquivo.
       let manifest = null;
       try { manifest = (await lerManifest(f)).manifest; }
       catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
-      // O manifest inteiro, porque o aviso das listas depende de o arquivo
-      // trazer lista; e o aparelho ter lista, porque não há o que perder quem
-      // não tem nenhuma.
-      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0 })
+      // O manifest inteiro, porque os avisos de lista e de livro dependem do
+      // arquivo trazer (ou não) cada um; e do aparelho ter o que perder, porque
+      // não há o que perder quem não tem lista nenhuma, ou livro nenhum.
+      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0, temLivros: S.books.length > 0 })
         .map((k) => t(k)).join('\n');
       const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;

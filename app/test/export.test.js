@@ -198,6 +198,24 @@ test('arquivo sem lista NÃO avisa se o aparelho também não tem', () => {
   assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }), []);
 });
 
+// Mesmo eixo dos dois de cima, para `livros`: DB.wipe() apaga a estante e os
+// blobs dos PDFs no modo substituir, e sem este aviso era o único dos quatro
+// campos sem sinal nenhum antes do "Substituir tudo".
+test('arquivo sem livro avisa quando o aparelho tem livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }),
+    ['msg.backup.replaceNoBooks']);
+});
+
+test('arquivo COM livros (partes) não gera o aviso de livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
+});
+
+// Não há o que perder: um aparelho sem livro nenhum não é avisado de nada.
+test('arquivo sem livro NÃO avisa se o aparelho também não tem', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [] }, { temListas: false, temLivros: false }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [] }), []);
+});
+
 test('os dois eixos se acumulam, na ordem do dano', () => {
   // O arquivo da folha de compartilhar, mais perigoso de todos: só cifras.
   assert.deepEqual(avisosDeSubstituir({ partes: ['cifra'], lists: [] }, { temListas: true }), [
