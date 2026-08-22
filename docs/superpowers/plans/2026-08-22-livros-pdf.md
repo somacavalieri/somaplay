@@ -951,7 +951,8 @@ async function carregarCapas() {
 - [ ] **Step 8: CSS**
 
 Em `app/css/app.css`, no fim, seguindo os nomes de variável que o arquivo já usa
-(`--muted`, `--accent`, `--card`, `--line`):
+(`--muted`, `--accent`, `--surface`, `--border` — confira em `app/css/app.css:25-46`, que
+define o tema escuro e o claro; `--card` e `--line` NÃO existem):
 
 ```css
 /* ---------- Livros ---------- */
@@ -961,14 +962,14 @@ Em `app/css/app.css`, no fim, seguindo os nomes de variável que o arquivo já u
 .books-head .btn-primary{margin-left:auto}
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:18px}
 .book-card{cursor:pointer;display:flex;flex-direction:column;gap:8px}
-.book-cover-wrap{aspect-ratio:1/1.414;background:var(--card);border:1px solid var(--line);
+.book-cover-wrap{aspect-ratio:1/1.414;background:var(--surface);border:1px solid var(--border);
   border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .book-cover{width:100%;height:100%;object-fit:cover;display:block}
 .book-cover.ph{color:var(--muted);width:auto;height:auto}
 .book-card .nm{font-weight:600;font-size:14px;line-height:1.3}
 .book-card .ct{color:var(--muted);font-size:12px}
 .book-draft{display:flex;gap:18px;align-items:flex-start}
-.book-draft .book-cover{width:130px;height:auto;border-radius:8px;border:1px solid var(--line)}
+.book-draft .book-cover{width:130px;height:auto;border-radius:8px;border:1px solid var(--border)}
 .book-draft-fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
 .foot-inline{display:flex;gap:10px;justify-content:flex-end}
 ```
@@ -1493,8 +1494,8 @@ O atalho de teclado (junto do bloco que já trata `' '` na tela play, ~linha 114
 .book-page .inner{min-height:100%;display:flex;align-items:center;justify-content:center;padding:10px}
 .book-page canvas{display:block;background:#fff;border-radius:4px;box-shadow:0 2px 14px rgba(0,0,0,.35)}
 .book-hud{display:flex;align-items:center;gap:14px;justify-content:center;
-  padding:10px 16px;border-top:1px solid var(--line);background:var(--card)}
-.book-hud button{background:transparent;border:1px solid var(--line);color:inherit;
+  padding:10px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.book-hud button{background:transparent;border:1px solid var(--border);color:inherit;
   border-radius:8px;min-width:44px;height:40px;font-size:18px}
 .book-hud button[disabled]{opacity:.35}
 .book-hud .pg{min-width:110px;text-align:center;color:var(--muted);font-size:13px}
@@ -1646,16 +1647,16 @@ E o cache morre junto com o livro, em `sairDoLivro()`:
 
 ```css
 .book-grid-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column}
-.book-grid-overlay .hd{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.book-grid-overlay .hd{display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid var(--border)}
 .book-grid-overlay .hd .t{font-size:17px;font-weight:700}
 .book-grid-overlay .goto{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
-.book-grid-overlay .goto input{width:90px;height:38px;border-radius:8px;border:1px solid var(--line);
-  background:var(--card);color:inherit;padding:0 10px;font:inherit}
+.book-grid-overlay .goto input{width:90px;height:38px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:inherit;padding:0 10px;font:inherit}
 .book-grid-overlay .minis{flex:1;overflow:auto;padding:18px;
   display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:14px}
 .mini{background:transparent;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}
-.mini img,.mini .ph{width:100%;aspect-ratio:1/1.414;object-fit:cover;background:var(--card);
-  border:1px solid var(--line);border-radius:6px;display:block}
+.mini img,.mini .ph{width:100%;aspect-ratio:1/1.414;object-fit:cover;background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;display:block}
 .mini.on img,.mini.on .ph{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .mini .n{color:var(--muted);font-size:12px}
 ```
@@ -1965,7 +1966,7 @@ function renomeioHTML(b) {
 Com `${renomeioHTML(b)}` na `.book-screen`, o CSS
 
 ```css
-.book-rename{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.book-rename{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
 .book-rename .input{flex:1;min-width:0}
 ```
 
