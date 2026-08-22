@@ -55,9 +55,10 @@ const SHELL = [
 ];
 
 // A biblioteca de terceiro que desenha PDF. Array separado do SHELL de propósito:
-// cache.addAll() rejeita inteiro se UM caminho faltar, e um .wasm esquecido aqui
-// não pode derrubar a instalação do app todo. O teste do SHELL compara este array
-// com o que existe em js/vendor.
+// o install() abaixo cacheia este array à parte e engole a falha dele — um
+// .wasm esquecido aqui não derruba a instalação do app todo, só deixa os
+// livros sem funcionar offline. O teste do SHELL compara este array com o que
+// existe em js/vendor.
 const VENDOR = [
   './js/vendor/pdfjs/pdf.mjs',
   './js/vendor/pdfjs/pdf.worker.mjs',
@@ -92,7 +93,12 @@ const VENDOR = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(VERSION)
-      .then((c) => c.addAll(SHELL).then(() => c.addAll(VENDOR)))
+      .then((c) => c.addAll(SHELL).then(() => c.addAll(VENDOR).catch((err) => {
+        // VENDOR não pode derrubar a instalação do app inteiro: sem ele os
+        // livros em PDF não abrem offline, mas cifra, áudio e tudo mais seguem
+        // funcionando. SHELL continua exigindo tudo — essa parte é essencial.
+        console.warn('SW: falha ao cachear VENDOR (livros em PDF ficarão sem offline)', err);
+      })))
       .then(() => self.skipWaiting())
   );
 });
