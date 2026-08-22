@@ -22,6 +22,28 @@ let desenhando = null;   // page currently being drawn, to drop a superseded cal
 // never has to share the main thread with a thumbnail raster mid-flight.
 let paginaOcupada = false;
 
+// The rename strip: swaps in for the page itself, right below the topbar —
+// never a browser prompt(), which cannot be styled or translated and blocks
+// the render loop.
+function renomeioHTML(b) {
+  if (!S.livroRenomeando) return '';
+  return `<div class="book-rename">
+    <input type="text" class="input lg" id="f-ren-titulo" value="${esc(b.titulo)}" placeholder="${t('books.draft.name')}">
+    <input type="text" class="input lg" id="f-ren-autor" value="${esc(b.autor || '')}" placeholder="${t('books.draft.author')}">
+    <button class="btn-ghost" data-a="cancelRenomearLivro">${t('common.cancel')}</button>
+    <button class="btn-save" data-a="confirmRenomearLivro">${I.save()}${t('common.save')}</button>
+  </div>`;
+}
+
+function menuHTML(b) {
+  if (!S.livroMenu) return '';
+  return `<div class="menu-pop">
+    <button data-a="renomearLivro">${I.pencil()}<span>${t('book.menu.rename')}</span></button>
+    <button data-a="exportarLivro">${I.download()}<span>${t('book.menu.export')}</span></button>
+    <button class="danger" data-a="apagarLivro">${I.trash()}<span>${t('book.menu.delete')}</span></button>
+  </div>`;
+}
+
 export function renderBook() {
   const b = livroById(S.livroId);
   if (!b) return '<div class="screen"></div>';
@@ -32,7 +54,12 @@ export function renderBook() {
       <div class="page-title">${esc(b.titulo)}</div>
       <span style="margin-left:auto"></span>
       <button class="btn-icon" data-a="toggleBookGrid" title="${t('book.grid')}">${I.grid(20)}</button>
+      <div class="menu-wrap">
+        <button class="btn-icon ${S.livroMenu ? 'accent-on' : ''}" data-a="toggleBookMenu" title="${t('play.menu.options')}">${I.dots()}</button>
+        ${menuHTML(b)}
+      </div>
     </div>
+    ${renomeioHTML(b)}
     <div class="book-page-wrap">
       <div class="book-page" data-bookscroll="1">
         <div class="inner"><canvas id="book-canvas"></canvas></div>

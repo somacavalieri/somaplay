@@ -223,7 +223,10 @@ export async function importLibrary(file, { merge = false } = {}) {
     // assume que existe.
     for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes, agora));
     for (const l of manifest.lists || []) await DB.putList(l);
-    for (const b of manifest.books || []) await DB.putBook(b);
+    // Ausência não é deleção, também aqui: um arquivo que não fala de livro
+    // não pode gravar `manifest.books` por acidente — o mesmo guard que
+    // `cifra` e `pessoal` já têm logo abaixo.
+    if (partes.includes('livros')) for (const b of manifest.books || []) await DB.putBook(b);
     if (partes.includes('pessoal') && manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas
       const { lang, chordNotation, chordNotationTouched, ...rest } = manifest.settings;

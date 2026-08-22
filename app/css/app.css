@@ -786,6 +786,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 
 /* ---------- Tela do livro ---------- */
 .book-screen{display:flex;flex-direction:column;height:100%}
+.book-rename{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.book-rename .input{flex:1;min-width:0}
 /* .book-page-wrap is the NON-scrolling positioning context (mirrors .cifra-col
    for the chart screen's floating controls): .book-page itself scrolls, so an
    absolutely-positioned child of .book-page would scroll away with the page

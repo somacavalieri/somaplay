@@ -54,6 +54,8 @@ export const S = {
   livroPagina: 1,
   livroZoom: 1,
   livroGrade: false,       // a grade de miniaturas está aberta?
+  livroMenu: false,        // o menu ⋯ da topbar do livro está aberto?
+  livroRenomeando: false,  // a faixa de renomear substituiu a página?
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias

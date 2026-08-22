@@ -495,6 +495,8 @@ const actions = {
     S.livroPagina = Math.min(Math.max(1, b.ultimaPagina || 1), b.paginas || 1);
     S.livroZoom = 1;
     S.livroGrade = false;
+    S.livroMenu = false;
+    S.livroRenomeando = false;
     S.screen = 'book';
     update();
   },
@@ -505,6 +507,51 @@ const actions = {
   bookZoomOut() { bookZoomBy(-0.2); },
   toggleBookGrid() { S.livroGrade = !S.livroGrade; update(); },
   irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; update(); },
+
+  // menu do livro: renomear, exportar, apagar
+  toggleBookMenu() { S.livroMenu = !S.livroMenu; update(); },
+
+  renomearLivro() { S.livroMenu = false; S.livroRenomeando = true; update(); },
+  cancelRenomearLivro() { S.livroRenomeando = false; update(); },
+  async confirmRenomearLivro() {
+    await renomearLivro(S.livroId, {
+      titulo: document.getElementById('f-ren-titulo')?.value.trim() || undefined,
+      autor: document.getElementById('f-ren-autor')?.value.trim() ?? undefined,
+    });
+    S.livroRenomeando = false;
+    update();
+  },
+
+  // `songIds: new Set()` e `listIds: new Set()` vazios, e não `null`: `null`
+  // significa "tudo" no recorte (backup.js:recorteParaExport), e exportar um
+  // livro arrastaria a biblioteca inteira — músicas, áudio e tudo mais — para
+  // dentro de um arquivo com nome de um único livro.
+  async exportarLivro() {
+    const b = livroById(S.livroId);
+    if (!b) return;
+    S.livroMenu = false;
+    const nome = nomeDoExport(`livro-${b.titulo}`, stampDeHoje(), ['livros'], {});
+    const file = await exportLibrary({
+      songIds: new Set(), listIds: new Set(), bookIds: new Set([b.id]),
+      partes: ['livros'], fileName: nome,
+    });
+    await entregaArquivo(file);
+    toast(t('book.exported'));
+    update();
+  },
+
+  async apagarLivro() {
+    const b = livroById(S.livroId);
+    if (!b) return;
+    S.livroMenu = false;
+    if (!confirm(t('book.delete.confirm', { title: b.titulo }))) { update(); return; }
+    await sairDoLivro();
+    await apagarLivro(b.id);
+    if (S.capaURLs[b.id]) { URL.revokeObjectURL(S.capaURLs[b.id]); delete S.capaURLs[b.id]; }
+    S.screen = 'home'; S.tab = 'books';
+    toast(t('book.deleted'));
+    update();
+  },
 
   // tela de toque
   setViewMode(d) {
@@ -1219,6 +1266,7 @@ document.addEventListener('click', (e) => {
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
+  if (S.livroMenu && !e.target.closest('.menu-wrap')) { S.livroMenu = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
   if (S.tomPop && !e.target.closest('.tom-pop') && !e.target.closest('.tag-tom')) { S.tomPop = null; update(); }
 });
@@ -1276,8 +1324,8 @@ document.addEventListener('keydown', (e) => {
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
     else if (S.navOpen) { S.navOpen = false; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen || S.livroMenu) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = S.livroMenu = false;
       update();
     }
   }

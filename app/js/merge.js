@@ -49,7 +49,16 @@ export function mergePlan(existing, incoming, agora = null) {
   // Livro é coleção de topo, como lista: sem parte de música nenhuma para
   // fundir campo a campo. `fundeLivros` já é a regra inteira (mantém o que o
   // aparelho tem, soma o que é novo) — mergePlan só liga as duas pontas.
-  const livros = fundeLivros((existing && existing.books) || [], (incoming && incoming.books) || []);
+  //
+  // Só funde quando o arquivo DECLARA falar de livro — o mesmo guard que
+  // importLibrary já aplica ao dicionário de acordes e às configurações no
+  // caminho de substituir. Sem ele, um pacote que nunca fala de `livros` mas
+  // por acaso chega com `books` populado (uma exportação feita por outra
+  // versão, um arquivo montado à mão) empurraria livros para dentro da estante
+  // por um campo que o próprio arquivo não assumiu carregar.
+  const livros = partes.includes('livros')
+    ? fundeLivros((existing && existing.books) || [], (incoming && incoming.books) || [])
+    : { books: (existing && existing.books) || [], added: 0 };
 
   return {
     artists,
