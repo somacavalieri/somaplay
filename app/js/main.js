@@ -10,6 +10,7 @@ import {
   duplicarMusicaNoTom, vizinhaNoContexto,
   criarLivro, apagarLivro, renomearLivro, livroById,
 } from './state.js';
+import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy } from './render/book.js';
 import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -92,6 +93,7 @@ export function update() {
   else if (scr === 'addedit') html = renderAddEdit();
   else if (scr === 'settings') html = renderSettings();
   else if (scr === 'chordbook') html = renderChordbook();
+  else if (scr === 'book') html = renderBook();
   html += renderPopover();
   html += renderShareSheet();
   app.innerHTML = html;
@@ -124,7 +126,14 @@ function afterRender() {
   else stopPlayTimers();
   if (S.screen === 'settings') { fillStorageInfo(); wireBackupInput(); }
   if (S.screen === 'addedit') wireAddEditFiles();
+  if (S.screen === 'book') afterRenderBook(update);
+  // A regra central para as capas da estante: a estante de Livros só está na
+  // tela quando S.screen === 'home' e S.tab === 'books'. Qualquer outro render —
+  // troca de aba, tela do livro, Configurações, o que vier depois — cai no
+  // else e revoga. Nada de espalhar revogarCapas() pelas ações que saem de
+  // Home; um render sem a estante já é o sinal certo, e é um só lugar.
   if (S.screen === 'home' && S.tab === 'books') { wireBookFileInput(); carregarCapas(); }
+  else revogarCapas();
 
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
@@ -343,11 +352,8 @@ const actions = {
   songPrev() { const s = vizinhaNoContexto(-1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   songNext() { const s = vizinhaNoContexto(1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   setTab(d) {
-    // Sai da aba Livros: revoga as capas antes de trocar, e não depois — a
-    // troca de S.tab é o que faz o próximo update() parar de desenhar
-    // .book-card, então os <img> que apontavam para esses object URLs já não
-    // existem no DOM quando revokeObjectURL roda.
-    if (S.tab === 'books' && d.id !== 'books') revogarCapas();
+    // A revogação das capas não mora mais aqui — afterRender() cobre a troca de
+    // aba (e toda outra saída da estante) num só lugar. Ver o comentário lá.
     S.tab = d.id;
     S.sortMenuOpen = false;
     update();
@@ -480,6 +486,23 @@ const actions = {
     await proximoLivroDaFila();
     update();
   },
+
+  // tela de leitura do livro
+  openBook(d) {
+    const b = livroById(d.id);
+    if (!b) return;
+    S.livroId = b.id;
+    S.livroPagina = Math.min(Math.max(1, b.ultimaPagina || 1), b.paginas || 1);
+    S.livroZoom = 1;
+    S.livroGrade = false;
+    S.screen = 'book';
+    update();
+  },
+  async sairDoLivro() { await sairDoLivro(); S.screen = 'home'; S.tab = 'books'; update(); },
+  async paginaAnterior() { if (await viraPagina(-1)) update(); },
+  async proximaPagina() { if (await viraPagina(1)) update(); },
+  bookZoomIn() { bookZoomBy(0.2); },
+  bookZoomOut() { bookZoomBy(-0.2); },
 
   // tela de toque
   setViewMode(d) {
@@ -1114,10 +1137,12 @@ async function carregarCapas() {
   if (mudou) updateHomeResults();
 }
 
-// O par de carregarCapas: fecha o que ela abriu. S.capaURLs documenta em
-// state.js que as capas são "revogadas ao sair da aba" — sem esta função (e
-// sem ela sendo chamada) o comentário mentia. Chamada de setTab ao sair de
-// Livros; carregarCapas busca de novo, do zero, na próxima vez que a aba abrir.
+// O par de carregarCapas: fecha o que ela abriu. Chamada de um único lugar,
+// afterRender() (acima), toda vez que a estante de Livros não está na tela —
+// não só na troca de aba: entrar num livro pela tela de leitura ou ir para
+// Configurações também sai da estante, e antes disso cada saída revogava (ou
+// esquecia de revogar) na própria ação, o que já deixou uma saída sem cobertura.
+// carregarCapas busca de novo, do zero, na próxima vez que a aba abrir.
 function revogarCapas() {
   for (const url of Object.values(S.capaURLs)) URL.revokeObjectURL(url);
   S.capaURLs = {};
@@ -1283,6 +1308,10 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       actions.toggleTransport();
     }
+  }
+  // setas = virar página na tela do livro
+  if (S.screen === 'book' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+    viraPagina(e.key === 'ArrowRight' ? 1 : -1).then((n) => { if (n) update(); });
   }
 });
 

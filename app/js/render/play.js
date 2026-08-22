@@ -13,6 +13,7 @@ import { tomPopHTML } from './tompop.js';
 import { offlineBadge } from './home.js';
 import { scrollStep, SCROLL_TICK_MS } from '../scroll-speed.js';
 import { t } from '../i18n.js';
+import { wireGestos, clampZoom } from '../panzoom.js';
 import { songNavHTML, songNavButtonHTML, scrollNavAtual, songNavArrowsHTML, posicaoTexto } from './songnav.js';
 
 // -------- mídia da música atual (blob URLs, cache por música) --------
@@ -748,49 +749,18 @@ function applyImgZoom() {
 }
 
 export function zoomBy(d) {
-  S.imgZoom = Math.max(0.4, Math.min(4, +(S.imgZoom + d).toFixed(3)));
+  S.imgZoom = clampZoom(S.imgZoom + d);
   applyImgZoom();
 }
 
-function imgDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
-
 function setupImgGestures() {
   const el = document.querySelector('[data-imgscroll]');
-  if (!el || el._gesturesWired) return;
-  el._gesturesWired = true;
-  let dragging = false, sx = 0, sy = 0, sl = 0, stp = 0, pinching = false;
-  el.addEventListener('pointerdown', (e) => {
-    if (pinching) return;
-    if (e.target.closest && e.target.closest('[data-nopan]')) return;
-    dragging = true; sx = e.clientX; sy = e.clientY; sl = el.scrollLeft; stp = el.scrollTop;
-    el.classList.add('grabbing');
-    try { el.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
+  if (!el) return;
+  wireGestos(el, {
+    getZoom: () => S.imgZoom,
+    setZoom: (z) => { S.imgZoom = z; applyImgZoom(); },
+    ignorar: (alvo) => !!(alvo.closest && alvo.closest('[data-nopan]')),
   });
-  el.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    el.scrollLeft = sl - (e.clientX - sx);
-    el.scrollTop = stp - (e.clientY - sy);
-  });
-  const end = () => { dragging = false; el.classList.remove('grabbing'); };
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', end);
-  el.addEventListener('wheel', (e) => {
-    if (!e.ctrlKey) return;
-    e.preventDefault();
-    zoomBy(e.deltaY < 0 ? 0.15 : -0.15);
-  }, { passive: false });
-  let startDist = 0, startZoom = 1;
-  el.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) { pinching = true; startDist = imgDist(e.touches); startZoom = S.imgZoom; }
-  }, { passive: false });
-  el.addEventListener('touchmove', (e) => {
-    if (pinching && e.touches.length === 2) {
-      e.preventDefault();
-      S.imgZoom = Math.max(0.4, Math.min(4, +(startZoom * (imgDist(e.touches) / (startDist || 1))).toFixed(3)));
-      applyImgZoom();
-    }
-  }, { passive: false });
-  el.addEventListener('touchend', (e) => { if (e.touches.length < 2) pinching = false; });
 }
 
 export function stopPlayTimers() {

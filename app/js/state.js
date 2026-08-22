@@ -45,7 +45,15 @@ export const S = {
   // seleção que sobrevive ao fechar o app vira mistério no próximo ensaio.
   livroDraft: null,        // { file, titulo, autor, paginas, capaBlob, capaURL } | null
   livroFila: [],           // PDFs escolhidos aguardando virar rascunho
-  capaURLs: {},            // id do livro → object URL da capa (revogado ao sair da aba)
+  // id do livro → object URL da capa. Revogado por afterRender() (main.js) toda
+  // vez que a estante de Livros não está na tela — sai da aba, entra num livro
+  // pela tela de leitura, vai para Configurações, o que for — e não só na troca
+  // de aba: um render sem a estante é o sinal, não a rota que levou até ele.
+  capaURLs: {},
+  livroId: null,           // livro aberto na tela book
+  livroPagina: 1,
+  livroZoom: 1,
+  livroGrade: false,       // a grade de miniaturas está aberta?
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
