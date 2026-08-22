@@ -27,8 +27,10 @@ export function renderBook() {
       <span style="margin-left:auto"></span>
       <button class="btn-icon" data-a="toggleBookGrid" title="${t('book.grid')}">${I.grid(20)}</button>
     </div>
-    <div class="book-page" data-bookscroll="1">
-      <div class="inner"><canvas id="book-canvas"></canvas></div>
+    <div class="book-page-wrap">
+      <div class="book-page" data-bookscroll="1">
+        <div class="inner"><canvas id="book-canvas"></canvas></div>
+      </div>
       <div class="book-status" id="book-status" hidden></div>
     </div>
     <div class="book-hud">
@@ -79,9 +81,19 @@ async function abreLivro(b) {
     const file = await DB.getBlob(b.blobId);
     if (!file) throw new Error('blob do livro ausente');
     const novoDoc = await abrirLivro(file);
-    doc = novoDoc;
-    docId = b.id;
-    if (paginasDe(doc) !== b.paginas) await salvaLivro({ ...b, paginas: paginasDe(doc) });
+    // A document is only installed if its book is still the current one,
+    // otherwise it is closed immediately: by the time a slow open on a
+    // 300 MB songbook resolves, the reader may already have moved on to a
+    // different book (S.livroId changed) or left the screen entirely
+    // (S.screen is no longer 'book') — either way, installing it here would
+    // leak it, since nothing else still holds a reference to close it later.
+    if (S.livroId === b.id && S.screen === 'book') {
+      doc = novoDoc;
+      docId = b.id;
+      if (paginasDe(doc) !== b.paginas) await salvaLivro({ ...b, paginas: paginasDe(doc) });
+    } else {
+      await fecharLivro(novoDoc);
+    }
   })();
   abrindo = { id: b.id, promise };
   try {
