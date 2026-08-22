@@ -1054,6 +1054,13 @@ test('distância inicial zero não vira divisão por zero', () => {
 test('distância entre dois toques é a hipotenusa', () => {
   assert.equal(distanciaEntre([{ clientX: 0, clientY: 0 }, { clientX: 3, clientY: 4 }]), 5);
 });
+
+test('a faixa de zoom é a mesma que a tela de tocar já usava', () => {
+  // play.js clampava em 0.4 e 4 na mão; extrair o gesto não pode mudar a faixa
+  // debaixo de quem já usa o app no palco.
+  assert.equal(ZOOM_MIN, 0.4);
+  assert.equal(ZOOM_MAX, 4);
+});
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -1098,7 +1105,21 @@ export function escalaDaPinca(zoomInicial, distAtual, distInicial) {
 //                      which is the whole disambiguation: zoomed in, a drag is a
 //                      pan and never a page turn.
 //   ignorar(target)  → optional: true for controls that must not start a drag
+// Wires an element that SCROLLS (the pan is its scrollLeft/scrollTop).
+//
+//   getZoom()        → current zoom
+//   setZoom(z)       → apply it; the caller redraws or resizes
+//   onSwipe(dir)     → optional: -1 previous, +1 next. Only fires at zoom 1,
+//                      which is the whole disambiguation: zoomed in, a drag is a
+//                      pan and never a page turn.
+//   ignorar(target)  → optional: true for controls that must not start a drag
+//
+// The wheel zooms only with Ctrl held, and plain wheel is left alone: the chart
+// screen has always behaved that way, and swallowing plain wheel would take
+// scrolling away from every desktop reader.
 export function wireGestos(el, { getZoom, setZoom, onSwipe = null, ignorar = () => false }) {
+  if (el._gesturesWired) return;
+  el._gesturesWired = true;
   let arrastando = false, sx = 0, sy = 0, sl = 0, stp = 0, pincando = false;
   let distInicial = 0, zoomInicial = 1, movimento = 0;
 
@@ -1106,6 +1127,9 @@ export function wireGestos(el, { getZoom, setZoom, onSwipe = null, ignorar = () 
     if (pincando || ignorar(e.target)) return;
     arrastando = true; movimento = 0;
     sx = e.clientX; sy = e.clientY; sl = el.scrollLeft; stp = el.scrollTop;
+    el.classList.add('grabbing');
+    // Without the capture a drag that leaves the element dies mid-gesture.
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* ok */ }
   });
   el.addEventListener('pointermove', (e) => {
     if (!arrastando || pincando) return;
@@ -1117,25 +1141,27 @@ export function wireGestos(el, { getZoom, setZoom, onSwipe = null, ignorar = () 
   const solta = (e) => {
     if (!arrastando) return;
     arrastando = false;
+    el.classList.remove('grabbing');
     if (!onSwipe || getZoom() > 1.001 || movimento < 60) return;
     const dx = e.clientX - sx, dy = e.clientY - sy;
     if (Math.abs(dx) > Math.abs(dy) * 1.5) onSwipe(dx < 0 ? 1 : -1);
   };
   el.addEventListener('pointerup', solta);
-  el.addEventListener('pointercancel', () => { arrastando = false; });
+  el.addEventListener('pointercancel', () => { arrastando = false; el.classList.remove('grabbing'); });
 
   el.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
     e.preventDefault();
     setZoom(clampZoom(getZoom() + (e.deltaY < 0 ? 0.15 : -0.15)));
   }, { passive: false });
 
   el.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
-      pincando = true; arrastando = false;
+      pincando = true; arrastando = false; el.classList.remove('grabbing');
       distInicial = distanciaEntre(e.touches);
       zoomInicial = getZoom();
     }
-  }, { passive: true });
+  }, { passive: false });
   el.addEventListener('touchmove', (e) => {
     if (!pincando || e.touches.length !== 2) return;
     e.preventDefault();
@@ -1155,34 +1181,45 @@ Esperado: PASS nos 5 testes.
 
 - [ ] **Step 5: A tela de tocar passa a usar o módulo**
 
-Em `app/js/render/play.js`, troque o corpo de `wireImgPan()` (linhas 755-793) por uma
-chamada ao módulo, mantendo `zoomBy` e `applyZoom` como estão:
+Em `app/js/render/play.js`. Os nomes reais no arquivo são **`setupImgGestures()`** (linha 757) e
+**`applyImgZoom()`** (linha 739) — confira antes de editar. O corpo inteiro de
+`setupImgGestures` (linhas 757-794, do `let dragging` até o último `addEventListener`)
+sai e vira uma chamada:
 
 ```js
 import { wireGestos, clampZoom } from '../panzoom.js';
 
 // …
 
-function wireImgPan() {
+function setupImgGestures() {
   const el = document.querySelector('[data-imgscroll]');
-  if (!el || el._panWired) return;
-  el._panWired = true;
+  if (!el) return;
   wireGestos(el, {
     getZoom: () => S.imgZoom,
-    setZoom: (z) => { S.imgZoom = z; applyZoom(); },
-    ignorar: (alvo) => !!alvo.closest(CTL_SEL) || !!alvo.closest('[data-nopan]'),
+    setZoom: (z) => { S.imgZoom = z; applyImgZoom(); },
+    ignorar: (alvo) => !!(alvo.closest && alvo.closest('[data-nopan]')),
   });
 }
 ```
+
+A guarda de "já ligado" (`el._gesturesWired`) mudou de lugar: agora mora dentro de
+`wireGestos`, com o mesmo nome de propriedade, então o comportamento é o de antes.
+A função local `imgDist` sai junto — quem calcula distância agora é
+`distanciaEntre`, no módulo.
 
 E `zoomBy` passa a usar o clamp compartilhado:
 
 ```js
 export function zoomBy(d) {
   S.imgZoom = clampZoom(S.imgZoom + d);
-  applyZoom();
+  applyImgZoom();
 }
 ```
+
+**Três comportamentos que NÃO podem mudar nessa troca** — são o que a tela de tocar
+já faz hoje, e o `panzoom.js` acima os preserva de propósito: a roda do mouse só dá
+zoom **com Ctrl** (sem Ctrl, a página rola); o ponteiro é capturado, para o arrasto
+sobreviver a sair do elemento; e a classe `grabbing` entra e sai com o arrasto.
 
 **Verificação obrigatória antes de seguir:** a tela de tocar é a que está no palco.
 Sirva o app, abra uma música com cifra em imagem e confirme que pinça, arrasto,
@@ -1305,7 +1342,7 @@ export function afterRenderBook(onUpdate) {
       getZoom: () => S.livroZoom,
       setZoom: (z) => { S.livroZoom = z; atualizaPct(); desenhaPagina(); },
       onSwipe: (dir) => { viraPagina(dir).then((n) => { if (n) onUpdate(); }); },
-      ignorar: (alvo) => !!alvo.closest('.book-hud'),
+      ignorar: (alvo) => !!(alvo.closest && alvo.closest('.book-hud')),
     });
   }
   desenhaPagina();
