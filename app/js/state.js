@@ -6,10 +6,11 @@ import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
 import { PARTES_TODAS } from './partes.js';
 import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
+import { tituloDeArquivo, blobIdsDosLivros } from './books.js';
 
 export const S = {
   // navegação
-  screen: 'home',          // home | artist | list | play | addedit | settings | chordbook
+  screen: 'home',          // home | artist | list | play | addedit | settings | chordbook | book
   tab: 'artists',          // artists | songs | estilos | lists
   // De onde a tela play foi aberta — o tipo E qual. Só na sessão: um contexto
   // que sobrevive ao fechar o app é uma promessa que a biblioteca pode não
@@ -24,6 +25,7 @@ export const S = {
   artistId: null,
   estiloId: null,          // estilo aberto (o nome do estilo é a chave)
   openListId: null,        // id da lista aberta ('__fav' = Favoritas)
+  livroId: null,           // livro aberto (tela book)
   listMenuOpen: false,
   creatingList: false,
   renamingList: false,
@@ -51,6 +53,7 @@ export const S = {
   artists: [],
   songs: [],
   lists: [],
+  books: [],
 
   // tela de toque
   currentSongId: null,
@@ -384,6 +387,7 @@ export async function initState() {
   S.artists = lib.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   S.songs = lib.songs;
   S.lists = lib.lists;
+  S.books = (lib.books || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
@@ -604,6 +608,55 @@ export function favList() {
     id: '__fav', nome: 'Favoritas', sistema: true, fixada: false,
     musicas: S.songs.filter((s) => s.favorita).map((s) => s.id),
   };
+}
+
+// ---------- livros ----------
+export function livroById(id) { return S.books.find((b) => b.id === id) || null; }
+
+// `capaBlob` e `paginas` chegam prontos de quem já abriu o PDF: state.js não
+// conhece pdf.js, e não é aqui que essa dependência entra.
+export async function criarLivro(file, { titulo, autor, paginas, capaBlob }) {
+  const id = uid();
+  const blobId = uid();
+  await DB.saveBlob(blobId, file);
+  let capaBlobId = null;
+  if (capaBlob) { capaBlobId = uid(); await DB.saveBlob(capaBlobId, capaBlob); }
+  const livro = {
+    id, blobId, capaBlobId,
+    titulo: (titulo || tituloDeArquivo(file.name) || file.name),
+    autor: autor || '',
+    fileName: file.name || '',
+    paginas: paginas || 0,
+    bytes: file.size || 0,
+    ultimaPagina: 1,
+    createdAt: Date.now(),
+  };
+  await DB.putBook(livro);
+  S.books.unshift(livro);
+  return livro;
+}
+
+export async function salvaLivro(livro) {
+  await DB.putBook(livro);
+  const i = S.books.findIndex((b) => b.id === livro.id);
+  if (i >= 0) S.books[i] = livro; else S.books.unshift(livro);
+  return livro;
+}
+
+export async function renomearLivro(id, { titulo, autor }) {
+  const b = livroById(id);
+  if (!b) return null;
+  return salvaLivro({ ...b, titulo: titulo ?? b.titulo, autor: autor ?? b.autor });
+}
+
+// Apaga o registro E os dois blobs. Não existe varredura de órfão no app: o que
+// não for apagado aqui fica ocupando disco para sempre.
+export async function apagarLivro(id) {
+  const b = livroById(id);
+  if (!b) return;
+  for (const bid of blobIdsDosLivros([b])) await DB.deleteBlob(bid);
+  await DB.deleteBook(id);
+  S.books = S.books.filter((x) => x.id !== id);
 }
 
 // ---------- contexto de navegação (spec 2026-08-17) ----------
