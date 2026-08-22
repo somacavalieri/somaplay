@@ -64,10 +64,30 @@ dizendo o que é e como atualizar. O valor "sem dependências" do projeto sempre
 *sem build step e sem gerenciador de pacotes*, e um arquivo estático copiado para dentro do
 repositório não fere isso.
 
-O que ele fere é a contagem de bytes: o app inteiro pesa 1,0 MB hoje, e o pdf.js minificado
-(principal + worker) pesa cerca de 1,5–1,8 MB. Ele entra no `SHELL` desde a instalação —
-decisão do usuário, contra a alternativa de buscá-lo na primeira importação, que deixaria o
-shell magro ao custo de exigir estar online para importar o primeiro livro.
+O que ele fere é a contagem de bytes. **Medido**, não estimado, no build `legacy` da
+v6.2.108:
+
+| Arquivo | Peso |
+|---|---|
+| `pdf.mjs` | 1,03 MB |
+| `pdf.worker.mjs` | 2,38 MB |
+| `wasm/` (jbig2, openjpeg, qcms) | 0,45 MB |
+| `standard_fonts/` (16 arquivos) | 0,80 MB |
+| **total** | **~4,7 MB** |
+
+O app inteiro pesa 1,0 MB hoje, então o precache vai para cerca de 5,7 MB. Fica **de
+fora**, de propósito: os `*.map` (8 MB de sourcemap que ninguém lê no tablet),
+`web/cmaps/` (1,6 MB e 169 arquivos para codificação CJK, que o acervo não usa) e
+`quickjs-eval.wasm` (JavaScript embutido em formulário PDF, fora do escopo).
+
+Os `.wasm` não são opcionais para este acervo: songbook escaneado usa JBIG2 com
+frequência, e sem o decodificador a página abre em branco. `standard_fonts` cobre o PDF
+de texto cuja fonte não está embutida.
+
+Ele entra no `SHELL` desde a instalação — decisão do usuário, tomada de novo depois desta
+medição, contra a alternativa de buscá-lo na primeira importação, que deixaria o shell
+magro ao custo de exigir estar online para importar o primeiro livro. Cinco megabytes uma
+vez por versão é ruído ao lado de um songbook de 300 MB.
 
 ### Livro não é música
 
