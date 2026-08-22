@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Soma Play — diagnóstico de PDF</title>
+<style>
+  body{background:#11151a;color:#e8eef5;font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:16px}
+  h1{font-size:16px;color:#f0b23c;margin:0 0 12px}
+  input,button{background:#f0b23c;color:#11151a;border:0;border-radius:8px;padding:10px 14px;font:600 14px system-ui;margin:0 8px 12px 0}
+  pre{white-space:pre-wrap;background:#0b0e12;border:1px solid #223;border-radius:8px;padding:12px}
+  canvas{max-width:100%;background:#fff;border-radius:6px}
+  .ok{color:#4ade80}.bad{color:#f87171}
+</style>
+<h1>Soma Play — diagnóstico de PDF</h1>
+<input type="file" id="f" accept="application/pdf">
+<button id="p10">Desenhar página 10</button>
+<pre id="out">Escolha um PDF.</pre>
+<canvas id="c"></canvas>
+<script type="module">
+import { abrirLivro, paginasDe, renderPagina, fecharLivro, versaoPdfJs } from './js/pdf.js';
+const out = document.getElementById('out'); const L = [];
+const log = (s, cls) => { L.push(cls ? `<span class="${cls}">${s}</span>` : s); out.innerHTML = L.join('\n'); };
+const mem = () => performance.memory ? ` · heap ${(performance.memory.usedJSHeapSize/1e6).toFixed(0)} MB` : '';
+let doc = null;
+document.getElementById('f').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  L.length = 0; log(`pdf.js ${versaoPdfJs}`);
+  log(`arquivo: ${file.name} · ${(file.size/1e6).toFixed(1)} MB`);
+  await fecharLivro(doc);
+  const t0 = performance.now();
+  try {
+    doc = await abrirLivro(file);
+    log(`abriu em ${(performance.now()-t0).toFixed(0)} ms · ${paginasDe(doc)} páginas${mem()}`, 'ok');
+  } catch (err) { log(`FALHOU: ${err && err.message}`, 'bad'); }
+});
+document.getElementById('p10').addEventListener('click', async () => {
+  if (!doc) return log('abra um PDF primeiro', 'bad');
+  const t0 = performance.now();
+  const { w, h } = await renderPagina(doc, Math.min(10, paginasDe(doc)), 900, window.devicePixelRatio || 1, document.getElementById('c'));
+  log(`desenhou em ${(performance.now()-t0).toFixed(0)} ms · ${w}×${Math.round(h)} css${mem()}`, 'ok');
+});
+</script>

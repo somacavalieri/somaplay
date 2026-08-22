@@ -22,6 +22,7 @@ const SHELL = [
   './js/initials.js',
   './js/samples.js',
   './js/version.js',
+  './js/pdf.js',
   './js/i18n.js',
   './js/i18n/pt.js',
   './js/i18n/en.js',
@@ -53,8 +54,47 @@ const SHELL = [
   './icons/icon-maskable-512.png',
 ];
 
+// A biblioteca de terceiro que desenha PDF. Array separado do SHELL de propósito:
+// cache.addAll() rejeita inteiro se UM caminho faltar, e um .wasm esquecido aqui
+// não pode derrubar a instalação do app todo. O teste do SHELL compara este array
+// com o que existe em js/vendor.
+const VENDOR = [
+  './js/vendor/pdfjs/pdf.mjs',
+  './js/vendor/pdfjs/pdf.worker.mjs',
+  './js/vendor/pdfjs/LICENSE',
+  './js/vendor/pdfjs/wasm/jbig2.wasm',
+  './js/vendor/pdfjs/wasm/openjpeg.wasm',
+  './js/vendor/pdfjs/wasm/qcms_bg.wasm',
+  './js/vendor/pdfjs/wasm/LICENSE_JBIG2',
+  './js/vendor/pdfjs/wasm/LICENSE_OPENJPEG',
+  './js/vendor/pdfjs/wasm/LICENSE_PDFJS_JBIG2',
+  './js/vendor/pdfjs/wasm/LICENSE_PDFJS_OPENJPEG',
+  './js/vendor/pdfjs/wasm/LICENSE_PDFJS_QCMS',
+  './js/vendor/pdfjs/wasm/LICENSE_QCMS',
+  './js/vendor/pdfjs/standard_fonts/FoxitDingbats.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitFixed.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitFixedBold.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitFixedBoldItalic.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitFixedItalic.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitSerif.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitSerifBold.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitSerifBoldItalic.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitSerifItalic.pfb',
+  './js/vendor/pdfjs/standard_fonts/FoxitSymbol.pfb',
+  './js/vendor/pdfjs/standard_fonts/LICENSE_FOXIT',
+  './js/vendor/pdfjs/standard_fonts/LICENSE_LIBERATION',
+  './js/vendor/pdfjs/standard_fonts/LiberationSans-Bold.ttf',
+  './js/vendor/pdfjs/standard_fonts/LiberationSans-BoldItalic.ttf',
+  './js/vendor/pdfjs/standard_fonts/LiberationSans-Italic.ttf',
+  './js/vendor/pdfjs/standard_fonts/LiberationSans-Regular.ttf',
+];
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(VERSION)
+      .then((c) => c.addAll(SHELL).then(() => c.addAll(VENDOR)))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
