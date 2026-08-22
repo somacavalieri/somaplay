@@ -22,6 +22,15 @@ test('não come um número que é o título', () => {
   assert.equal(tituloDeArquivo('101-Musicas-do-Seculo-XX.pdf'), '101 Musicas do Seculo XX');
 });
 
+test('a fronteira do id do Scribd é 6 dígitos', () => {
+  // O regex é /^\d{6,}[-_]/. Sem este teste, afrouxar para \d{4,} continuaria
+  // verde nos dois testes acima (3 dígitos sobrevive, 9 dígitos é cortado) e
+  // comeria o "1969-" de um nome de arquivo de verdade, tipo um ano de disco.
+  // 5 dígitos ainda é título; 6 já é o id que o Scribd cola na frente.
+  assert.equal(tituloDeArquivo('12345-Not-An-Id.pdf'), '12345 Not An Id');
+  assert.equal(tituloDeArquivo('123456-Is-An-Id.pdf'), 'Is An Id');
+});
+
 test('nome vazio ou sem miolo devolve string vazia', () => {
   assert.equal(tituloDeArquivo(''), '');
   assert.equal(tituloDeArquivo('.pdf'), '');

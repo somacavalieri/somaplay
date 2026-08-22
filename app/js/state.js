@@ -6,7 +6,7 @@ import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
 import { PARTES_TODAS } from './partes.js';
 import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
-import { tituloDeArquivo, blobIdsDosLivros } from './books.js';
+import { tituloDeArquivo } from './books.js';
 
 export const S = {
   // navegação
@@ -651,10 +651,20 @@ export async function renomearLivro(id, { titulo, autor }) {
 
 // Apaga o registro E os dois blobs. Não existe varredura de órfão no app: o que
 // não for apagado aqui fica ocupando disco para sempre.
+//
+// Ordem deliberada, e diferente da de blobIdsDosLivros (que devolve
+// [blobId, capaBlobId] — uma ordem que uma tarefa futura usa como contrato do
+// export, e não é para mudar): aqui apagamos a CAPA primeiro e o PDF por
+// último. deleteBlob() normalmente engole falha do OPFS e tolera chave
+// ausente no fallback IDB, então só aborta no meio por algo raro — cota
+// esgotada, corrida de troca de versão entre abas. Se isso acontecer entre os
+// dois deletes, queremos que o ponteiro que sobrevive seja o do PDF, não o da
+// capa: um livro sem miniatura ainda abre; um livro sem PDF não abre nada.
 export async function apagarLivro(id) {
   const b = livroById(id);
   if (!b) return;
-  for (const bid of blobIdsDosLivros([b])) await DB.deleteBlob(bid);
+  if (b.capaBlobId) await DB.deleteBlob(b.capaBlobId);
+  if (b.blobId) await DB.deleteBlob(b.blobId);
   await DB.deleteBook(id);
   S.books = S.books.filter((x) => x.id !== id);
 }

@@ -230,5 +230,9 @@ export async function importLibrary(file, { merge = false } = {}) {
   S.artists = all.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   S.songs = all.songs;
   S.lists = all.lists;
+  // wipe() (modo espelho) já limpou o store books e apagou os blobs no OPFS —
+  // sem esta linha o espelho em memória continuaria com registros antigos
+  // apontando para PDF e capa que não existem mais no disco.
+  S.books = (all.books || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   return result;
 }
