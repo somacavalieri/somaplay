@@ -59,7 +59,6 @@ export async function abrirLivro(file) {
     wasmUrl: WASM_URL,
     standardFontDataUrl: FONTS_URL,
     disableAutoFetch: true,
-    isEvalSupported: false,
   });
   // Race against the transport's own failure channel (see the `erro` comment
   // above): whichever settles first wins, so a broken range read fails the
@@ -90,7 +89,25 @@ export async function renderPagina(doc, n, larguraCss, dpr, canvas) {
 }
 
 export async function fecharLivro(doc) {
-  if (doc) { try { await doc.destroy(); } catch (e) { /* já fechado */ } }
+  if (!doc) return;
+  // PDFDocumentProxy (what abrirLivro resolves to) has no destroy() of its
+  // own — confirmed by reading the vendored class in pdf.mjs and, at runtime,
+  // by opening a real document and checking its prototype. The obvious
+  // `doc.destroy()` throws TypeError; destroy() lives on
+  // PDFDocumentLoadingTask instead, reached through the proxy's `loadingTask`
+  // getter, and that's what actually tears the worker and its decoded-image
+  // memory down. A blanket catch around the wrong call used to swallow that
+  // TypeError as "already closed" — the worker leaked silently for the whole
+  // page lifetime.
+  try {
+    await doc.loadingTask.destroy();
+  } catch (err) {
+    // pdf.js's own destroy() is safe to call twice (it guards its transport
+    // with optional chaining), so a genuine double-close does not throw here.
+    // Anything that does reach this catch is a real failure — surface it
+    // instead of hiding it.
+    console.warn('fecharLivro: falha ao destruir o documento PDF', err);
+  }
 }
 
 export const versaoPdfJs = pdfjs.version;
