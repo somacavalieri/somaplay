@@ -29,6 +29,7 @@ export function renderBook() {
     </div>
     <div class="book-page" data-bookscroll="1">
       <div class="inner"><canvas id="book-canvas"></canvas></div>
+      <div class="book-status" id="book-status" hidden></div>
     </div>
     <div class="book-hud">
       <button data-a="paginaAnterior" title="${t('book.prev')}" ${n <= 1 ? 'disabled' : ''}>${I.chevL(20)}</button>
@@ -43,24 +44,85 @@ export function renderBook() {
   </div>`;
 }
 
+function setStatus(msg) {
+  const el = document.getElementById('book-status');
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.hidden = false; }
+  else { el.hidden = true; el.textContent = ''; }
+}
+
+// Sets the CSS (display) size of the canvas, in one place, so the fresh-render
+// path and the prefetch-cache-hit path can never drift apart the way they did
+// before: the cache-hit branch used to set canvas.width/height (the pixel
+// buffer) and forget canvas.style.width/height (the display size), leaving the
+// page shown at the wrong size whenever a prefetched page was used.
+function aplicaTamanhoCanvas(canvas, w, h) {
+  canvas.style.width = w + 'px';
+  canvas.style.height = Math.round(h) + 'px';
+}
+
+// The in-flight document open, keyed by book id. Concurrent desenhaPagina()
+// calls — three fast flicks before the first page has finished opening — used
+// to each see `doc` still null and each call abrirLivro() on the same
+// multi-hundred-MB file; only the last to resolve was ever kept, and the other
+// PDFDocumentProxy instances leaked (~100 MB each, measured). Now every
+// concurrent caller awaits this one promise instead of starting its own.
+let abrindo = null; // { id, promise } | null
+
+async function abreLivro(b) {
+  if (abrindo && abrindo.id === b.id) { await abrindo.promise; return; }
+  if (doc && docId === b.id) return; // another caller finished opening it while we were about to start
+  const antigo = doc;
+  doc = null; docId = null;
+  const promise = (async () => {
+    await fecharLivro(antigo);
+    const file = await DB.getBlob(b.blobId);
+    if (!file) throw new Error('blob do livro ausente');
+    const novoDoc = await abrirLivro(file);
+    doc = novoDoc;
+    docId = b.id;
+    if (paginasDe(doc) !== b.paginas) await salvaLivro({ ...b, paginas: paginasDe(doc) });
+  })();
+  abrindo = { id: b.id, promise };
+  try {
+    await promise;
+  } finally {
+    if (abrindo && abrindo.promise === promise) abrindo = null;
+  }
+}
+
 // One page ahead, kept off-screen. A 300 dpi page takes a few hundred ms to
 // rasterise, and that is exactly the pause you feel when turning. Only ever one:
 // prefetching a whole book would be a background job competing with the page the
 // eyes are actually on.
-let adiantada = null;   // { id, n, bitmap }
+let adiantada = null;   // { id, n, z, bitmap, w, h } | null — z is the zoom it was rendered at
+
+// Discards whatever is cached, closing the bitmap so its decoded pixels (held
+// outside the JS heap) don't wait on the GC — tens of MB each, on a 401-page
+// book flicked through quickly.
+function descartaAdiantada() {
+  if (!adiantada) return;
+  try { adiantada.bitmap.close(); } catch (e) { /* já fechado */ }
+  adiantada = null;
+}
 
 async function adiantaProxima() {
   const b = livroById(S.livroId);
   const n = S.livroPagina + 1;
+  const z = S.livroZoom;
   if (!b || !doc || n > b.paginas) return;
-  if (adiantada && adiantada.id === b.id && adiantada.n === n) return;
+  if (adiantada && adiantada.id === b.id && adiantada.n === n && Math.abs(adiantada.z - z) < 0.001) return;
   const el = document.querySelector('[data-bookscroll]');
   if (!el) return;
   const canvas = document.createElement('canvas');
   try {
-    await renderPagina(doc, n, Math.max(320, el.clientWidth * S.livroZoom), window.devicePixelRatio || 1, canvas);
-    adiantada = { id: b.id, n, bitmap: await createImageBitmap(canvas) };
-  } catch (e) { adiantada = null; }
+    const { w, h } = await renderPagina(doc, n, Math.max(320, el.clientWidth * z), window.devicePixelRatio || 1, canvas);
+    const bitmap = await createImageBitmap(canvas);
+    // A newer prefetch replaces whatever was cached before — close it here,
+    // not leave it for whoever notices next.
+    descartaAdiantada();
+    adiantada = { id: b.id, n, z, bitmap, w, h };
+  } catch (e) { /* mantém o que já estava em cache, se houver algo válido */ }
 }
 
 // Draws the current page. Every call carries a token: a fast reader can turn
@@ -74,47 +136,51 @@ export async function desenhaPagina() {
   desenhando = alvo;
   try {
     if (!doc || docId !== b.id) {
-      await fecharLivro(doc);
-      doc = null;
-      const file = await DB.getBlob(b.blobId);
-      if (!file) return;
-      doc = await abrirLivro(file);
-      docId = b.id;
-      if (paginasDe(doc) !== b.paginas) await salvaLivro({ ...b, paginas: paginasDe(doc) });
+      setStatus(t('book.rendering'));
+      await abreLivro(b);
+      // `doc` is module state, shared by every caller that awaited the open
+      // above — not something this call owns. If a faster flick superseded us
+      // while we were waiting, the document is exactly what the newer call
+      // needs too, so we hand it over as-is and just stop drawing OUR page;
+      // closing it here would pull it out from under the call that is about
+      // to use it.
+      if (desenhando !== alvo) return;
     }
-    if (desenhando !== alvo) return;
     const el = document.querySelector('[data-bookscroll]');
     const largura = Math.max(320, el.clientWidth * S.livroZoom);
     if (adiantada && adiantada.id === b.id && adiantada.n === alvo.n
-        && Math.abs(alvo.z - S.livroZoom) < 0.001) {
-      canvas.width = adiantada.bitmap.width;
-      canvas.height = adiantada.bitmap.height;
-      canvas.getContext('2d', { alpha: false }).drawImage(adiantada.bitmap, 0, 0);
+        && Math.abs(adiantada.z - alvo.z) < 0.001) {
+      const cache = adiantada;
       adiantada = null;
+      canvas.width = cache.bitmap.width;
+      canvas.height = cache.bitmap.height;
+      canvas.getContext('2d', { alpha: false }).drawImage(cache.bitmap, 0, 0);
+      aplicaTamanhoCanvas(canvas, cache.w, cache.h);
+      cache.bitmap.close();
     } else {
       const { w, h } = await renderPagina(doc, alvo.n, largura, window.devicePixelRatio || 1, canvas);
       if (desenhando !== alvo) return;
-      canvas.style.width = w + 'px';
-      canvas.style.height = Math.round(h) + 'px';
+      aplicaTamanhoCanvas(canvas, w, h);
     }
     el.querySelector('.inner').style.alignItems = S.livroZoom > 1.001 ? 'flex-start' : 'center';
+    setStatus(null);
     setTimeout(() => adiantaProxima(), 120);
   } catch (e) {
-    if (desenhando === alvo) console.warn('book render', e);
+    if (desenhando === alvo) { console.warn('book render', e); setStatus(t('book.error.page')); }
   }
 }
 
-// `onUpdate` é o update() do main.js, injetado como afterRenderPlay(update) já
-// faz (main.js:107): o render não importa o main, ou o ciclo fecha.
+// `onUpdate` is main.js's update(), injected the same way afterRenderPlay(update)
+// already does — the render module never imports main.js, or the cycle would
+// close on itself.
 export function afterRenderBook(onUpdate) {
   const el = document.querySelector('[data-bookscroll]');
   if (el && !el._panWired) {
     el._panWired = true;
     wireGestos(el, {
       getZoom: () => S.livroZoom,
-      setZoom: (z) => { S.livroZoom = z; atualizaPct(); desenhaPagina(); },
+      setZoom: (z) => { S.livroZoom = z; atualizaPct(); descartaAdiantada(); desenhaPagina(); },
       onSwipe: (dir) => { viraPagina(dir).then((n) => { if (n) onUpdate(); }); },
-      ignorar: (alvo) => !!(alvo.closest && alvo.closest('.book-hud')),
     });
   }
   desenhaPagina();
@@ -128,6 +194,7 @@ function atualizaPct() {
 export function bookZoomBy(d) {
   S.livroZoom = clampZoom(S.livroZoom + d);
   atualizaPct();
+  descartaAdiantada();
   desenhaPagina();
 }
 
@@ -147,5 +214,5 @@ export async function sairDoLivro() {
   if (b && b.ultimaPagina !== S.livroPagina) await salvaLivro({ ...b, ultimaPagina: S.livroPagina });
   await fecharLivro(doc);
   doc = null; docId = null; desenhando = null;
-  adiantada = null;
+  descartaAdiantada();
 }
