@@ -100,6 +100,7 @@ export const EN = {
   'books.draft.remaining': '{count} more queued',
   'books.reading': 'Reading the PDF…',
   'books.error.open': "Couldn't open this PDF: {msg}",
+  'books.error.save': "Couldn't save the book: {msg}",
   'books.error.notPdf': '{name} is not a PDF.',
   'books.saved': '{title} is on the shelf.',
   'home.mode.t2': 'Accompaniment',

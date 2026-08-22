@@ -100,10 +100,23 @@ export function update() {
   afterRender();
 }
 
+// Atalho de #home-results: troca só o innerHTML da lista, sem passar por
+// afterRender(). Isso significa que QUALQUER coisa que afterRender() faz
+// especificamente para o conteúdo de #home-results tem que ser repetida aqui
+// à mão — refreshFonteCounts() já é assim por este motivo, e wireBookFileInput()
+// entra pela mesma razão: renderBooksTab() emite um <input id="file-livro"> novo
+// a cada chamada, e um input novo sem listener é um botão "Adicionar livro" que
+// abre o seletor de arquivo e não faz mais nada. Esta função é chamada da busca
+// (toda tecla) e de carregarCapas() (toda capa que chega) — as duas rodam o
+// tempo todo enquanto a aba Livros está aberta. Esqueça de repetir algo daqui
+// da próxima vez e o próximo bug vai ser exatamente este, de novo.
 function updateHomeResults() {
   const el = document.getElementById('home-results');
-  if (el) { el.innerHTML = homeResults(); refreshFonteCounts(); }
-  else update();
+  if (el) {
+    el.innerHTML = homeResults();
+    refreshFonteCounts();
+    if (S.tab === 'books') wireBookFileInput();
+  } else update();
 }
 
 function afterRender() {
@@ -278,6 +291,14 @@ let apagandoFonte = false;
 // duas cópias.
 let duplicandoTom = false;
 
+// Mesma guarda, mesmo motivo: criarLivro grava o PDF inteiro no OPFS num await
+// que pode levar segundos para um songbook grande, e o botão "Salvar livro"
+// continua tocável durante ele. Sem isto, um duplo toque na tela — comum em
+// touchscreen — reentra com S.livroDraft ainda preenchido, e criarLivro cunha
+// um uid() novo e escreve uma SEGUNDA cópia completa do arquivo: duas entradas
+// na estante, o dobro do armazenamento, e nada que diga ao usuário qual é qual.
+let salvandoLivro = false;
+
 const actions = {
   // navegação
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
@@ -321,7 +342,16 @@ const actions = {
   navPick(d) { if (d.id !== S.currentSongId) openSongAction(d.id, S.navCtx?.kind); else actions.closeSongNav(); },
   songPrev() { const s = vizinhaNoContexto(-1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   songNext() { const s = vizinhaNoContexto(1); if (s) openSongAction(s.id, S.navCtx?.kind); },
-  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
+  setTab(d) {
+    // Sai da aba Livros: revoga as capas antes de trocar, e não depois — a
+    // troca de S.tab é o que faz o próximo update() parar de desenhar
+    // .book-card, então os <img> que apontavam para esses object URLs já não
+    // existem no DOM quando revokeObjectURL roda.
+    if (S.tab === 'books' && d.id !== 'books') revogarCapas();
+    S.tab = d.id;
+    S.sortMenuOpen = false;
+    update();
+  },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
       ? S.modeFilter.filter((x) => x !== d.id)
@@ -426,8 +456,10 @@ const actions = {
   },
 
   async saveLivroDraft() {
+    if (salvandoLivro) return;
     const d = S.livroDraft;
     if (!d) return;
+    salvandoLivro = true;
     d.titulo = document.getElementById('f-livro-titulo')?.value.trim() || d.titulo;
     d.autor = document.getElementById('f-livro-autor')?.value.trim() || '';
     try {
@@ -436,7 +468,12 @@ const actions = {
       });
       toast(t('books.saved', { title: livro.titulo }));
     } catch (e) {
-      toast(t('books.error.open', { msg: e.message }));
+      // Erro daqui é do OPFS (escrever o PDF/a capa), não do pdf.js — a esta
+      // altura o arquivo já abriu, é assim que o rascunho existe. books.error.open
+      // culparia a coisa errada.
+      toast(t('books.error.save', { msg: e.message }));
+    } finally {
+      salvandoLivro = false;
     }
     if (d.capaURL) URL.revokeObjectURL(d.capaURL);
     S.livroDraft = null;
@@ -1075,6 +1112,15 @@ async function carregarCapas() {
     if (url) { S.capaURLs[b.id] = url; mudou = true; }
   }
   if (mudou) updateHomeResults();
+}
+
+// O par de carregarCapas: fecha o que ela abriu. S.capaURLs documenta em
+// state.js que as capas são "revogadas ao sair da aba" — sem esta função (e
+// sem ela sendo chamada) o comentário mentia. Chamada de setTab ao sair de
+// Livros; carregarCapas busca de novo, do zero, na próxima vez que a aba abrir.
+function revogarCapas() {
+  for (const url of Object.values(S.capaURLs)) URL.revokeObjectURL(url);
+  S.capaURLs = {};
 }
 
 // A tela de Configurações tem o <input id="file-backup">. Religado a cada render.

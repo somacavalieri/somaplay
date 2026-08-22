@@ -100,6 +100,7 @@ export const PT = {
   'books.draft.remaining': 'mais {count} na fila',
   'books.reading': 'Lendo o PDF…',
   'books.error.open': 'Não deu para abrir este PDF: {msg}',
+  'books.error.save': 'Não deu para salvar o livro: {msg}',
   'books.error.notPdf': '{name} não é um PDF.',
   'books.saved': '{title} entrou na estante.',
   'home.mode.t2': 'Acompanhamento',
