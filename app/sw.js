@@ -43,6 +43,7 @@ const SHELL = [
   './js/render/estilo.js',
   './js/render/popover.js',
   './js/render/fontestrip.js',
+  './js/render/books.js',
   './fonts/sora-latin.woff2',
   './fonts/sora-latin-ext.woff2',
   './fonts/inter-latin.woff2',

@@ -8,10 +8,13 @@ import {
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
   duplicarMusicaNoTom, vizinhaNoContexto,
+  criarLivro, apagarLivro, renomearLivro, livroById,
 } from './state.js';
+import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
 import { renderHome, homeResults } from './render/home.js';
+import { renderBooksTab, capaDoArquivo } from './render/books.js';
 import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
@@ -108,6 +111,7 @@ function afterRender() {
   else stopPlayTimers();
   if (S.screen === 'settings') { fillStorageInfo(); wireBackupInput(); }
   if (S.screen === 'addedit') wireAddEditFiles();
+  if (S.screen === 'home' && S.tab === 'books') { wireBookFileInput(); carregarCapas(); }
 
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
@@ -404,6 +408,39 @@ const actions = {
       const l = listById(S.openListId);
       if (l) { l.musicas = l.musicas.filter((x) => x !== d.id); DB.putList(l); }
     }
+    update();
+  },
+
+  // livros
+  pickLivro() { document.getElementById('file-livro')?.click(); },
+
+  // async e com update() no fim, como saveLivroDraft: sem isso a UI nunca
+  // reflete o cancelamento — o cartão do rascunho ficaria preso na tela
+  // apontando pra um object URL que acabamos de revogar (imagem quebrada), e o
+  // próximo PDF da fila só apareceria no próximo re-render de outro motivo.
+  async cancelLivroDraft() {
+    if (S.livroDraft?.capaURL) URL.revokeObjectURL(S.livroDraft.capaURL);
+    S.livroDraft = null;
+    await proximoLivroDaFila();
+    update();
+  },
+
+  async saveLivroDraft() {
+    const d = S.livroDraft;
+    if (!d) return;
+    d.titulo = document.getElementById('f-livro-titulo')?.value.trim() || d.titulo;
+    d.autor = document.getElementById('f-livro-autor')?.value.trim() || '';
+    try {
+      const livro = await criarLivro(d.file, {
+        titulo: d.titulo, autor: d.autor, paginas: d.paginas, capaBlob: d.capaBlob,
+      });
+      toast(t('books.saved', { title: livro.titulo }));
+    } catch (e) {
+      toast(t('books.error.open', { msg: e.message }));
+    }
+    if (d.capaURL) URL.revokeObjectURL(d.capaURL);
+    S.livroDraft = null;
+    await proximoLivroDaFila();
     update();
   },
 
@@ -989,6 +1026,55 @@ function wireAddEditFiles() {
     fileTarget = null;
     update();
   };
+}
+
+// Um livro por vez: o rascunho aberto é o da frente da fila, e salvar (ou
+// cancelar) puxa o próximo. Importar 5 PDFs de uma vez sem passar por aqui
+// significaria 5 livros com título de arquivo cru e nenhum autor.
+async function proximoLivroDaFila() {
+  const file = (S.livroFila || []).shift();
+  if (!file) return;
+  toast(t('books.reading'));
+  try {
+    const { paginas, capaBlob } = await capaDoArquivo(file);
+    S.livroDraft = {
+      file, paginas, capaBlob,
+      capaURL: capaBlob ? URL.createObjectURL(capaBlob) : null,
+      titulo: tituloDeArquivo(file.name) || file.name,
+      autor: '',
+    };
+  } catch (e) {
+    toast(t('books.error.open', { msg: e.message }));
+    await proximoLivroDaFila();
+  }
+}
+
+export function wireBookFileInput() {
+  const inp = document.getElementById('file-livro');
+  if (!inp || inp._wired) return;
+  inp._wired = true;
+  inp.addEventListener('change', async () => {
+    const files = [...inp.files].filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    const recusados = [...inp.files].filter((f) => !files.includes(f));
+    for (const f of recusados) toast(t('books.error.notPdf', { name: f.name }));
+    inp.value = '';
+    S.livroFila = (S.livroFila || []).concat(files);
+    if (!S.livroDraft) await proximoLivroDaFila();
+    update();
+  });
+}
+
+// As capas entram depois do render, uma vez cada. Sem a guarda do `capaURLs`,
+// cada re-render (digitar na busca, trocar de aba) criaria object URL novo para
+// as mesmas capas e vazaria memória até o app engasgar.
+async function carregarCapas() {
+  let mudou = false;
+  for (const b of S.books) {
+    if (!b.capaBlobId || S.capaURLs[b.id]) continue;
+    const url = await DB.blobURL(b.capaBlobId);
+    if (url) { S.capaURLs[b.id] = url; mudou = true; }
+  }
+  if (mudou) updateHomeResults();
 }
 
 // A tela de Configurações tem o <input id="file-backup">. Religado a cada render.

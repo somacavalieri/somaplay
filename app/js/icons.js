@@ -57,6 +57,8 @@ export const I = {
   // pílula do filtro, que troca de cor quando há fonte ativa.
   tag: (w = 17) => stroke(w, '<path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.6" cy="7.6" r="1.3"/>'),
   disc: (w = 18, on) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="${on ? 'var(--accent)' : 'var(--muted2)'}" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5" fill="${on ? 'var(--accent)' : 'none'}"/></svg>`,
+  chevL: (w = 18) => stroke(w, '<path d="M15 18l-6-6 6-6"/>', 2.2),
+  book: (w = 18) => stroke(w, '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
 };
 
 export const eqBars = () => '<div class="eq"><span></span><span></span><span></span></div>';

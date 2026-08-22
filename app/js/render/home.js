@@ -4,6 +4,7 @@ import { I, esc, eqBars } from '../icons.js';
 import { iniciais } from '../initials.js';
 import { t } from '../i18n.js';
 import { fonteStripHTML, corDaFonte } from './fontestrip.js';
+import { renderBooksTab } from './books.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 
@@ -191,16 +192,21 @@ export function homeResults() {
   if (S.tab === 'artists') return artistCards();
   if (S.tab === 'songs') return songsTab();
   if (S.tab === 'estilos') return estiloCards();
+  if (S.tab === 'books') return renderBooksTab();
   return listsTab();
 }
 
 export function renderHome() {
   const isL = S.tab === 'lists';
+  // A lente de modo não se aplica a Listas nem a Livros — nenhum dos dois é
+  // "cifra, acompanhamento ou karaokê", os dois são materiais de outra ordem.
+  const semLente = S.tab === 'lists' || S.tab === 'books';
   const tabsub = isL
     ? t('home.tabsub.lists', { count: S.lists.length })
-    : (S.tab === 'artists' ? t('home.tabsub.artists', { count: S.artists.length })
-      : S.tab === 'estilos' ? t('home.tabsub.estilos')
-      : t('home.tabsub.songs', { count: S.songs.length }));
+    : S.tab === 'books' ? t('home.tabsub.books', { count: S.books.length })
+      : (S.tab === 'artists' ? t('home.tabsub.artists', { count: S.artists.length })
+        : S.tab === 'estilos' ? t('home.tabsub.estilos')
+          : t('home.tabsub.songs', { count: S.songs.length }));
   const chips = ['T2', 'T3'].map((m) => {
     const on = S.modeFilter.includes(m);
     const cls = m === 'T2' ? 't2' : 't3';
@@ -222,10 +228,11 @@ export function renderHome() {
         <button class="${S.tab === 'songs' ? 'on' : ''}" data-a="setTab" data-id="songs">${I.music()}${t('home.tabs.songs')}</button>
         <button class="${S.tab === 'estilos' ? 'on' : ''}" data-a="setTab" data-id="estilos">${I.disc(18)}${t('home.tabs.styles')}</button>
         <button class="${S.tab === 'lists' ? 'on' : ''}" data-a="setTab" data-id="lists">${I.listIcon()}${t('home.tabs.lists')}</button>
+        <button class="${S.tab === 'books' ? 'on' : ''}" data-a="setTab" data-id="books">${I.book(18)}${t('home.tabs.books')}</button>
       </div>
       <div class="tabsub">${tabsub}</div>
-      ${fonteStripHTML(isL)}
-      <div class="lens ${isL ? 'off' : ''}" title="${isL ? t('home.lens.disabledHint') : t('home.lens.filterHint')}">
+      ${fonteStripHTML(semLente)}
+      <div class="lens ${semLente ? 'off' : ''}" title="${semLente ? t('home.lens.disabledHint') : t('home.lens.filterHint')}">
         ${I.funnel()}${chips}
       </div>
     </div>

@@ -41,6 +41,11 @@ export const S = {
   // Vive só na sessão, como exportFontes: uma seleção que sobrevive ao fechar o
   // app vira um arquivo misteriosamente incompleto no próximo ensaio.
   shareSheet: null,        // { titulo, songIds:Set, listIds:Set|null, opcao, tamanhos }
+  // Rascunho de importação de livro, pelo mesmo motivo do shareSheet: uma
+  // seleção que sobrevive ao fechar o app vira mistério no próximo ensaio.
+  livroDraft: null,        // { file, titulo, autor, paginas, capaBlob, capaURL } | null
+  livroFila: [],           // PDFs escolhidos aguardando virar rascunho
+  capaURLs: {},            // id do livro → object URL da capa (revogado ao sair da aba)
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
