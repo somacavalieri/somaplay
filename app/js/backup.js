@@ -155,9 +155,9 @@ export async function lerManifest(file) {
 // Devolve NOMES DE CHAVE, não texto traduzido: assim a função continua pura e o
 // teste não depende da tabela de i18n.
 //
-// Recebe o MANIFEST inteiro, e não só `partes`, porque os dois eixos que
-// somem num "substituir tudo" moram em lugares diferentes do arquivo: as partes
-// no campo `partes`, as listas na presença de `lists`.
+// Recebe o MANIFEST inteiro, e não só `partes`, porque os eixos que somem num
+// "substituir tudo" moram em lugares diferentes do arquivo: cifra/áudio/pessoal
+// no campo `partes`, listas e livros na presença de `lists` e `books`.
 //
 // `pessoal` avisa. A regra antiga — "perder as favoritas num substituir tudo é o
 // que substituir sempre fez" — era verdade até esta branch: ANTES dela todo
@@ -171,7 +171,7 @@ export async function lerManifest(file) {
 // normalizaPartes o lê como completo — a mesma leitura de importLibrary. A
 // guarda mora aqui, e não em quem chama, para a função ser total: ela roda ANTES
 // do try do diálogo.
-export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false, temLivros = false } = {}) {
+export function avisosDeSubstituir({ partes, lists, books } = {}, { temListas = false, temLivros = false } = {}) {
   const ps = normalizaPartes(partes);
   const out = [];
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
@@ -180,12 +180,23 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false, 
   // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
   // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
   if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
-  // Mesma regra dos dois eixos acima: `livros` é campo DECLARADO (como cifra,
-  // áudio, pessoal), mas só vale avisar quando o aparelho tem o que perder —
-  // um aparelho sem livro nenhum não é avisado de nada. `DB.wipe()` apaga a
-  // estante inteira e os blobs dos PDFs no modo substituir, e sem este aviso
-  // esse era o único eixo dos quatro sem sinal nenhum antes do "Substituir".
-  if (!ps.includes('livros') && temLivros) out.push('msg.backup.replaceNoBooks');
+  // `livros` olha o CONTEÚDO (`books`), não a declaração (`partes`) — ao
+  // contrário de cifra/áudio/pessoal, e pelo MESMO motivo de `lists` acima.
+  // cifra/áudio/pessoal podem confiar em `partes` porque as três existiam em
+  // todo .somaplay já escrito: um arquivo antigo sem o campo `partes` volta de
+  // normalizaPartes() como "declara as três", e essa leitura sempre foi
+  // verdade para elas. `livros` é conceito novo — todo .somaplay gravado antes
+  // desta tarefa não tem a MENOR ideia do que é um livro, e ainda assim
+  // normalizaPartes(undefined) devolve PARTES_TODAS, que agora INCLUI
+  // 'livros'. Testar `ps.includes('livros')` nesse arquivo dá `true` — a
+  // leitura "arquivo completo" o lê como se declarasse livro — e um "Substituir
+  // tudo" com exatamente esse arquivo (todo backup existente até ontem) apagaria
+  // a estante inteira sem aviso nenhum, restaurando zero livros porque um
+  // arquivo desses estruturalmente não pode carregar nenhum. Olhar `books` em
+  // vez de `partes` é o que faz "o arquivo nunca falou de livro" e "o arquivo
+  // fala de livro mas não trouxe nenhum" avisarem igual, que é a distinção que
+  // `lists` já resolve há mais tempo.
+  if (!(Array.isArray(books) && books.length) && temLivros) out.push('msg.backup.replaceNoBooks');
   return out;
 }
 

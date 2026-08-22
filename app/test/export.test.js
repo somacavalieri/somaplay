@@ -198,21 +198,34 @@ test('arquivo sem lista NÃO avisa se o aparelho também não tem', () => {
   assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }), []);
 });
 
-// Mesmo eixo dos dois de cima, para `livros`: DB.wipe() apaga a estante e os
-// blobs dos PDFs no modo substituir, e sem este aviso era o único dos quatro
-// campos sem sinal nenhum antes do "Substituir tudo".
-test('arquivo sem livro avisa quando o aparelho tem livros', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }),
+// `livros` olha CONTEÚDO (`books`), não declaração (`partes`) — ao contrário
+// de cifra/áudio/pessoal, e pelo MESMO motivo de `lists`. DB.wipe() apaga a
+// estante e os blobs dos PDFs no modo substituir; sem o aviso certo esse era
+// o único dos quatro eixos sem sinal nenhum antes do "Substituir tudo".
+test('arquivo sem livro (conteúdo vazio) avisa quando o aparelho tem livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }], books: [] }, { temListas: true, temLivros: true }),
     ['msg.backup.replaceNoBooks']);
 });
 
-test('arquivo COM livros (partes) não gera o aviso de livros', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
+// A REGRESSÃO que motivou trocar de eixo: um .somaplay gravado ANTES desta
+// tarefa não tem `partes` nem `books` — nenhum dos dois. normalizaPartes(undefined)
+// devolve PARTES_TODAS, que agora INCLUI 'livros', então testar a declaração
+// (`ps.includes('livros')`) leria esse arquivo como "fala de livro" e nunca
+// avisaria — e é exatamente esse arquivo, o único tipo que existe na prática
+// hoje, que "Substituir tudo" apagaria a estante inteira sem aviso nenhum.
+test('arquivo ANTIGO (sem partes, sem books) avisa quando o aparelho tem livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }),
+    ['msg.backup.replaceNoBooks']);
+});
+
+test('arquivo COM livros (conteúdo) não gera o aviso de livros, mesmo que `partes` não declare', () => {
+  // partes deliberadamente SEM 'livros': prova que quem decide é o conteúdo.
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }], books: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
 });
 
 // Não há o que perder: um aparelho sem livro nenhum não é avisado de nada.
 test('arquivo sem livro NÃO avisa se o aparelho também não tem', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [] }, { temListas: false, temLivros: false }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [], books: [] }, { temListas: false, temLivros: false }), []);
   assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [] }), []);
 });
 
