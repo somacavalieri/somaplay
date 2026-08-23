@@ -124,6 +124,15 @@ export async function fillStorageInfo() {
   }
 }
 
+// Decide se o botão Exportar tem o que fazer (F2 do review final). `n` já
+// chega filtrado por fonte — pode ser 0 numa biblioteca sem música nenhuma.
+// Um aparelho que só tem livros não tem cifra/áudio para desmarcar, então
+// `temLivros` sozinho também libera o botão; o caso antigo (só música,
+// `temConteudo` decide) continua igual. Pura, para testar sem DOM.
+export function podeExportarBackup({ n, temConteudo, temLivros }) {
+  return (n > 0 && temConteudo) || !!temLivros;
+}
+
 // O bloco Exportar. As linhas vêm de fontesDaBiblioteca — mais usadas primeiro,
 // "Sem fonte" por último. O data-id carrega a GRAFIA SALVA da fonte, nunca
 // traduzida: ela é conteúdo do usuário. Só o balde usa o sentinela, com o
@@ -180,14 +189,20 @@ function blocoExportar() {
 
   // Cifras e Áudio ambas desmarcadas geram um arquivo sem conteúdo nenhum. É
   // acidente, não caso de uso — o botão trava, pela mesma regra de "nenhuma
-  // fonte marcada".
+  // fonte marcada". Mas um aparelho que só tem livros (F2 do review final) não
+  // tem cifra nem áudio para desmarcar, e mesmo assim tem o que exportar: as
+  // duas caixas não decidem mais sozinhas se o botão trava.
   const temConteudo = S.exportPartes.some((p) => p === 'cifra' || p === 'audio');
+  const temLivros = S.books.length > 0;
+  const podeExportar = podeExportarBackup({ n, temConteudo, temLivros });
 
-  const acao = !temConteudo
+  const acao = !temConteudo && !temLivros
     ? t('settings.export.nothingPart')
     : n
       ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
-      : t('settings.export.nothing');
+      : temLivros
+        ? t('settings.export.action', { count: S.books.length, song: t(S.books.length === 1 ? 'common.book' : 'common.books') })
+        : t('settings.export.nothing');
 
   return `<div class="setting-block" style="padding:20px;margin-top:6px">
     <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
@@ -195,7 +210,7 @@ function blocoExportar() {
     ${linhas}
     <div style="color:var(--muted);font-size:12px;margin:16px 2px 6px;text-transform:uppercase;letter-spacing:.04em">${t('settings.export.what')}</div>
     ${caixas}
-    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n && temConteudo ? '' : 'disabled'}>${I.download()}${acao}</button>
+    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${podeExportar ? '' : 'disabled'}>${I.download()}${acao}</button>
   </div>`;
 }
 

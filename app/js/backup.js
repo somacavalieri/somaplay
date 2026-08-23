@@ -6,7 +6,7 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
-import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
 import { blobIdsDosLivros } from './books.js';
 
 const MAGIC = 'SOMAPLAY1\n';
@@ -28,6 +28,20 @@ export function recorteParaExport(estado, sel) {
   const artistsOut = songIds ? artists.filter((a) => comMusica.has(a.id)) : artists;
   const listsOut = listIds ? lists.filter((l) => listIds.has(l.id)) : lists;
   return { artists: artistsOut, songs: songsOut, lists: listsOut };
+}
+
+// Decide se o export de Settings é um backup COMPLETO — nada restringido em
+// eixo nenhum: todas as fontes, as três partes de música, e as listas — ou um
+// RECORTE (uma fonte escolhida, uma caixa desmarcada, listas fora), feito para
+// compartilhar com alguém. Só o completo carrega a estante de livros junto
+// (F1 do review final): `exportPartes` nunca contém 'livros' — Settings não
+// tem caixa para ele — então 'livros' só é acrescentado aqui, no caminho sem
+// restrição nenhuma. `fontes` é `S.exportFontes`: `null` é "todas".
+export function partesDoExport({ fontes, exportListas, exportPartes }) {
+  const completo = fontes === null
+    && !!exportListas
+    && PARTES_DE_MUSICA.every((p) => exportPartes.includes(p));
+  return completo ? [...exportPartes, 'livros'] : exportPartes;
 }
 
 export function stampDeHoje(d = new Date()) {

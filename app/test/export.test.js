@@ -10,8 +10,8 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir } from '../js/backup.js';
-import { PARTES_TODAS } from '../js/partes.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, partesDoExport } from '../js/backup.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
 // mesmo se os artistas fossem filtrados, e a asserção que mais importa não
@@ -261,4 +261,41 @@ test('lists malformado conta como "não traz lista"', () => {
 test('sem argumento nenhum a função é total', () => {
   // Roda ANTES do try do diálogo: quebrar aqui deixaria o import sem caminho.
   assert.deepEqual(avisosDeSubstituir(), []);
+});
+
+// --- partesDoExport (F1 do review final) ------------------------------------
+// A regra inteira é uma linha: 'livros' só entra em `partes` quando o export
+// não restringiu NADA — nem fonte, nem parte de música, nem listas. Qualquer
+// restrição é um recorte para compartilhar, e um recorte não pode arrastar a
+// estante (até centenas de MB) para dentro do arquivo.
+test('backup sem restrição nenhuma acrescenta livros às partes', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.deepEqual(partes, [...PARTES_DE_MUSICA, 'livros']);
+});
+
+test('uma fonte escolhida é um recorte: livros fica de fora', () => {
+  // O cenário do achado: desmarcar Áudio E escolher só a fonte VJ.
+  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: ['cifra'] });
+  assert.deepEqual(partes, ['cifra']);
+  assert.ok(!partes.includes('livros'));
+});
+
+test('uma fonte escolhida, mesmo com as três partes marcadas, ainda é recorte', () => {
+  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('uma caixa desmarcada, mesmo com todas as fontes, é recorte', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: ['cifra', 'audio'] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('listas fora do export também tira o backup de "completo"', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: false, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('fontes como array vazio (nenhuma fonte marcada) não é "todas": não é completo', () => {
+  const partes = partesDoExport({ fontes: [], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
 });

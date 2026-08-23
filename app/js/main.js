@@ -26,8 +26,8 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir } from './backup.js';
-import { PARTES_TODAS } from './partes.js';
+import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir, partesDoExport } from './backup.js';
+import { PARTES_DE_MUSICA } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -899,13 +899,14 @@ const actions = {
     S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
   },
-  // A remarcação reconstrói a partir de PARTES_TODAS para a ordem do array ser
-  // sempre a canônica — assim o `partes` gravado no arquivo não depende da
-  // ordem em que as caixas foram clicadas.
+  // A remarcação reconstrói a partir de PARTES_DE_MUSICA para a ordem do array
+  // ser sempre a canônica — assim o `partes` gravado no arquivo não depende da
+  // ordem em que as caixas foram clicadas. 'livros' nunca passa por aqui:
+  // Settings não tem caixa para ele (F1 do review final) — ver exportBackup.
   toggleExportParte(d) {
     S.exportPartes = S.exportPartes.includes(d.id)
       ? S.exportPartes.filter((p) => p !== d.id)
-      : [...PARTES_TODAS.filter((p) => p === d.id || S.exportPartes.includes(p))];
+      : [...PARTES_DE_MUSICA.filter((p) => p === d.id || S.exportPartes.includes(p))];
     update();
   },
   toggleExportListas() { S.exportListas = !S.exportListas; update(); },
@@ -945,7 +946,9 @@ const actions = {
   },
   async exportBackup() {
     const fontes = S.exportFontes;
-    const partes = S.exportPartes;
+    // partesDoExport (backup.js) decide se isto é um backup completo — e só o
+    // completo carrega a estante de livros junto (F1 do review final).
+    const partes = partesDoExport({ fontes, exportListas: S.exportListas, exportPartes: S.exportPartes });
     const sel = {
       songIds: fontes?.length ? songIdsDasFontes(S.songs, fontes) : null,
       listIds: S.exportListas ? null : new Set(),

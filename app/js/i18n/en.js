@@ -8,6 +8,8 @@ export const EN = {
   'common.off': 'Off',
   'common.song': 'song',
   'common.songs': 'songs',
+  'common.book': 'book',
+  'common.books': 'books',
   'common.favorite': 'Favorite',
   'common.create': 'Create',
   'common.system': 'System',

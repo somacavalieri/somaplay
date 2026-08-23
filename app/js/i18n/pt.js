@@ -8,6 +8,8 @@ export const PT = {
   'common.off': 'Desligado',
   'common.song': 'música',
   'common.songs': 'músicas',
+  'common.book': 'livro',
+  'common.books': 'livros',
   'common.favorite': 'Favoritar',
   'common.create': 'Criar',
   'common.system': 'Sistema',
