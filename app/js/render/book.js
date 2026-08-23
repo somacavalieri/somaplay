@@ -46,7 +46,10 @@ function menuHTML(b) {
 
 export function renderBook() {
   const b = livroById(S.livroId);
-  if (!b) return '<div class="screen"></div>';
+  // Same pattern as every sibling screen (artist/list/estilo/play): a missing
+  // record navigates back out instead of drawing an empty screen with no
+  // topbar, no back button and no way off it (F6 do review final).
+  if (!b) { S.screen = 'home'; S.tab = 'books'; return '<div></div>'; }
   const n = S.livroPagina;
   return `<div class="screen book-screen">
     <div class="topbar">
@@ -115,10 +118,23 @@ function gradeHTML(b) {
 // only when the main thread has slack, so it never competes for a frame with
 // a page turn or the pan/zoom gesture handling. Falls back to a short timeout
 // where requestIdleCallback doesn't exist (older Safari).
+//
+// `agendada` makes this idempotent — a second call while one is already
+// pending is a no-op instead of a second, independent chain. That matters
+// most for desenhaMiniaturas()'s own retry branch below (doc still opening,
+// or a book whose document can never open): that branch schedules a retry
+// WITHOUT setting `miniaturasEmExecucao` — there is no batch in flight to
+// guard — so before this guard existed, every scroll event during the wait
+// seeded its own independent idle-polling chain, and a fling could spawn
+// dozens of them for the exact same zero work (F11 do review final).
+let agendada = false;
 function agendaMiniaturas(atrasoMs) {
+  if (agendada) return;
+  agendada = true;
+  const rodar = () => { agendada = false; desenhaMiniaturas(); };
   const ric = typeof requestIdleCallback === 'function' ? requestIdleCallback : null;
-  if (ric) ric(() => desenhaMiniaturas(), { timeout: 300 });
-  else setTimeout(() => desenhaMiniaturas(), atrasoMs || 60);
+  if (ric) ric(rodar, { timeout: 300 });
+  else setTimeout(rodar, atrasoMs || 60);
 }
 
 // A placeholder counts as "on screen" with a small margin either side, so a
