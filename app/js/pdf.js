@@ -59,6 +59,18 @@ function carregaPdfjs() {
         abort() { this.file = null; }
       };
       return pdfjs;
+    }).catch((err) => {
+      // Reachable, not theoretical: sw.js deliberately lets the VENDOR
+      // precache fail (a missing .wasm must not break the whole app offline),
+      // so a device can install with pdf.mjs uncached. Without clearing the
+      // cache here, that first failed import() poisons `pdfjsPromise`
+      // forever — every later abrirLivro()/versaoPdfJs() for the rest of the
+      // page's lifetime rejects with the SAME stale error, even after the
+      // device comes back online and the file becomes fetchable. Clearing it
+      // on rejection is what lets the very next call retry the import
+      // instead of replaying history.
+      pdfjsPromise = null;
+      throw err;
     });
   }
   return pdfjsPromise;
