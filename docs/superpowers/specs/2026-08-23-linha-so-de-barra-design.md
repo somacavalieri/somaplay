@@ -1,7 +1,7 @@
 # Linha só de barra de compasso é linha de acordes
 
 **Data:** 2026-08-23
-**Estado:** abordagem aprovada; spec em revisão
+**Estado:** aprovado, a implementar
 
 ## O problema
 
@@ -169,8 +169,35 @@ Em `app/test/cifraparse.test.js` (pareamento) e `app/test/cifrawrap.test.js`
 5. linha de letra que é só `...` ou `---` seguida de outra letra → não pareia;
 6. `isChordLine` continua reprovando a linha de barra pura — a função não mudou.
 
-## Versão
+## Versão e branch base
 
 Mexe em `app/js/chords.js`, que está no `SHELL`. Pela regra do projeto é no
-mínimo **PATCH**: `0.15.0` → `0.15.1`, nos dois lugares (`app/js/version.js` e
-linha 2 de `app/sw.js`), com `app/test/version.test.js` guardando a sincronia.
+mínimo **PATCH**.
+
+O número depende de onde a correção entra, e nenhuma branch de feature chegou na
+`main` ainda:
+
+| branch | versão |
+|---|---|
+| `main` | 0.13.0 |
+| `feat/transposicao` | 0.15.0 |
+| `feat/anotacoes` | 0.16.0 |
+| `feat/livros-pdf` | **0.17.0** |
+
+**Decisão: ramificar de `feat/livros-pdf`** — `0.17.0` → **`0.17.1`**, nos dois
+lugares (`app/js/version.js` e linha 2 de `app/sw.js`), com
+`app/test/version.test.js` guardando a sincronia.
+
+O custo dessa escolha, registrado de propósito: a correção passa a **depender da
+feature de livros PDF** e só chega na `main` quando aquela chegar. Foi decisão do
+usuário, contra a alternativa de sair da `main` como correção independente.
+
+**A branch precisa ser um worktree**, não um `checkout` na árvore atual:
+`README.md` e `README.pt-BR.md` têm modificação pendente em
+`feat/transposicao` e divergem entre as duas branches, então trocar de branch
+aqui conflita. O worktree também preserva o acervo em `chords/` e os módulos em
+`scripts/new_songbook/books/` — ambos ignorados pelo git, e ambos com trabalho de
+extração em andamento.
+
+A spec nasceu commitada em `feat/transposicao` (`12d1df3`) e precisa ser levada
+para a branch nova.
