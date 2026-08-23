@@ -25,7 +25,6 @@ export const S = {
   artistId: null,
   estiloId: null,          // estilo aberto (o nome do estilo é a chave)
   openListId: null,        // id da lista aberta ('__fav' = Favoritas)
-  livroId: null,           // livro aberto (tela book)
   listMenuOpen: false,
   creatingList: false,
   renamingList: false,
@@ -633,25 +632,41 @@ export function livroById(id) { return S.books.find((b) => b.id === id) || null;
 
 // `capaBlob` e `paginas` chegam prontos de quem já abriu o PDF: state.js não
 // conhece pdf.js, e não é aqui que essa dependência entra.
+//
+// Os blobs são escritos ANTES do registro (`DB.putBook`), e se o registro
+// falhar — cota esgotada, ou a conexão fechada pelo `onversionchange` de
+// db.js quando outra aba faz upgrade — os bytes já gravados (até 301 MB)
+// ficariam no disco sem nada apontando para eles: não existe varredura de
+// blob órfão (ver o comentário de apagarLivro). Uma retentativa mintaria um
+// `blobId` novo e escreveria outra cópia inteira. Por isso o corpo inteiro
+// roda num try, e qualquer falha apaga o que já foi escrito antes de
+// relançar — mesma ordem de apagarLivro (capa primeiro, PDF por último),
+// ainda que aqui nada esteja referenciado por um registro publicado.
 export async function criarLivro(file, { titulo, autor, paginas, capaBlob }) {
   const id = uid();
   const blobId = uid();
-  await DB.saveBlob(blobId, file);
   let capaBlobId = null;
-  if (capaBlob) { capaBlobId = uid(); await DB.saveBlob(capaBlobId, capaBlob); }
-  const livro = {
-    id, blobId, capaBlobId,
-    titulo: (titulo || tituloDeArquivo(file.name) || file.name),
-    autor: autor || '',
-    fileName: file.name || '',
-    paginas: paginas || 0,
-    bytes: file.size || 0,
-    ultimaPagina: 1,
-    createdAt: Date.now(),
-  };
-  await DB.putBook(livro);
-  S.books.unshift(livro);
-  return livro;
+  try {
+    await DB.saveBlob(blobId, file);
+    if (capaBlob) { capaBlobId = uid(); await DB.saveBlob(capaBlobId, capaBlob); }
+    const livro = {
+      id, blobId, capaBlobId,
+      titulo: (titulo || tituloDeArquivo(file.name) || file.name),
+      autor: autor || '',
+      fileName: file.name || '',
+      paginas: paginas || 0,
+      bytes: file.size || 0,
+      ultimaPagina: 1,
+      createdAt: Date.now(),
+    };
+    await DB.putBook(livro);
+    S.books.unshift(livro);
+    return livro;
+  } catch (e) {
+    if (capaBlobId) { try { await DB.deleteBlob(capaBlobId); } catch (_) { /* melhor esforço */ } }
+    try { await DB.deleteBlob(blobId); } catch (_) { /* melhor esforço */ }
+    throw e;
+  }
 }
 
 export async function salvaLivro(livro) {

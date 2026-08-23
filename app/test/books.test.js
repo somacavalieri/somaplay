@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tituloDeArquivo, blobIdsDosLivros, fundeLivros } from '../js/books.js';
 import { mergePlan } from '../js/merge.js';
+import { DB } from '../js/db.js';
+import { criarLivro } from '../js/state.js';
 
 test('tira a extensão e troca separador por espaço', () => {
   assert.equal(tituloDeArquivo('O-Melhor-de-Gonzaguinha.pdf'), 'O Melhor de Gonzaguinha');
@@ -90,4 +92,65 @@ test('mergePlan de arquivo antigo (sem books) não mexe na estante', () => {
   const atual = { artists: [], songs: [], lists: [], books: [{ id: 'l1', titulo: 'Meu' }] };
   const plano = mergePlan(atual, { artists: [], songs: [], lists: [] });
   assert.deepEqual(plano.books, atual.books);
+});
+
+// --- criarLivro: uma falha no registro não pode deixar os blobs órfãos -----
+// (F3 do review final) DB é um objeto simples exportado por db.js; os testes
+// trocam seus métodos por dublês e devolvem o original no finally, sem tocar
+// em IndexedDB/OPFS de verdade.
+test('putBook rejeitando apaga o PDF e a capa que já tinham sido escritos', async () => {
+  const saved = [];
+  const deleted = [];
+  const orig = { saveBlob: DB.saveBlob, putBook: DB.putBook, deleteBlob: DB.deleteBlob };
+  DB.saveBlob = async (id) => { saved.push(id); return { id, store: 'opfs' }; };
+  DB.deleteBlob = async (id) => { deleted.push(id); };
+  DB.putBook = async () => { throw new Error('quota exceeded'); };
+  try {
+    await assert.rejects(
+      () => criarLivro({ name: 'x.pdf', size: 301_000_000 }, { paginas: 10, capaBlob: { size: 9 } }),
+      /quota exceeded/,
+    );
+    assert.equal(saved.length, 2, 'o PDF e a capa foram escritos antes do registro falhar');
+    assert.deepEqual(deleted.sort(), saved.slice().sort(), 'os dois blobs escritos foram apagados');
+  } finally {
+    Object.assign(DB, orig);
+  }
+});
+
+test('putBook rejeitando sem capa apaga só o blob do PDF', async () => {
+  const saved = [];
+  const deleted = [];
+  const orig = { saveBlob: DB.saveBlob, putBook: DB.putBook, deleteBlob: DB.deleteBlob };
+  DB.saveBlob = async (id) => { saved.push(id); return { id, store: 'opfs' }; };
+  DB.deleteBlob = async (id) => { deleted.push(id); };
+  DB.putBook = async () => { throw new Error('connection closed'); };
+  try {
+    await assert.rejects(
+      () => criarLivro({ name: 'x.pdf', size: 1000 }, { paginas: 1 }),
+      /connection closed/,
+    );
+    assert.equal(saved.length, 1);
+    assert.deepEqual(deleted, saved);
+  } finally {
+    Object.assign(DB, orig);
+  }
+});
+
+test('saveBlob do PDF rejeitando não deixa nada para apagar', async () => {
+  const deleted = [];
+  const orig = { saveBlob: DB.saveBlob, deleteBlob: DB.deleteBlob };
+  DB.saveBlob = async () => { throw new Error('quota exceeded'); };
+  DB.deleteBlob = async (id) => { deleted.push(id); };
+  try {
+    await assert.rejects(
+      () => criarLivro({ name: 'x.pdf', size: 1000 }, { paginas: 1, capaBlob: { size: 9 } }),
+      /quota exceeded/,
+    );
+    // A capa nunca chega a ser escrita, e o PDF que falhou não precisa de
+    // "apagar" (nada foi persistido) — mas a chamada de melhor esforço para o
+    // blobId do PDF é inofensiva mesmo que o id nunca tenha existido.
+    assert.ok(deleted.length <= 1);
+  } finally {
+    Object.assign(DB, orig);
+  }
 });
