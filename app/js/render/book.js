@@ -388,7 +388,7 @@ export function afterRenderBook(onUpdate) {
         const b = livroById(S.livroId);
         if (!b) return;
         const n = Math.max(1, Math.min(b.paginas, +goto.value || 1));
-        S.livroPagina = n; S.livroGrade = false; onUpdate();
+        S.livroPagina = n; S.livroGrade = false; marcaPaginaMudou(); onUpdate();
       };
       goto.addEventListener('change', commitGoto);
       goto.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitGoto(); });
@@ -409,18 +409,52 @@ export function bookZoomBy(d) {
   desenhaPagina();
 }
 
-// Page turns are persisted, but lazily: writing to IndexedDB on every turn of a
-// 401-page book is a write per flick of the finger.
+// Page turns are persisted, but lazily: a debounced write, not one write to
+// IndexedDB per flick of the finger through a 401-page book — the same
+// pattern saveSettingsDebounced (main.js) already uses for the zoom/speed/
+// volume sliders. `flushLivroPagina`, called from main.js's visibilitychange
+// listener, is what makes the debounce safe: the Home button, an app switch
+// or the tab being evicted can all happen before an 800 ms timer fires, and
+// without a flush on hide that is exactly the gap that would make the field
+// the spec calls "small and decisive" (F4 do review final) decorative instead.
+let _pageSaveTimer = null;
+function persistePaginaAgora() {
+  clearTimeout(_pageSaveTimer);
+  _pageSaveTimer = null;
+  const b = livroById(S.livroId);
+  if (b && b.ultimaPagina !== S.livroPagina) salvaLivro({ ...b, ultimaPagina: S.livroPagina });
+}
+function agendaSalvaPagina() {
+  clearTimeout(_pageSaveTimer);
+  _pageSaveTimer = setTimeout(persistePaginaAgora, 800);
+}
+// Called only while the book screen is showing: a flush after the reader has
+// already left (S.screen no longer 'book') would be racing sairDoLivro(),
+// which persists synchronously and then tears the book down.
+export function flushLivroPagina() {
+  if (S.screen === 'book') persistePaginaAgora();
+}
+
 export async function viraPagina(dir) {
   const b = livroById(S.livroId);
   if (!b) return;
   const n = Math.max(1, Math.min(b.paginas, S.livroPagina + dir));
   if (n === S.livroPagina) return;
   S.livroPagina = n;
+  agendaSalvaPagina();
   return n;
 }
 
+// Jumping from the thumbnail grid or the "go to page" field also moves the
+// reading position — same debounce, so a fling through the grid does not
+// write once per cell either.
+export function marcaPaginaMudou() {
+  agendaSalvaPagina();
+}
+
 export async function sairDoLivro() {
+  clearTimeout(_pageSaveTimer);
+  _pageSaveTimer = null;
   const b = livroById(S.livroId);
   if (b && b.ultimaPagina !== S.livroPagina) await salvaLivro({ ...b, ultimaPagina: S.livroPagina });
   await fecharLivro(doc);

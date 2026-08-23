@@ -10,7 +10,7 @@ import {
   duplicarMusicaNoTom, vizinhaNoContexto,
   criarLivro, apagarLivro, renomearLivro, livroById,
 } from './state.js';
-import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy } from './render/book.js';
+import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy, marcaPaginaMudou, flushLivroPagina } from './render/book.js';
 import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -506,7 +506,7 @@ const actions = {
   bookZoomIn() { bookZoomBy(0.2); },
   bookZoomOut() { bookZoomBy(-0.2); },
   toggleBookGrid() { S.livroGrade = !S.livroGrade; update(); },
-  irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; update(); },
+  irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; marcaPaginaMudou(); update(); },
 
   // menu do livro: renomear, exportar, apagar
   toggleBookMenu() { S.livroMenu = !S.livroMenu; update(); },
@@ -1403,6 +1403,11 @@ async function manageWakeLock() {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') manageWakeLock();
+  // Home button, app switch or the tab being evicted all fire this with
+  // 'hidden' first — the one moment the debounced page-position write (F4 do
+  // review final) has to have already landed, because there may be no next
+  // event on this page to land it later.
+  else flushLivroPagina();
 });
 
 // ---------- boot ----------
