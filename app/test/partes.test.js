@@ -5,7 +5,7 @@
 // usuário já usa — não regrediu quando as partes entraram.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { podaPorPartes, fundeMusica, normalizaPartes, PARTES_TODAS, PARTES_DE_MUSICA } from '../js/partes.js';
+import { podaPorPartes, fundeMusica, normalizaPartes, PARTES_TODAS, PARTES_DE_MUSICA, CAMPOS } from '../js/partes.js';
 import { blobIdsDasMusicas } from '../js/state.js';
 
 const musica = () => ({
@@ -281,25 +281,79 @@ test('o registro devolvido compartilha as estruturas aninhadas com as entradas',
   assert.equal(out.cifra, atual.cifra);    // parte não declarada: fica a do aparelho
 });
 
+test('anotacoes viaja quando declarada e some quando nao', () => {
+  const s = { id: 's1', artistId: 'a1', title: 'X', tom: 'G', anotacoes: '<p>oi</p>' };
+  assert.equal(podaPorPartes([s], ['cifra'])[0].anotacoes, undefined);
+  assert.equal(podaPorPartes([s], ['anotacoes'])[0].anotacoes, '<p>oi</p>');
+});
+
+test('cifra sozinha nao encosta na anotacao que ja existe', () => {
+  const atual = { id: 's1', artistId: 'a1', title: 'X', anotacoes: '<p>do aluno</p>' };
+  const r = fundeMusica(atual, { id: 's1', artistId: 'a1', title: 'X', tom: 'A' }, ['cifra']);
+  assert.equal(r.anotacoes, '<p>do aluno</p>');
+  assert.equal(r.tom, 'A');
+});
+
+test('anotacoes declarada sobrescreve', () => {
+  const atual = { id: 's1', artistId: 'a1', title: 'X', anotacoes: '<p>do aluno</p>' };
+  const r = fundeMusica(atual, { id: 's1', artistId: 'a1', title: 'X', anotacoes: '<p>do professor</p>' }, ['anotacoes']);
+  assert.equal(r.anotacoes, '<p>do professor</p>');
+});
+
+test('backup antigo, com as tres partes de entao, volta INTEIRO', () => {
+  // O caminho rapido do backup completo promete devolver ate um campo que este
+  // modulo nunca ouviu falar. Somar uma parte a PARTES_TODAS quebraria isso em
+  // silencio, e so na direcao de entrada.
+  const doArquivo = { id: 's1', artistId: 'a1', title: 'X', campoDesconhecido: 42 };
+  const r = fundeMusica(null, doArquivo, ['cifra', 'audio', 'pessoal'], 1);
+  assert.equal(r.campoDesconhecido, 42);
+});
+
+test('backup novo, com as quatro partes, tambem volta inteiro', () => {
+  const doArquivo = { id: 's1', artistId: 'a1', title: 'X', campoDesconhecido: 42 };
+  const r = fundeMusica(null, doArquivo, ['cifra', 'audio', 'pessoal', 'anotacoes'], 1);
+  assert.equal(r.campoDesconhecido, 42);
+});
+
 // --- livros: um quarto eixo que não é parte de música ----------------------
 // A armadilha inteira desta tarefa: `todasAsPartes` tem que continuar medindo
 // PARTES_DE_MUSICA, e não PARTES_TODAS, ou todo .somaplay já gravado no disco
 // do usuário (que declara três partes, não quatro) cai na cópia campo a campo
 // e perde, EM SILÊNCIO e NA VOLTA, todo campo fora de CAMPOS.
 test('livros é uma parte declarável, mas não é parte de música', () => {
-  assert.deepEqual(PARTES_DE_MUSICA, ['cifra', 'audio', 'pessoal']);
+  // Toda parte de MÚSICA tem entrada em CAMPOS; livro não tem, porque não é
+  // campo de música — é coleção de topo, como as listas.
+  for (const p of PARTES_DE_MUSICA) assert.ok(CAMPOS[p], `${p} sem entrada em CAMPOS`);
   assert.ok(PARTES_TODAS.includes('livros'));
+  assert.equal(CAMPOS.livros, undefined);
 });
 
 test('REGRESSÃO: backup gravado antes dos livros restaura o registro INTACTO', () => {
-  // O .somaplay que já está no disco do usuário declara três partes, não quatro.
-  // Se `todasAsPartes` passar a exigir as quatro, esse arquivo cai na cópia campo
-  // a campo e perde, EM SILÊNCIO e NA VOLTA, todo campo fora de CAMPOS.
+  // O .somaplay que já está no disco do usuário declara as três partes de
+  // então. É na ENTRADA que isso precisa ser honrado: `arquivoCompleto` mede o
+  // vocabulário da época do arquivo, então ele volta INTEIRO — inclusive um
+  // campo que este módulo nunca ouviu falar. Medir o vocabulário de hoje aqui
+  // derrubaria todo backup já gravado na cópia campo a campo, e ele perderia
+  // esse campo em silêncio, na direção que ninguém confere.
   const antigas = ['cifra', 'audio', 'pessoal'];
   const registro = { id: 's1', artistId: 'a1', title: 'X', cifra: { tipo: 'texto' },
     favorita: true, campoQueNinguemConhece: 42 };
-  assert.deepEqual(podaPorPartes([registro], antigas), [registro]);
   assert.deepEqual(fundeMusica(null, registro, antigas), registro);
+});
+
+test('na SAÍDA, as três partes de então são um recorte, não um backup completo', () => {
+  // A assimetria deliberada, e o contrário do teste acima: `podaPorPartes`
+  // escreve um arquivo AGORA, então vale o vocabulário de hoje. Um export que
+  // declara só as três partes antigas não pode levar de carona a anotação (nem
+  // qualquer campo) que ele não declarou — foi para isso que a branch das
+  // anotações separou `exportCompleto` de `arquivoCompleto`.
+  const registro = { id: 's1', artistId: 'a1', title: 'X', cifra: { tipo: 'texto' },
+    favorita: true, anotacoes: '<p>minha</p>' };
+  const [saiu] = podaPorPartes([registro], ['cifra', 'audio', 'pessoal']);
+  assert.equal(saiu.anotacoes, undefined);
+  assert.equal(saiu.favorita, true);
+  // e com o vocabulário inteiro de hoje, o registro sai intacto
+  assert.deepEqual(podaPorPartes([registro], PARTES_TODAS), [registro]);
 });
 
 test('um arquivo só de livros não poda música nenhuma para dentro', () => {

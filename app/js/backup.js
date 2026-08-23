@@ -8,6 +8,7 @@ import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './cho
 import { t } from './i18n.js';
 import { PARTES_TODAS, PARTES_DE_MUSICA, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
 import { blobIdsDosLivros } from './books.js';
+import { limpaHTML } from './anotacoes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
 
@@ -191,6 +192,11 @@ export function avisosDeSubstituir({ partes, lists, books } = {}, { temListas = 
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
   if (!ps.includes('cifra')) out.push('msg.backup.replaceNoCifra');
   if (!ps.includes('pessoal')) out.push('msg.backup.replaceNoPessoal');
+  // Assimétrico de propósito: o arquivo TRAZER anotação não avisa nada — isso é
+  // substituir normal. O aviso é só para quando ele NÃO traz: aí a anotação
+  // some sem nada para tomar o lugar dela, e substituir não pergunta por
+  // música (essa pergunta é só do merge, em conflitosDeNotas).
+  if (!ps.includes('anotacoes')) out.push('msg.backup.replaceNoAnotacoes');
   // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
   // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
   if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
@@ -214,12 +220,77 @@ export function avisosDeSubstituir({ partes, lists, books } = {}, { temListas = 
   return out;
 }
 
-export async function importLibrary(file, { merge = false } = {}) {
+// A anotação é o único campo que o merge sobrescreve e que foi digitado à mão.
+// Sem anotação de um dos lados, ou com as duas iguais, não há o que perguntar.
+//
+// Pura e chamada pelo chamador, como avisosDeSubstituir: perguntar de dentro de
+// importLibrary seria tarde demais no modo substituir, onde o DB.wipe() já
+// aconteceu.
+//
+// Na prática só faz sentido perguntar no MERGE — no substituir o aparelho
+// inteiro é apagado antes de gravar (DB.wipe()), então "manter a minha" não
+// tem onde pousar; ali o aviso certo é avisosDeSubstituir, não esta pergunta
+// por música. A função continua total e sem saber de modo, de propósito: quem
+// decide se pergunta é o chamador (main.js), não ela.
+export function conflitosDeNotas(atuais, doArquivo, partes) {
+  if (!normalizaPartes(partes).includes('anotacoes')) return [];
+  const mapa = new Map((atuais || []).map((s) => [s.id, s]));
+  return (doArquivo || []).filter((f) => {
+    const a = mapa.get(f.id);
+    const minha = String((a && a.anotacoes) || '').trim();
+    const dela = String(f.anotacoes || '').trim();
+    return minha && dela && minha !== dela;
+  }).map((f) => f.id);
+}
+
+// "Manter as minhas" só vale para as músicas onde os dois lados de fato
+// colidem — `conflitosNotas` é a lista exata que conflitosDeNotas() já
+// calculou, no chamador, ANTES do import começar. Apagar de TODO
+// `songs` trataria um arquivo de 10 músicas, com 1 em conflito, como se as
+// 10 tivessem colidido: a resposta "manter a minha" apagaria a anotação das
+// outras 9, que nem apareceram na pergunta. Extraída (em vez de inline em
+// importLibrary) para ficar testável sem DOMParser nem IndexedDB.
+export function aplicaDecisaoNotas(songs, decisaoNotas, conflitosNotas) {
+  if (decisaoNotas !== 'manter') return;
+  const emConflito = new Set(conflitosNotas);
+  for (const s of songs || []) {
+    if (emConflito.has(s.id)) delete s.anotacoes;
+  }
+}
+
+export async function importLibrary(file, { merge = false, decisaoNotas = 'substituir', conflitosNotas = [] } = {}) {
   const { manifest, blobsStart } = await lerManifest(file);
   // Um arquivo corrompido ou feito à mão pode trazer `partes` que não é array —
   // e sem essa guarda o `.includes` mais abaixo lançaria DEPOIS do DB.wipe() no
   // modo substituir. Tratar como "completo" é a mesma regra de "partes ausente".
   const partes = normalizaPartes(manifest.partes);
+
+  // Antes de qualquer gravação: daqui para baixo a anotação do arquivo já é
+  // confiável, nos dois modos. O .somaplay chegou de fora (WhatsApp, outro
+  // aparelho) e o campo vai direto para um innerHTML — sem isso um arquivo
+  // malicioso ou só malformado escreveria HTML cru na biblioteca.
+  for (const s of manifest.songs || []) {
+    if (s.anotacoes) s.anotacoes = limpaHTML(s.anotacoes);
+  }
+  // "Manter as minhas": apaga o campo do ARQUIVO em memória, e não de `partes`.
+  // Tirar 'anotacoes' de `partes` não bastaria: um `partes` de 4 itens menos
+  // 'anotacoes' vira exatamente PARTES_LEGADO, e fundeMusica trata
+  // PARTES_LEGADO como "arquivo legado completo" (partes.js) — o
+  // Object.assign daquele atalho copiaria a anotação de qualquer jeito,
+  // porque ele copia a partir do objeto, não da lista de partes. Apagar a
+  // chave é imune a esse atalho, porque ambos os caminhos de fundeMusica só
+  // tocam num campo que existe no objeto de origem.
+  //
+  // Isto SÓ preserva a anotação local no MERGE. No substituir, `atual` chega
+  // `null` em fundeMusica (a linha do DB.wipe() logo abaixo já rodou por
+  // baixo, e a chamada de replace usa `fundeMusica(null, s, partes, agora)`)
+  // — não há registro local para a anotação apagada "voltar a valer", então
+  // apagar a chave ali só faria a anotação sumir, não mantê-la. main.js sabe
+  // disso e só passa `decisaoNotas: 'manter'` quando `merge` é true; no
+  // substituir o aviso é outro (avisosDeSubstituir → replaceNoAnotacoes),
+  // dado ANTES da troca, porque depois do wipe já é tarde para perguntar.
+  aplicaDecisaoNotas(manifest.songs, decisaoNotas, conflitosNotas);
+
   // Um relógio só para o import inteiro: uma música que chega sem `createdAt`
   // (todo compartilhamento, porque a data é `pessoal`) nasce com a data de hoje,
   // e o repertório inteiro entra JUNTO no topo de Recentes.

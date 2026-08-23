@@ -57,6 +57,20 @@ export const I = {
   // pílula do filtro, que troca de cor quando há fonte ativa.
   tag: (w = 17) => stroke(w, '<path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.6" cy="7.6" r="1.3"/>'),
   disc: (w = 18, on) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="${on ? 'var(--accent)' : 'var(--muted2)'}" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5" fill="${on ? 'var(--accent)' : 'none'}"/></svg>`,
+  // barra de ferramentas do editor de anotações (Task 4)
+  tbBold: (w = 19) => stroke(w, '<path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z"/>'),
+  tbItalic: (w = 19) => stroke(w, '<path d="M19 4h-9M14 20H5M15 4 9 20"/>'),
+  tbUnderline: (w = 19) => stroke(w, '<path d="M6 4v6a6 6 0 0 0 12 0V4M4 21h16"/>'),
+  tbStrike: (w = 19) => stroke(w, '<path d="M16 5H9.5a3.5 3.5 0 0 0-2.4 6M13.5 12A3.5 3.5 0 0 1 14 19H7M4 12h16"/>'),
+  tbMark: (w = 19) => stroke(w, '<path d="m9 11-6 6v3h9l3-3"/><path d="M22 12 17.4 16.6a2 2 0 0 1-2.8 0L9.4 11.4a2 2 0 0 1 0-2.8L14 4z"/>'),
+  tbHeading: (w = 19) => stroke(w, '<path d="M6 12h12M6 20V4M18 20V4"/>'),
+  tbUl: (w = 19) => stroke(w, '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
+  tbOl: (w = 19) => stroke(w, '<path d="M10 6h11M10 12h11M10 18h11M4 4h1v4M4 8h2M6 18H4c0-1 2-1.6 2-2.6S5 14 4 14.6"/>'),
+  tbQuote: (w = 19) => stroke(w, '<path d="M10 11H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7a4 4 0 0 1-4 4M20 11h-5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7a4 4 0 0 1-4 4"/>'),
+  tbLink: (w = 19) => stroke(w, '<path d="M10.5 13.5a5 5 0 0 0 7.3.4l2.4-2.4a5 5 0 0 0-7.1-7.1l-1.4 1.4"/><path d="M13.5 10.5a5 5 0 0 0-7.3-.4l-2.4 2.4a5 5 0 0 0 7.1 7.1l1.4-1.4"/>'),
+  tbMono: (w = 19) => stroke(w, '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>'),
+  tbUndo: (w = 19) => stroke(w, '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'),
+  tbRedo: (w = 19) => stroke(w, '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/>'),
   chevL: (w = 18) => stroke(w, '<path d="M15 18l-6-6 6-6"/>', 2.2),
   book: (w = 18) => stroke(w, '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
 };

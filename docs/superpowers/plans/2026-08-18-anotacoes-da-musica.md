@@ -33,6 +33,8 @@ para a lógica pura, `node --check` para sintaxe, navegador para a UI.
   `transpose.js`, que já são em português.
 - **Versão final: 0.16.0**, em `js/version.js` e na linha 2 de `sw.js`, mais
   entrada no `CHANGELOG.md`.
+- **As ações de `main.js` são MÉTODOS de um objeto**, não `case` de um `switch`:
+  `nomeDaAcao() { ... },`. O elemento as invoca por `data-a="nomeDaAcao"`.
 - Rodar `cd app && node --test` ao fim de cada tarefa. Verde antes de commitar.
 
 ---
@@ -397,6 +399,19 @@ de propósito. A verificação é no navegador, no Step 6.
 
 Acrescentar ao fim de `app/css/app.css`:
 
+As classes `.blk`/`.blk-hd` **não existem** no app — o nome de lá é
+`.chords-block`/`.hd`. Em vez de criar um conjunto paralelo idêntico, estenda os
+seletores que já existem (linhas ~396-398), para haver uma fonte de verdade só:
+
+```css
+.chords-block,.blk{max-width:720px;margin:38px auto 0;border-top:1px solid var(--border);padding-top:24px}
+.chords-block .hd,.blk-hd{display:flex;align-items:center;gap:9px;margin-bottom:15px}
+.chords-block .hd .t,.blk-hd .t{font-family:var(--f-title);font-weight:700;font-size:16px}
+```
+
+`.chords-block .hd .n` fica como está — aquele contador é só do bloco de acordes.
+E então, ao fim do arquivo:
+
 ```css
 /* --- Anotações da música --- */
 .notas .sp{flex:1}
@@ -666,8 +681,8 @@ Em `app/js/state.js`, acrescentar a `S`:
 Em `app/js/main.js`, nas ações:
 
 ```js
-    case 'editNotas': S.notasEdit = true; update(); break;
-    case 'closeNotas': salvaNotasPendente(); S.notasEdit = false; update(); break;
+  editNotas() { S.notasEdit = true; update(); },
+  closeNotas() { salvaNotasPendente(); S.notasEdit = false; update(); },
 ```
 
 - [ ] **Step 5: Ligar o editor ao DOM**
@@ -861,7 +876,7 @@ quando **alguma** música selecionada tem anotação e a opção leva cifra:
 ```
 
 `S.shareSheet` ganha `incluirNotas: false`; `main.js` ganha
-`case 'toggleShareNotas': S.shareSheet.incluirNotas = !S.shareSheet.incluirNotas; update(); break;`;
+`toggleShareNotas() { S.shareSheet.incluirNotas = !S.shareSheet.incluirNotas; update(); },`;
 e `doShare` passa a chamar `partesDaEscolha(sh.opcao, sh.incluirNotas)` no lugar
 de ler `o.partes` direto.
 
@@ -889,23 +904,37 @@ git commit -m "feat(notes): let a share carry the sender's notes"
 
 ---
 
-### Task 6: Confirmar antes de substituir
+### Task 6: Filtrar e confirmar na importação
 
 **Files:**
 - Modify: `app/js/backup.js`
 - Modify: `app/js/main.js`
-- Modify: `app/js/state.js`
-- Modify: `app/test/merge.test.js`
+- Modify: `app/test/export.test.js`
 - Modify: `app/js/i18n/pt.js`, `app/js/i18n/en.js`
 
 **Interfaces:**
-- Consumes: `normalizaPartes` da Task 2.
-- Produces: `conflitosDeNotas(atuais: Song[], doArquivo: Song[], partes: string[]): string[]`
-  — ids das músicas em que os dois lados têm anotação e elas diferem.
+- Consumes: `limpaHTML` da Task 1; `normalizaPartes` da Task 2 (já importado por
+  `backup.js`).
+- Produces: `conflitosDeNotas(atuais, doArquivo, partes): string[]` — **pura**,
+  exportada de `backup.js` no molde de `avisosDeSubstituir`; e
+  `importLibrary(file, { merge, decisaoNotas })`.
+
+Três correções de pré-voo já estão embutidas nesta tarefa, e o motivo importa:
+
+1. A função de import chama-se **`importLibrary`** (`backup.js:179`), não
+   `importFile`.
+2. A pergunta **não** pode acontecer de dentro de `importLibrary`: no modo
+   substituir, `DB.wipe()` roda na linha 191, e devolver uma pergunta depois
+   disso apagaria a biblioteca antes de perguntar. A detecção é pura e o
+   chamador decide — exatamente o que `avisosDeSubstituir` já faz.
+3. A pergunta vale **nos dois modos**. O caso que a motivou — o professor
+   reenviando a música corrigida — é um merge, e hoje o modo merge nem lê o
+   manifesto.
 
 - [ ] **Step 1: Teste que falha**
 
-Em `app/test/merge.test.js` (importando `conflitosDeNotas` de `../js/backup.js`):
+Em `app/test/export.test.js` (que já importa `backup.js`), acrescentar
+`conflitosDeNotas` ao import do topo e, ao fim do arquivo:
 
 ```js
 test('conflito so quando os dois lados tem anotacao e elas diferem', () => {
@@ -921,21 +950,30 @@ test('conflito so quando os dois lados tem anotacao e elas diferem', () => {
   ];
   assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra', 'anotacoes']), ['a']);
   assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra']), []);
+  assert.deepEqual(conflitosDeNotas(atuais, arq, undefined), ['a']);
 });
 ```
 
+O terceiro caso é o arquivo sem `partes`: `normalizaPartes` o lê como completo,
+e completo inclui `anotacoes`.
+
 - [ ] **Step 2: Rodar e ver falhar**
 
-Run: `cd app && node --test test/merge.test.js`
+Run: `cd app && node --test test/export.test.js`
 Expected: FAIL — `conflitosDeNotas is not a function`.
 
 - [ ] **Step 3: Implementar a detecção**
 
-Em `app/js/backup.js`:
+Em `app/js/backup.js`, ao lado de `avisosDeSubstituir` (que é o molde: pura,
+exportada, chamada ANTES do diálogo, total mesmo com entrada corrompida):
 
 ```js
 // A anotação é o único campo que o merge sobrescreve e que foi digitado à mão.
 // Sem anotação de um dos lados, ou com as duas iguais, não há o que perguntar.
+//
+// Pura e chamada pelo chamador, como avisosDeSubstituir: perguntar de dentro de
+// importLibrary seria tarde demais no modo substituir, onde o DB.wipe() já
+// aconteceu.
 export function conflitosDeNotas(atuais, doArquivo, partes) {
   if (!normalizaPartes(partes).includes('anotacoes')) return [];
   const mapa = new Map((atuais || []).map((s) => [s.id, s]));
@@ -950,128 +988,111 @@ export function conflitosDeNotas(atuais, doArquivo, partes) {
 
 - [ ] **Step 4: Rodar e ver passar**
 
-Run: `cd app && node --test test/merge.test.js`
+Run: `cd app && node --test test/export.test.js`
 Expected: PASS.
 
 - [ ] **Step 5: Filtrar o que vem do arquivo**
 
-Este é o segundo dos três pontos de chamada do filtro (spec §5), e o mais
-importante: o `.somaplay` chegou por WhatsApp, de uma origem que o app não
-controla, e o campo vai direto para um `innerHTML`.
+Segundo dos três pontos de chamada do filtro (spec §5), e o mais importante: o
+`.somaplay` chegou por WhatsApp, de origem que o app não controla, e o campo vai
+direto para um `innerHTML`.
 
-Um lugar só resolve os dois modos de importação. Em `app/js/backup.js`, logo
-depois de o manifesto ser lido e **antes** do `if (merge)` da linha ~202:
+Em `importLibrary`, logo depois do `lerManifest` e **antes** do `DB.wipe()` da
+linha 191 — é a primeira linha em que o conteúdo do arquivo existe em memória, e
+cobre os dois modos de uma vez:
 
 ```js
-  // Antes de qualquer gravação, e antes até da detecção de conflito: daqui para
-  // baixo a anotação do arquivo já é confiável, nos dois modos.
+export async function importLibrary(file, { merge = false, decisaoNotas = 'substituir' } = {}) {
+  const { manifest, blobsStart } = await lerManifest(file);
+  let partes = normalizaPartes(manifest.partes);
+
+  // Antes de qualquer gravação: daqui para baixo a anotação do arquivo já é
+  // confiável, nos dois modos.
   for (const s of manifest.songs || []) {
     if (s.anotacoes) s.anotacoes = limpaHTML(s.anotacoes);
   }
-```
-
-Acrescentar `limpaHTML` a um import de `./anotacoes.js` em `backup.js`.
-
-- [ ] **Step 6: A confirmação**
-
-`importFile` ganha uma decisão explícita em vez de adivinhar. Assinatura:
-`importFile(file, { merge, decisaoNotas })`, onde `decisaoNotas` é
-`'perguntar'` (padrão), `'manter'` ou `'substituir'`.
-
-Em `backup.js`, depois do Step 5 e antes do `if (merge)`:
-
-```js
-  const conflitos = conflitosDeNotas(S.songs, manifest.songs, partes);
-  if (conflitos.length && decisaoNotas === 'perguntar') {
-    // Nada foi gravado ainda: devolver AQUI deixa o import inteiro pendente da
-    // resposta, em vez de gravar metade e perguntar depois.
-    return { pergunta: 'notas', conflitos: conflitos.length };
-  }
+  // "Manter as minhas" é uma parte a menos declarada — nenhum caso especial
+  // dentro do merge.
   if (decisaoNotas === 'manter') partes = partes.filter((x) => x !== 'anotacoes');
 ```
 
-Em `app/js/state.js`:
+`partes` passa de `const` para `let`. Acrescentar `limpaHTML` a um
+`import { limpaHTML } from './anotacoes.js';` em `backup.js`.
+
+- [ ] **Step 6: A pergunta, nos dois modos**
+
+Em `app/js/main.js`, no handler do input de backup (por volta da linha 1000). O
+manifesto hoje só é lido no ramo de substituir; passa a ser lido **antes** do
+`if (merge)`, porque a pergunta das anotações vale nos dois:
 
 ```js
-  importNotas: null,   // { file, merge, conflitos } — o import parado esperando resposta
+    const merge = S.importMode === 'merge';
+    const total = S.songs.length;
+
+    // Só o cabeçalho — alguns KB, não o arquivo. Lido uma vez para os dois
+    // modos: o aviso de substituir precisa dele, e a pergunta das anotações
+    // também, inclusive no merge (que é o caso do professor reenviando).
+    let manifest = null;
+    try { manifest = (await lerManifest(f)).manifest; }
+    catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+
+    if (merge) {
+      if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
+    } else if (total > 0) {
+      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0 })
+        .map((k) => t(k)).join('\n');
+      const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
+      if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
+    }
+
+    // Cancelar mantém as suas: a resposta destrutiva é a afirmativa.
+    const conflitos = conflitosDeNotas(S.songs, manifest.songs, manifest.partes);
+    const decisaoNotas = conflitos.length
+      ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
+      : 'substituir';
+
+    toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
+    try {
+      const res = await importLibrary(f, { merge, decisaoNotas });
 ```
 
-Em `renderPopover()`, no `main.js`, um ramo novo antes do retorno final:
+`conflitosDeNotas` entra no import de `./backup.js` na linha 25 de `main.js`.
 
-```js
-  if (S.importNotas) {
-    return `<div class="scrim">
-      <div class="popover" data-stop="1">
-        <div class="head"><div class="title">${t('import.notas.title')}</div></div>
-        <div style="padding:16px 22px;color:var(--muted);font-size:14px;line-height:1.65">${t('import.notas.body', { n: S.importNotas.conflitos })}</div>
-        <div class="foot">
-          <button class="btn-ghost lg" style="flex:1" data-a="importNotasManter">${t('import.notas.keep')}</button>
-          <button class="btn-primary" style="flex:1" data-a="importNotasSubstituir">${t('import.notas.replace')}</button>
-        </div>
-      </div>
-    </div>`;
-  }
-```
-
-E as duas ações, que reexecutam o import guardado com a decisão tomada:
-
-```js
-    case 'importNotasManter': retomaImport('manter'); break;
-    case 'importNotasSubstituir': retomaImport('substituir'); break;
-```
-
-```js
-async function retomaImport(decisaoNotas) {
-  const pend = S.importNotas;
-  S.importNotas = null;
-  if (!pend) return;
-  await importFile(pend.file, { merge: pend.merge, decisaoNotas });
-  update();
-}
-```
-
-Quem chama `importFile` hoje passa a testar `r.pergunta === 'notas'` e, nesse
-caso, guardar `S.importNotas = { file, merge, conflitos: r.conflitos }` e
-chamar `update()`, em vez de mostrar o resultado.
-
-No fluxo de importação, antes de gravar: se `conflitosDeNotas(...)` não estiver
-vazio, guardar o import pendente em `S.importNotas = { plano, ids }` e renderizar
-um `.popover` de 420px com título `t('import.notas.title')`, corpo
-`t('import.notas.body', { n: ids.length })` e dois botões — **"Manter as minhas"**
-(tira `'anotacoes'` das partes e segue) e **"Substituir"** (segue como está).
-Cifra e áudio entram nos dois caminhos: a pergunta é só sobre a anotação.
+Usa `confirm()`, e não um popover próprio, porque é o vocabulário do fluxo de
+importação inteiro — as duas outras perguntas ali são `confirm`. O texto carrega
+os dois desfechos, já que OK/Cancelar não aceitam rótulo.
 
 - [ ] **Step 7: i18n**
 
 PT:
 
 ```js
-  'import.notas.title': 'Substituir suas anotações?',
-  'import.notas.body': 'O arquivo traz anotações para {n} música(s) em que você já escreveu. As cifras e o áudio entram de qualquer jeito.',
-  'import.notas.keep': 'Manter as minhas',
-  'import.notas.replace': 'Substituir',
+  'msg.notas.confirmReplace': 'Este arquivo traz anotações para {n} música(s) em que você já escreveu.\n\nOK substitui pelas do arquivo · Cancelar mantém as suas.\n\nAs cifras e o áudio entram de qualquer jeito.',
 ```
 
 EN:
 
 ```js
-  'import.notas.title': 'Replace your notes?',
-  'import.notas.body': 'The file carries notes for {n} song(s) where you have already written. Charts and audio come in either way.',
-  'import.notas.keep': 'Keep mine',
-  'import.notas.replace': 'Replace',
+  'msg.notas.confirmReplace': 'This file carries notes for {n} song(s) where you have already written.\n\nOK replaces them with the file\'s · Cancel keeps yours.\n\nCharts and audio come in either way.',
 ```
 
 - [ ] **Step 8: Verificar no navegador**
 
-Exportar uma música com anotação, mudar a anotação no aparelho, reimportar: a
-pergunta aparece. "Manter as minhas" preserva; "Substituir" troca. Importar só a
-cifra: nenhuma pergunta.
+1. Exportar uma música com anotação (caixa marcada), mudar a anotação no
+   aparelho, reimportar **em modo merge**: a pergunta aparece. Cancelar preserva
+   a sua; OK troca. Nos dois casos a cifra entra.
+2. O mesmo em modo substituir.
+3. Importar um arquivo **só de cifra**: nenhuma pergunta.
+4. Importar sobre uma música **sem** anotação local: nenhuma pergunta.
+5. Um arquivo cuja anotação contenha `<img src="data:...">` ou
+   `<a href="javascript:...">` entra limpo — conferir no DevTools que o campo
+   gravado não tem nem um nem outro.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add app/js/backup.js app/js/main.js app/js/state.js app/test/merge.test.js app/js/i18n/pt.js app/js/i18n/en.js
-git commit -m "feat(notes): ask before an import overwrites written notes"
+git add app/js/backup.js app/js/main.js app/test/export.test.js app/js/i18n/pt.js app/js/i18n/en.js
+git commit -m "feat(notes): sanitise imported notes and ask before replacing them"
 ```
 
 ---

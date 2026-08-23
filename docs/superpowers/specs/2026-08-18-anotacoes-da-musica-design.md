@@ -338,6 +338,42 @@ todos ficam mais fáceis de decidir depois de ver este funcionando num tablet.
 - `shell.test.js`, `i18n.test.js`, `version.test.js` verdes.
 - Navegador: tablet, tema claro e escuro, teclado virtual aberto, colar de fora.
 
+## O que falta verificar num navegador
+
+Implementado e revisado em 2026-08-19 (plano
+`docs/superpowers/plans/2026-08-18-anotacoes-da-musica.md`, versão 0.16.0).
+554 testes automatizados passam — mas eles cobrem só o núcleo **puro**.
+
+**`paraArvore` e `limpaHTML` nunca executaram.** Elas dependem de `DOMParser`,
+que não existe no Node, e o ambiente da implementação não tinha navegador. A
+metade do filtro que efetivamente lê HTML de fora, portanto, está verificada
+apenas por leitura. Isto não é ressalva de rotina: é a fronteira entre um
+arquivo recebido por WhatsApp e um `innerHTML`.
+
+Em ordem de risco:
+
+1. **O filtro de verdade.** Colar do Word, do Google Docs e de uma mensagem de
+   WhatsApp. Confirmar que sobrevivem só as 14 tags, que fonte e cor somem, e
+   que uma imagem base64 (`data:`) colada não entra.
+2. **Um `.somaplay` hostil, feito à mão** — anotação com `onerror`, `<svg><script>`,
+   `href="javascript:"`, `<style>` — importado nos **dois** modos, merge e
+   substituir. Nada deve executar nem sobreviver.
+3. **Editar a música com anotação escrita** (⋯ → Editar música) e salvar: a
+   anotação tem que continuar lá. Foi um bug real, corrigido em `cab9559`.
+4. **Digitar espaço no editor** numa música com áudio: tem que escrever um
+   espaço, não tocar. Também foi bug real, mesmo commit.
+5. **Os treze botões no Chrome do Android.** `strikeThrough` e `underline` podem
+   emitir `<span style>`, que o filtro desembrulha — a formatação sumiria ao
+   salvar. É o ponto mais provável de surpresa.
+6. **O bloco alinhado através de dois ciclos** salvar → reabrir → salvar: a
+   coluna tem que sobreviver inteira.
+7. **Modo imagem.** A seção vive dentro de `.cifra-imgwrap`, que tem
+   `touch-action:none` e arraste por JS, e o `data-nopan="1"` desliga o arraste
+   ali — conferir se aquela região rola. E a barra grudada com `imgZoom > 1`.
+8. **Teclado virtual**: largura da barra, e o "mais" abaixo de 700 px.
+9. **Tema claro e escuro** com texto colado do Word.
+10. **A pílula de salto** ida e volta.
+
 ## Próximos passos
 
 1. Executar `docs/superpowers/plans/2026-08-18-anotacoes-da-musica.md`.

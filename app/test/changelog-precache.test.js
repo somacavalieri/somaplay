@@ -1,7 +1,7 @@
 // changelog-precache.test.js — o número do precache no CHANGELOG bate com o
 // disco (F13 do review final).
 //
-// A entrada da 0.16.0 dizia "o precache vai de ~1 MB para ~5,7 MB". Medido: o
+// A entrada que estreou o pdf.js dizia "o precache vai de ~1 MB para ~5,7 MB". Medido: o
 // "1 MB" media a pasta app/ inteira (fontes, ícones, tudo), não o SHELL do
 // Service Worker — uma medida diferente da que decide o tamanho real do
 // precache. Este teste mede SHELL e VENDOR do jeito que shell.test.js já mede
@@ -16,6 +16,19 @@ const APP = fileURLToPath(new URL('..', import.meta.url));
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SW = readFileSync(APP + 'sw.js', 'utf8');
 const CHANGELOG = readFileSync(ROOT + 'CHANGELOG.md', 'utf8');
+const VERSAO = readFileSync(APP + 'js/version.js', 'utf8').match(/VERSION = '([^']+)'/)[1];
+
+// O bloco da versão ATUAL, delimitado pelo próximo cabeçalho de release — e não
+// por um número de versão escrito à mão aqui dentro. A primeira grafia deste
+// teste fixava '## [0.16.0]' e '## [0.15.0]', e a release seguinte (0.17.0) o
+// deixou olhando para o bloco errado, verde por acidente.
+function blocoDaVersao() {
+  const inicio = CHANGELOG.indexOf(`## [${VERSAO}]`);
+  assert.notEqual(inicio, -1, `CHANGELOG sem entrada para a versão ${VERSAO}`);
+  const resto = CHANGELOG.slice(inicio + 1);
+  const fim = resto.indexOf('\n## [');
+  return fim === -1 ? CHANGELOG.slice(inicio) : CHANGELOG.slice(inicio, inicio + 1 + fim);
+}
 
 function paths(nome) {
   const m = SW.match(new RegExp(`const ${nome} = \\[([\\s\\S]*?)\\];`));
@@ -52,17 +65,17 @@ function numerosEmMB(texto) {
   return [...texto.matchAll(/~(\d+(?:[.,]\d+)?) ?MB/g)].map((m) => parseFloat(m[1].replace(',', '.')));
 }
 
-test('a entrada 0.16.0 do CHANGELOG não repete a estimativa antiga (~1 MB / ~5,7 MB)', () => {
-  const bloco = CHANGELOG.slice(CHANGELOG.indexOf('## [0.16.0]'), CHANGELOG.indexOf('## [0.15.0]'));
+test('a entrada da versão atual não repete a estimativa antiga (~1 MB / ~5,7 MB)', () => {
+  const bloco = blocoDaVersao();
   assert.ok(!/~1[.,]0? ?MB/.test(bloco), 'ainda cita "~1 MB" — essa era a pasta app/ inteira, não o SHELL');
   assert.ok(!/5[.,]7 ?MB/.test(bloco), 'ainda cita "~5,7 MB" — o total medido é outro');
 });
 
-test('a entrada 0.16.0 do CHANGELOG cita SHELL, VENDOR e o total dentro de 5% do disco', () => {
+test('a entrada da versão atual cita SHELL, VENDOR e o total dentro de 5% do disco', () => {
   const shellMB = mb(totalBytes(paths('SHELL')));
   const vendorMB = mb(totalBytes(paths('VENDOR')));
   const totalMB = shellMB + vendorMB;
-  const bloco = CHANGELOG.slice(CHANGELOG.indexOf('## [0.16.0]'), CHANGELOG.indexOf('## [0.15.0]'));
+  const bloco = blocoDaVersao();
   const escritos = numerosEmMB(bloco);
   assert.ok(escritos.length >= 3,
     `esperava pelo menos 3 números "~X MB" no bloco (SHELL, VENDOR, total); achei ${escritos.length}: ${bloco}`);

@@ -10,8 +10,9 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, partesDoExport } from '../js/backup.js';
-import { PARTES_TODAS, PARTES_DE_MUSICA } from '../js/partes.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir,
+  partesDoExport, conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA, fundeMusica } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
 // mesmo se os artistas fossem filtrados, e a asserção que mais importa não
@@ -166,20 +167,32 @@ test('arquivo completo não gera aviso nenhum', () => {
 });
 
 test('arquivo sem áudio avisa que o áudio some', () => {
-  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['cifra', 'pessoal'] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['cifra', 'pessoal', 'anotacoes'] }, { temListas: true }),
     ['msg.backup.replaceNoAudio']);
 });
 
 test('pacote só de áudio avisa que as cifras somem', () => {
-  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['audio', 'pessoal'] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ ...COMPLETO, partes: ['audio', 'pessoal', 'anotacoes'] }, { temListas: true }),
     ['msg.backup.replaceNoCifra']);
 });
 
 // A regra que esta branch fabricou: antes dela todo .somaplay levava as
 // favoritas, então substituir nunca as perdia. Agora perde, e em silêncio.
 test('arquivo sem o pessoal avisa que favoritas e ajustes somem', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio'], lists: [{ id: 'l1' }] }, { temListas: true }),
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'anotacoes'], lists: [{ id: 'l1' }] }, { temListas: true }),
     ['msg.backup.replaceNoPessoal']);
+});
+
+// Assimétrico de propósito: o arquivo TER anotação e ser substituído não avisa
+// nada — é substituir normal. O aviso é só para quando ele NÃO traz nenhuma, e
+// a de quem já escreveu some sem nada para tomar o lugar.
+test('arquivo sem anotação avisa que a anotação some', () => {
+  // As três partes de então, escritas por extenso DE PROPÓSITO: o assunto do
+  // teste é um arquivo que não declara 'anotacoes'. Trocar isto por
+  // PARTES_DE_MUSICA (que passou a incluí-la) faria o teste passar a testar o
+  // contrário do que o nome diz.
+  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }] }, { temListas: true }),
+    ['msg.backup.replaceNoAnotacoes']);
 });
 
 test('arquivo sem lista avisa quando o aparelho tem listas', () => {
@@ -203,7 +216,7 @@ test('arquivo sem lista NÃO avisa se o aparelho também não tem', () => {
 // estante e os blobs dos PDFs no modo substituir; sem o aviso certo esse era
 // o único dos quatro eixos sem sinal nenhum antes do "Substituir tudo".
 test('arquivo sem livro (conteúdo vazio) avisa quando o aparelho tem livros', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }], books: [] }, { temListas: true, temLivros: true }),
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [{ id: 'l1' }], books: [] }, { temListas: true, temLivros: true }),
     ['msg.backup.replaceNoBooks']);
 });
 
@@ -220,13 +233,13 @@ test('arquivo ANTIGO (sem partes, sem books) avisa quando o aparelho tem livros'
 
 test('arquivo COM livros (conteúdo) não gera o aviso de livros, mesmo que `partes` não declare', () => {
   // partes deliberadamente SEM 'livros': prova que quem decide é o conteúdo.
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }], books: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [{ id: 'l1' }], books: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
 });
 
 // Não há o que perder: um aparelho sem livro nenhum não é avisado de nada.
 test('arquivo sem livro NÃO avisa se o aparelho também não tem', () => {
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [], books: [] }, { temListas: false, temLivros: false }), []);
-  assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [] }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [], books: [] }, { temListas: false, temLivros: false }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [] }), []);
 });
 
 test('os dois eixos se acumulam, na ordem do dano', () => {
@@ -234,11 +247,13 @@ test('os dois eixos se acumulam, na ordem do dano', () => {
   assert.deepEqual(avisosDeSubstituir({ partes: ['cifra'], lists: [] }, { temListas: true }), [
     'msg.backup.replaceNoAudio',
     'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoAnotacoes',
     'msg.backup.replaceNoLists',
   ]);
   assert.deepEqual(avisosDeSubstituir({ partes: ['audio'], lists: [] }, { temListas: true }), [
     'msg.backup.replaceNoCifra',
     'msg.backup.replaceNoPessoal',
+    'msg.backup.replaceNoAnotacoes',
     'msg.backup.replaceNoLists',
   ]);
 });
@@ -261,6 +276,68 @@ test('lists malformado conta como "não traz lista"', () => {
 test('sem argumento nenhum a função é total', () => {
   // Roda ANTES do try do diálogo: quebrar aqui deixaria o import sem caminho.
   assert.deepEqual(avisosDeSubstituir(), []);
+});
+
+test('conflito so quando os dois lados tem anotacao e elas diferem', () => {
+  const atuais = [
+    { id: 'a', anotacoes: '<p>minha</p>' },
+    { id: 'b', anotacoes: '<p>igual</p>' },
+    { id: 'c' },
+  ];
+  const arq = [
+    { id: 'a', anotacoes: '<p>do professor</p>' },
+    { id: 'b', anotacoes: '<p>igual</p>' },
+    { id: 'c', anotacoes: '<p>nova</p>' },
+  ];
+  assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra', 'anotacoes']), ['a']);
+  assert.deepEqual(conflitosDeNotas(atuais, arq, ['cifra']), []);
+  assert.deepEqual(conflitosDeNotas(atuais, arq, undefined), ['a']);
+});
+
+// A propriedade que a task inteira existe para garantir, e só no merge: quando
+// decisaoNotas === 'manter', importLibrary apaga `anotacoes` do registro que
+// veio do arquivo ANTES de chamar fundeMusica/mergePlan. Aqui está o efeito
+// dessa apagada — `atual` é o registro REAL do aparelho (não null, que é o
+// caso do substituir, onde não há o que manter porque o aparelho já foi
+// apagado): a anotação local tem que sobreviver intacta.
+test('merge com "manter": sem a chave anotacoes no arquivo, a local sobrevive', () => {
+  const atual = { id: 's1', artistId: 'a1', title: 'X', anotacoes: '<p>minha</p>', tom: 'G' };
+  const doArquivo = { id: 's1', artistId: 'a1', title: 'X', tom: 'A' }; // sem 'anotacoes': já apagada
+  const r = fundeMusica(atual, doArquivo, PARTES_TODAS, 1);
+  assert.equal(r.anotacoes, '<p>minha</p>');
+  assert.equal(r.tom, 'A'); // as outras partes continuam sendo fundidas normalmente
+});
+
+// I1 do final-review: "manter a minha" apagava anotacoes de TODO o arquivo,
+// não só das músicas que colidiam de verdade — um professor mandando dez
+// músicas com nota, com o aluno tendo nota própria em só uma, recebia ZERO
+// notas de volta. `aplicaDecisaoNotas` é o que importLibrary chama agora, com
+// a lista exata de conflitosDeNotas(); só ela decide quem perde o campo.
+test('"manter a minha": só a música em conflito perde a anotação do arquivo, as outras a recebem', () => {
+  const atuais = [
+    { id: 's1', anotacoes: '<p>minha s1</p>' }, // tem nota local: vai colidir com a do arquivo
+    { id: 's2' },                               // sem nota local: nada para colidir
+  ];
+  const doArquivo = [
+    { id: 's1', anotacoes: '<p>do professor s1</p>' },
+    { id: 's2', anotacoes: '<p>do professor s2</p>' },
+  ];
+  const partes = PARTES_TODAS;
+  const conflitos = conflitosDeNotas(atuais, doArquivo, partes);
+  assert.deepEqual(conflitos, ['s1']);
+
+  aplicaDecisaoNotas(doArquivo, 'manter', conflitos);
+
+  const s1 = fundeMusica(atuais[0], doArquivo.find((s) => s.id === 's1'), partes, 1);
+  const s2 = fundeMusica(atuais[1], doArquivo.find((s) => s.id === 's2'), partes, 1);
+  assert.equal(s1.anotacoes, '<p>minha s1</p>'); // conflitante: fica com a local
+  assert.equal(s2.anotacoes, '<p>do professor s2</p>'); // sem conflito: recebe a do arquivo
+});
+
+test('aplicaDecisaoNotas não mexe em nada quando a decisão é "substituir"', () => {
+  const doArquivo = [{ id: 's1', anotacoes: '<p>do arquivo</p>' }];
+  aplicaDecisaoNotas(doArquivo, 'substituir', ['s1']);
+  assert.equal(doArquivo[0].anotacoes, '<p>do arquivo</p>');
 });
 
 // --- partesDoExport (F1 do review final) ------------------------------------

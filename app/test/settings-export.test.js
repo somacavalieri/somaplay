@@ -18,6 +18,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { podeExportarBackup, renderSettings } from '../js/render/settings.js';
 import { S } from '../js/state.js';
+import { PARTES_DE_MUSICA } from '../js/partes.js';
 
 // ---------- podeExportarBackup: the pure predicate ----------
 
@@ -48,7 +49,7 @@ function resetS() {
   S.songs = [];
   S.books = [];
   S.exportFontes = null;    // null = todas
-  S.exportPartes = ['cifra', 'audio', 'pessoal'];
+  S.exportPartes = [...PARTES_DE_MUSICA];   // as caixas de Settings, sem 'livros'
   S.exportListas = true;
 }
 

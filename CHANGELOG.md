@@ -32,7 +32,7 @@ Two rules keep the number honest:
 
 Nothing yet.
 
-## [0.16.0] - 2026-08-22
+## [0.17.0] - 2026-08-23
 
 ### Added
 
@@ -44,12 +44,31 @@ Nothing yet.
 ### Changed
 
 - pdf.js v6.2.108 is vendored under `app/js/vendor/` — the project's first third-party
-  dependency. The precache goes from ~0.77 MB (`SHELL`) to ~5.45 MB (`SHELL` ~0.77 MB +
+  dependency. The precache goes from ~0.80 MB (`SHELL`) to ~5.48 MB (`SHELL` ~0.80 MB +
   `VENDOR` ~4.68 MB, measured on disk); there is still no build step and no package
   manager. The vendored module itself is loaded lazily, on first book open, so a user
   who never opens a book never pays the ~95 ms / ~40 MB of parsing and executing it.
 - `PARTES_TODAS` gained `livros`; `todasAsPartes()` now measures `PARTES_DE_MUSICA`, so
   every `.somaplay` written before this release still restores untouched.
+## [0.16.0] - 2026-08-19
+
+### Added
+
+- Song annotations: a per-song "Anotações" text section, below the chord grid,
+  with a rich-text editor offering bold, italic, underline, strikethrough,
+  highlight, heading styles, bulleted and numbered lists, block quotes, links,
+  monospace blocks, and undo/redo.
+- Annotation content is stored as HTML, restricted to a 14-tag allowlist. Pasting
+  from Word, Google Docs, or WhatsApp preserves structure (headings, lists,
+  emphasis) while dropping foreign fonts, colors, and images — keeping pasted
+  text legible in both light and dark themes.
+- Annotations travel as their own part in a shared `.somaplay` file, selected by
+  checkbox in the share sheet. Correcting a chart and resending it will not
+  overwrite annotations the recipient wrote.
+- On import, annotations are filtered before anything is written. In merge mode
+  the app asks before replacing annotations you already have; in replace mode it
+  warns that yours will be lost. Backups written by earlier versions restore
+  whole, preserving backward compatibility.
 
 ## [0.15.0] - 2026-08-17
 

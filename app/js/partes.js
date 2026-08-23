@@ -9,17 +9,23 @@
 // it is exactly how the two would drift apart.
 // Design: docs/superpowers/specs/2026-08-15-partes-do-arquivo-design.md
 
-// As partes de uma MÚSICA. É este conjunto que `todasAsPartes` mede, e mexer
-// nele muda o que "arquivo completo" significa para todo .somaplay já gravado.
-export const PARTES_DE_MUSICA = ['cifra', 'audio', 'pessoal'];
+// As partes que descrevem uma MÚSICA — todas elas têm entrada em CAMPOS.
+export const PARTES_DE_MUSICA = ['cifra', 'audio', 'pessoal', 'anotacoes'];
 
-// O que um arquivo pode declarar que carrega. Livro é coleção de topo, como as
-// listas — não é campo de música, e por isso NÃO entra em CAMPOS.
+// As partes que existiam antes da 0.16.0. Um arquivo que declara todas ELAS era
+// completo na época em que foi escrito, e continua sendo — completude é
+// propriedade do arquivo, não da versão do código que o lê.
+const PARTES_LEGADO = ['cifra', 'audio', 'pessoal'];
+
+// Tudo que um arquivo pode declarar que carrega: as partes de música mais as
+// coleções de topo. `livros` é a primeira coleção de topo a entrar aqui, e por
+// isso NÃO tem entrada em CAMPOS — livro não é campo de música, é uma coleção
+// ao lado de `lists`.
 //
-// Acrescentar 'livros' aqui é seguro porque `todasAsPartes` continua medindo
-// PARTES_DE_MUSICA: um backup antigo, que declara as três, segue sendo lido como
-// completo e volta com o registro intacto. Exigir as quatro faria todo backup já
-// gravado perder campo na restauração — em silêncio, e na direção que ninguém confere.
+// As duas coleções entram no arquivo por regras diferentes, de propósito:
+// `anotacoes` é campo de música e viaja junto com a música, inclusive num
+// recorte; `livros` pesa centenas de megabytes e só viaja quando o export é
+// irrestrito (ver partesDoExport, em backup.js).
 export const PARTES_TODAS = [...PARTES_DE_MUSICA, 'livros'];
 
 // How the file says "this song". Never pruned: without it an audio-only pack
@@ -32,6 +38,7 @@ export const CAMPOS = {
   cifra: ['tom', 'cifra', 'letra', 'estilo', 'fonte'],
   audio: ['stems', 'full'],
   pessoal: ['favorita', 'createdAt'],
+  anotacoes: ['anotacoes'],
 };
 
 // Anything that is not a list of parts reads as a complete file: that is what a
@@ -42,7 +49,21 @@ export function normalizaPartes(partes) {
   return Array.isArray(partes) ? partes : PARTES_TODAS;
 }
 
-const todasAsPartes = (ps) => PARTES_DE_MUSICA.every((p) => ps.includes(p));
+// Duas perguntas parecidas que NÃO são a mesma.
+//
+// Na saída: "este export é um backup completo?" — escrito por este código, então
+// vale o vocabulário de hoje. Sem isso, um export que declarasse só as três
+// partes antigas cairia no caminho rápido e levaria junto a anotação que não
+// declarou.
+//
+// Na entrada: "este arquivo era completo quando foi escrito?" — e aí vale o
+// vocabulário da época dele. É esta assimetria que faz todo .somaplay já gravado
+// continuar restaurando o registro INTEIRO: exigir dele as partes que nem
+// existiam quando foi escrito o derrubaria na cópia campo a campo, e ele perderia
+// em silêncio qualquer campo fora de CAMPOS — na volta, que é a direção que
+// ninguém confere.
+const exportCompleto = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
+const arquivoCompleto = (ps) => PARTES_LEGADO.every((p) => ps.includes(p));
 
 // The one copy loop both sides share: identity always, plus the fields of the
 // declared parts. `k in src` and not `src[k] !== undefined`, so a field the
@@ -57,7 +78,7 @@ const copiaCampos = (dest, src, ps) => {
 // the complete-backup path, and the test asserts it rather than hoping for it.
 export function podaPorPartes(songs, partes) {
   const ps = normalizaPartes(partes);
-  if (todasAsPartes(ps)) return (songs || []).slice();
+  if (exportCompleto(ps)) return (songs || []).slice();
   return (songs || []).map((s) => copiaCampos({}, s, ps));
 }
 
@@ -93,7 +114,7 @@ export function fundeMusica(atual, doArquivo, partes, agora = null) {
   // record back WHOLE — including a field this module has never heard of. The
   // copy loop below would drop it silently, and only on the way back IN, which
   // is the direction nobody thinks to check.
-  if (todasAsPartes(ps)) Object.assign(out, doArquivo);
+  if (arquivoCompleto(ps)) Object.assign(out, doArquivo);
   else copiaCampos(out, doArquivo, ps);
   if (!out.cifra) out.cifra = cifraVazia();
   // A shared song must arrive dated TODAY. createdAt sits in `pessoal` so it

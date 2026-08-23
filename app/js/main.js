@@ -20,14 +20,15 @@ import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
 import { renderPopover } from './render/popover.js';
-import { renderShareSheet, calculaTamanhos, OPCOES } from './render/sharesheet.js';
-import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual } from './render/play.js';
+import { renderShareSheet, calculaTamanhos, OPCOES, partesDaEscolha } from './render/sharesheet.js';
+import { renderPlay, afterRenderPlay, loadSongMedia, unloadSongMedia, manageScroll, zoomBy, stopPlayTimers, tomAtual, salvaNotasPendente } from './render/play.js';
 import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render/addedit.js';
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir, partesDoExport } from './backup.js';
-import { PARTES_DE_MUSICA } from './partes.js';
+import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport,
+  stampDeHoje, lerManifest, avisosDeSubstituir, partesDoExport, conflitosDeNotas } from './backup.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -192,6 +193,11 @@ function afterRender() {
 
 // ---------- navegação/áudio ao sair da tela de toque ----------
 function leavePlay() {
+  // Sair da tela com o editor de anotações aberto (voltar, trocar de música,
+  // apagar, editar a música) não passa pelo botão "Pronto" — sem isto o texto
+  // digitado nos últimos 600ms do debounce se perderia, e a próxima música
+  // aberta herdaria S.notasEdit true e abriria já em modo de edição.
+  if (S.notasEdit) { salvaNotasPendente(); S.notasEdit = false; }
   S.transportPlaying = false;
   S.scrollPlaying = false;
   S.chordPop = null;
@@ -597,6 +603,11 @@ const actions = {
     const song = currentSong();
     if (!song) return;
     if (!confirm(t('msg.song.confirmDelete', { title: song.title }))) return;
+    // leavePlay() pode disparar um saveSong() (não-esperado) neste MESMO
+    // registro, se o editor de anotações estava aberto. Seguro mesmo sem
+    // await: é a mesma IndexedDB store, e transações na mesma store rodam na
+    // ordem em que foram abertas — o save sempre commita antes do delete que
+    // já está prestes a ser aberto na linha seguinte.
     leavePlay();
     await deleteSong(song.id);
     // Apagar a última música de uma fonte pequena não deixa pílula nenhuma
@@ -727,6 +738,20 @@ const actions = {
     update();
   },
   togglePinnedBar() { S.pinnedOpen = !S.pinnedOpen; update(); },
+  editNotas() { S.notasEdit = true; update(); },
+  closeNotas() { salvaNotasPendente(); S.notasEdit = false; update(); },
+  // Ida e volta no mesmo botão (spec 2026-08-18): com a seção já visível, ele
+  // devolve o lugar de onde o salto partiu. Sem update() aqui — mexer na
+  // rolagem não muda estado de tela, e um re-render jogaria a rolagem fora.
+  jumpNotas() {
+    const cx = document.querySelector('[data-autoscroll="1"]');
+    const alvo = document.getElementById('notas');
+    if (cx && alvo) {
+      const jaLa = S.notasVolta !== null && alvo.getBoundingClientRect().top < cx.clientHeight * 0.5;
+      if (jaLa) { cx.scrollTo({ top: S.notasVolta, behavior: 'smooth' }); S.notasVolta = null; }
+      else { S.notasVolta = cx.scrollTop; alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+  },
   toggleScroll() {
     S.scrollPlaying = !S.scrollPlaying;
     manageScroll();
@@ -988,6 +1013,7 @@ const actions = {
       listIds: daLista ? new Set([l.id]) : new Set(),
       opcao: 'cifras',
       tamanhos: null,
+      incluirNotas: false,
     };
     S.listMenuOpen = false;
     S.artistMenuOpen = false;
@@ -1006,19 +1032,19 @@ const actions = {
   },
   closeShare() { S.shareSheet = null; update(); },
   pickShareOpt(d) { if (S.shareSheet) { S.shareSheet.opcao = d.id; update(); } },
+  toggleShareNotas() { if (S.shareSheet) { S.shareSheet.incluirNotas = !S.shareSheet.incluirNotas; update(); } },
   async doShare() {
     const sh = S.shareSheet;
     if (!sh) return;
-    const opt = OPCOES.find((o) => o.id === sh.opcao);
-    if (!opt) return;
-    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), opt.partes, {
+    const partes = partesDaEscolha(sh.opcao, sh.incluirNotas);
+    const fileName = nomeDoExport(sh.titulo, stampDeHoje(), partes, {
       cifras: t('share.word.cifras'), audio: t('share.word.audio'),
     });
     S.shareSheet = null;
     update();
     toast(t('msg.backup.exporting'));
     try {
-      if (await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes: opt.partes, fileName }))) {
+      if (await entregaArquivo(await exportLibrary({ songIds: sh.songIds, listIds: sh.listIds, partes, fileName }))) {
         toast(t('msg.backup.exported'));
       }
     } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
@@ -1235,6 +1261,14 @@ function wireBackupInput() {
     if (!f) return;
     const merge = S.importMode === 'merge';
     const total = S.songs.length;
+
+    // Só o cabeçalho — alguns KB, não o arquivo. Lido uma vez para os dois
+    // modos: o aviso de substituir precisa dele, e a pergunta das anotações
+    // também, inclusive no merge (que é o caso do professor reenviando).
+    let manifest = null;
+    try { manifest = (await lerManifest(f)).manifest; }
+    catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+
     // Um aparelho pode ser só uma estante de songbooks e não ter música
     // nenhuma — exatamente o que a tarefa dos livros tornou possível. Sem
     // contar `S.books` aqui, esse aparelho passava direto para o wipe() do
@@ -1243,11 +1277,6 @@ function wireBackupInput() {
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
     } else if (temAlgoAPerder) {
-      // O aviso precisa do manifest, então ele é lido ANTES do confirm. É só o
-      // cabeçalho — alguns KB, não o arquivo.
-      let manifest = null;
-      try { manifest = (await lerManifest(f)).manifest; }
-      catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
       // O manifest inteiro, porque os avisos de lista e de livro dependem do
       // arquivo trazer (ou não) cada um; e do aparelho ter o que perder, porque
       // não há o que perder quem não tem lista nenhuma, ou livro nenhum.
@@ -1256,9 +1285,20 @@ function wireBackupInput() {
       const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
     }
+
+    // Só no merge há o que negociar: no substituir a pessoa já confirmou
+    // trocar a biblioteca inteira (avisosDeSubstituir cobriu a falta de
+    // anotação ali em cima), e "manter a minha" não faz sentido quando ela
+    // está prestes a deixar de existir. Cancelar mantém as suas: a resposta
+    // destrutiva é a afirmativa.
+    const conflitos = merge ? conflitosDeNotas(S.songs, manifest.songs, manifest.partes) : [];
+    const decisaoNotas = conflitos.length
+      ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
+      : 'substituir';
+
     toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
     try {
-      const res = await importLibrary(f, { merge });
+      const res = await importLibrary(f, { merge, decisaoNotas, conflitosNotas: conflitos });
       // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
       // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
       // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
@@ -1290,6 +1330,15 @@ document.addEventListener('click', (e) => {
       // <svg> de dentro, então o X do próprio popover seria descartado aqui.
       const stop = e.target.closest('[data-stop]');
       if ((name === 'closePopover' || name === 'toggleMixer' || name === 'closeChordPicker' || name === 'closeShare') && stop && !stop.contains(t)) return;
+      // Editor de anotações aberto: qualquer ação do chrome — trocar de música,
+      // abrir a gaveta, o mixer, o T1/T2/T3, tocar um acorde — passa por AQUI
+      // antes de rodar. `closeNotas` já grava sozinha (é a ação "dona" do
+      // editor), então fica de fora para não gravar duas vezes. Isto NÃO
+      // bloqueia a ação: quem pediu "próxima música" tem que continuar indo
+      // para a próxima música. Só garante que o que já foi digitado está
+      // gravado ANTES do update() que a ação for disparar — depois dele o
+      // contenteditable já era, e a escrita ficaria só na tela.
+      if (S.notasEdit && name !== 'closeNotas') salvaNotasPendente();
       actions[name](t.dataset, e, t);
       return;
     }
@@ -1385,7 +1434,11 @@ document.addEventListener('keydown', (e) => {
     if (document.activeElement?.id === 'cb-new-name') actions.cbConfirmAdd();
   }
   // espaço = play/pause do transporte na tela de toque (fora de inputs)
-  if (e.key === ' ' && S.screen === 'play' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) {
+  // `isContentEditable` cobre o editor de anotações — um DIV, não INPUT/TEXTAREA —
+  // e qualquer superfície editável futura: sem isso, digitar um espaço nas
+  // notas era engolido pelo atalho e disparava toggleTransport(), cujo
+  // update() destrói o contenteditable no meio da digitação.
+  if (e.key === ' ' && S.screen === 'play' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '') && !document.activeElement?.isContentEditable) {
     const song = currentSong();
     if (song && ((song.stems || []).length || (song.full || []).length)) {
       e.preventDefault();
