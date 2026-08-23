@@ -23,7 +23,7 @@ const mem = () => performance.memory ? ` · heap ${(performance.memory.usedJSHea
 let doc = null;
 document.getElementById('f').addEventListener('change', async (e) => {
   const file = e.target.files[0]; if (!file) return;
-  L.length = 0; log(`pdf.js ${versaoPdfJs}`);
+  L.length = 0; log(`pdf.js ${await versaoPdfJs()}`);
   log(`arquivo: ${file.name} · ${(file.size/1e6).toFixed(1)} MB`);
   await fecharLivro(doc);
   const t0 = performance.now();
