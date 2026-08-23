@@ -31,7 +31,26 @@ function totalBytes(lista) {
 }
 
 // MB decimal (1e6), a mesma escala que a spec e o CHANGELOG usam para "MB".
-const mb = (bytes) => (bytes / 1e6).toFixed(2);
+const mb = (bytes) => bytes / 1e6;
+
+// A tolerância que este teste aceita entre o número escrito e o disco de
+// verdade — NÃO igualdade a centésimo de MB. SHELL pesa ~769 KB: bastam
+// ~700 bytes a mais (um módulo novo, a regra do próprio projeto — "todo
+// módulo novo entra no SHELL") para o `.toFixed(2)` mudar de "0.77" para
+// "0.78", e a única correção que esse tipo de comparação aceitaria seria
+// reescrever uma nota de release já publicada, o que este projeto trata como
+// registro histórico, não como algo para editar a cada byte. 5% cobre
+// arredondamento de exibição e um punhado de arquivos indo e vindo do SHELL/
+// VENDOR sem deixar de pegar a regressão que interessa: alguém trocando o
+// número de volta para a estimativa antiga (uma discrepância de dezenas de
+// por cento, não de fração de um).
+const TOLERANCIA = 0.05;
+const dentroDaFaixa = (medido, escrito) => Math.abs(escrito - medido) <= medido * TOLERANCIA;
+
+// Todo número "~X MB" (X com ponto OU vírgula decimal) escrito no bloco.
+function numerosEmMB(texto) {
+  return [...texto.matchAll(/~(\d+(?:[.,]\d+)?) ?MB/g)].map((m) => parseFloat(m[1].replace(',', '.')));
+}
 
 test('a entrada 0.16.0 do CHANGELOG não repete a estimativa antiga (~1 MB / ~5,7 MB)', () => {
   const bloco = CHANGELOG.slice(CHANGELOG.indexOf('## [0.16.0]'), CHANGELOG.indexOf('## [0.15.0]'));
@@ -39,19 +58,21 @@ test('a entrada 0.16.0 do CHANGELOG não repete a estimativa antiga (~1 MB / ~5,
   assert.ok(!/5[.,]7 ?MB/.test(bloco), 'ainda cita "~5,7 MB" — o total medido é outro');
 });
 
-test('a entrada 0.16.0 do CHANGELOG cita o SHELL e o VENDOR medidos de verdade', () => {
+test('a entrada 0.16.0 do CHANGELOG cita SHELL, VENDOR e o total dentro de 5% do disco', () => {
   const shellMB = mb(totalBytes(paths('SHELL')));
   const vendorMB = mb(totalBytes(paths('VENDOR')));
-  const totalMB = mb(totalBytes(paths('SHELL')) + totalBytes(paths('VENDOR')));
+  const totalMB = shellMB + vendorMB;
   const bloco = CHANGELOG.slice(CHANGELOG.indexOf('## [0.16.0]'), CHANGELOG.indexOf('## [0.15.0]'));
-  // Comparado a duas casas decimais: o objetivo é pegar uma REGRESSÃO da
-  // correção (alguém troca o número de volta para uma estimativa), não travar
-  // o teste toda vez que um arquivo do SHELL mudar um byte — daí a tolerância
-  // de duas casas, e não uma comparação byte a byte.
-  assert.ok(bloco.includes(`~${shellMB.replace('.', ',')} MB`) || bloco.includes(`~${shellMB} MB`),
-    `CHANGELOG não cita o SHELL medido (~${shellMB} MB): ${bloco}`);
-  assert.ok(bloco.includes(`~${vendorMB.replace('.', ',')} MB`) || bloco.includes(`~${vendorMB} MB`),
-    `CHANGELOG não cita o VENDOR medido (~${vendorMB} MB): ${bloco}`);
-  assert.ok(bloco.includes(`~${totalMB.replace('.', ',')} MB`) || bloco.includes(`~${totalMB} MB`),
-    `CHANGELOG não cita o total medido (~${totalMB} MB): ${bloco}`);
+  const escritos = numerosEmMB(bloco);
+  assert.ok(escritos.length >= 3,
+    `esperava pelo menos 3 números "~X MB" no bloco (SHELL, VENDOR, total); achei ${escritos.length}: ${bloco}`);
+  // Cada medida real precisa ter PELO MENOS UM número escrito perto dela —
+  // não comparamos posição a posição porque a frase pode reordenar os três
+  // sem deixar de estar certa. O que este teste pretende pegar é a prosa se
+  // afastando dos bytes de verdade — em qualquer direção, em qualquer ordem.
+  for (const [rotulo, medido] of [['SHELL', shellMB], ['VENDOR', vendorMB], ['total', totalMB]]) {
+    assert.ok(escritos.some((e) => dentroDaFaixa(medido, e)),
+      `nenhum número do CHANGELOG está a ${TOLERANCIA * 100}% do ${rotulo} medido `
+      + `(~${medido.toFixed(2)} MB); números citados: ${escritos.join(', ')}`);
+  }
 });
