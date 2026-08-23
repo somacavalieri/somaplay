@@ -65,6 +65,22 @@ that ships with the app was written for the project. If you need demo material, 
 
 **`chords/` is gitignored and stays that way.** It is the author's local asset library.
 
+**`app/diag.html` and `app/diag-pdf.html` ship deliberately, unlinked and outside the
+offline shell.** Both live under `app/`, which `.github/workflows/pages.yml` deploys
+wholesale — so both are live on the public site, reachable by anyone who knows (or
+guesses) the URL, even though nothing links to them and they are not in `SHELL` (they
+404 offline). That is the established pattern, not an oversight: they are hand tools for
+checking a codec/renderer directly, not part of the app. Do not delete either, and do not
+add a new one to `SHELL` — that would defeat the point of a page that exists to be
+opened by hand, occasionally, online.
+
+## Third-party code
+
+`app/js/vendor/` holds pdf.js, vendored — the project's only third-party dependency.
+It is copied in as-is, not installed by a package manager; **nobody edits anything
+under `vendor/`**. To update it, follow the procedure in
+`app/js/vendor/pdfjs/VERSAO.md`.
+
 ## How changes get made
 
 The project follows **spec → plan → implementation**:

@@ -10,8 +10,9 @@
 // caminho que todo usuário já usa hoje — não regrediu quando o filtro entrou.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir, conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
-import { PARTES_TODAS, fundeMusica } from '../js/partes.js';
+import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir,
+  partesDoExport, conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA, fundeMusica } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
 // mesmo se os artistas fossem filtrados, e a asserção que mais importa não
@@ -186,6 +187,10 @@ test('arquivo sem o pessoal avisa que favoritas e ajustes somem', () => {
 // nada — é substituir normal. O aviso é só para quando ele NÃO traz nenhuma, e
 // a de quem já escreveu some sem nada para tomar o lugar.
 test('arquivo sem anotação avisa que a anotação some', () => {
+  // As três partes de então, escritas por extenso DE PROPÓSITO: o assunto do
+  // teste é um arquivo que não declara 'anotacoes'. Trocar isto por
+  // PARTES_DE_MUSICA (que passou a incluí-la) faria o teste passar a testar o
+  // contrário do que o nome diz.
   assert.deepEqual(avisosDeSubstituir({ partes: ['cifra', 'audio', 'pessoal'], lists: [{ id: 'l1' }] }, { temListas: true }),
     ['msg.backup.replaceNoAnotacoes']);
 });
@@ -204,6 +209,37 @@ test('arquivo COM lista não gera o aviso de listas', () => {
 test('arquivo sem lista NÃO avisa se o aparelho também não tem', () => {
   assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }, { temListas: false }), []);
   assert.deepEqual(avisosDeSubstituir({ partes: PARTES_TODAS, lists: [] }), []);
+});
+
+// `livros` olha CONTEÚDO (`books`), não declaração (`partes`) — ao contrário
+// de cifra/áudio/pessoal, e pelo MESMO motivo de `lists`. DB.wipe() apaga a
+// estante e os blobs dos PDFs no modo substituir; sem o aviso certo esse era
+// o único dos quatro eixos sem sinal nenhum antes do "Substituir tudo".
+test('arquivo sem livro (conteúdo vazio) avisa quando o aparelho tem livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [{ id: 'l1' }], books: [] }, { temListas: true, temLivros: true }),
+    ['msg.backup.replaceNoBooks']);
+});
+
+// A REGRESSÃO que motivou trocar de eixo: um .somaplay gravado ANTES desta
+// tarefa não tem `partes` nem `books` — nenhum dos dois. normalizaPartes(undefined)
+// devolve PARTES_TODAS, que agora INCLUI 'livros', então testar a declaração
+// (`ps.includes('livros')`) leria esse arquivo como "fala de livro" e nunca
+// avisaria — e é exatamente esse arquivo, o único tipo que existe na prática
+// hoje, que "Substituir tudo" apagaria a estante inteira sem aviso nenhum.
+test('arquivo ANTIGO (sem partes, sem books) avisa quando o aparelho tem livros', () => {
+  assert.deepEqual(avisosDeSubstituir({ lists: [{ id: 'l1' }] }, { temListas: true, temLivros: true }),
+    ['msg.backup.replaceNoBooks']);
+});
+
+test('arquivo COM livros (conteúdo) não gera o aviso de livros, mesmo que `partes` não declare', () => {
+  // partes deliberadamente SEM 'livros': prova que quem decide é o conteúdo.
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [{ id: 'l1' }], books: [{ id: 'l1' }] }, { temListas: true, temLivros: true }), []);
+});
+
+// Não há o que perder: um aparelho sem livro nenhum não é avisado de nada.
+test('arquivo sem livro NÃO avisa se o aparelho também não tem', () => {
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [], books: [] }, { temListas: false, temLivros: false }), []);
+  assert.deepEqual(avisosDeSubstituir({ partes: PARTES_DE_MUSICA, lists: [] }), []);
 });
 
 test('os dois eixos se acumulam, na ordem do dano', () => {
@@ -302,4 +338,41 @@ test('aplicaDecisaoNotas não mexe em nada quando a decisão é "substituir"', (
   const doArquivo = [{ id: 's1', anotacoes: '<p>do arquivo</p>' }];
   aplicaDecisaoNotas(doArquivo, 'substituir', ['s1']);
   assert.equal(doArquivo[0].anotacoes, '<p>do arquivo</p>');
+});
+
+// --- partesDoExport (F1 do review final) ------------------------------------
+// A regra inteira é uma linha: 'livros' só entra em `partes` quando o export
+// não restringiu NADA — nem fonte, nem parte de música, nem listas. Qualquer
+// restrição é um recorte para compartilhar, e um recorte não pode arrastar a
+// estante (até centenas de MB) para dentro do arquivo.
+test('backup sem restrição nenhuma acrescenta livros às partes', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.deepEqual(partes, [...PARTES_DE_MUSICA, 'livros']);
+});
+
+test('uma fonte escolhida é um recorte: livros fica de fora', () => {
+  // O cenário do achado: desmarcar Áudio E escolher só a fonte VJ.
+  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: ['cifra'] });
+  assert.deepEqual(partes, ['cifra']);
+  assert.ok(!partes.includes('livros'));
+});
+
+test('uma fonte escolhida, mesmo com as três partes marcadas, ainda é recorte', () => {
+  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('uma caixa desmarcada, mesmo com todas as fontes, é recorte', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: ['cifra', 'audio'] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('listas fora do export também tira o backup de "completo"', () => {
+  const partes = partesDoExport({ fontes: null, exportListas: false, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
+});
+
+test('fontes como array vazio (nenhuma fonte marcada) não é "todas": não é completo', () => {
+  const partes = partesDoExport({ fontes: [], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
+  assert.ok(!partes.includes('livros'));
 });

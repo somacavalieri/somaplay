@@ -66,6 +66,8 @@ significa que aquela música não tem conteúdo para ele.
 
 **Biblioteca**
 - Navegue por **Artista**, **Música**, **Estilo** ou **Lista**
+- **Livros**: um songbook em PDF entra inteiro na biblioteca, com capa, leitura
+  página a página e zoom por pinça que redesenha a página em vez de esticar
 - Setlists com reordenação por arrastar, mais favoritas
 - Listas são globais — ignoram a lente de modo, e abrir uma música pela lista toca ela no
   melhor modo disponível

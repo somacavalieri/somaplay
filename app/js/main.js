@@ -8,10 +8,14 @@ import {
   toggleFonte as calcToggleFonte, podarFonteFilter,
   musicasPresentes, songsOfArtist, artistById, matchesLens,
   duplicarMusicaNoTom, vizinhaNoContexto,
+  criarLivro, apagarLivro, renomearLivro, livroById,
 } from './state.js';
+import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy, marcaPaginaMudou, flushLivroPagina } from './render/book.js';
+import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
 import { renderHome, homeResults } from './render/home.js';
+import { capaDoArquivo } from './render/books.js';
 import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
@@ -22,8 +26,9 @@ import { renderAddEdit, newDraft, syncDraftFromDOM, commitDraft } from './render
 import { renderEstilo } from './render/estilo.js';
 import { renderSettings, fillStorageInfo } from './render/settings.js';
 import { renderChordbook } from './render/chordbookscreen.js';
-import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport, stampDeHoje, lerManifest, avisosDeSubstituir, conflitosDeNotas } from './backup.js';
-import { PARTES_TODAS } from './partes.js';
+import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport,
+  stampDeHoje, lerManifest, avisosDeSubstituir, partesDoExport, conflitosDeNotas } from './backup.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA } from './partes.js';
 import { importSamples } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
@@ -89,6 +94,7 @@ export function update() {
   else if (scr === 'addedit') html = renderAddEdit();
   else if (scr === 'settings') html = renderSettings();
   else if (scr === 'chordbook') html = renderChordbook();
+  else if (scr === 'book') html = renderBook();
   html += renderPopover();
   html += renderShareSheet();
   app.innerHTML = html;
@@ -97,10 +103,23 @@ export function update() {
   afterRender();
 }
 
+// Atalho de #home-results: troca só o innerHTML da lista, sem passar por
+// afterRender(). Isso significa que QUALQUER coisa que afterRender() faz
+// especificamente para o conteúdo de #home-results tem que ser repetida aqui
+// à mão — refreshFonteCounts() já é assim por este motivo, e wireBookFileInput()
+// entra pela mesma razão: renderBooksTab() emite um <input id="file-livro"> novo
+// a cada chamada, e um input novo sem listener é um botão "Adicionar livro" que
+// abre o seletor de arquivo e não faz mais nada. Esta função é chamada da busca
+// (toda tecla) e de carregarCapas() (toda capa que chega) — as duas rodam o
+// tempo todo enquanto a aba Livros está aberta. Esqueça de repetir algo daqui
+// da próxima vez e o próximo bug vai ser exatamente este, de novo.
 function updateHomeResults() {
   const el = document.getElementById('home-results');
-  if (el) { el.innerHTML = homeResults(); refreshFonteCounts(); }
-  else update();
+  if (el) {
+    el.innerHTML = homeResults();
+    refreshFonteCounts();
+    if (S.tab === 'books') wireBookFileInput();
+  } else update();
 }
 
 function afterRender() {
@@ -108,6 +127,14 @@ function afterRender() {
   else stopPlayTimers();
   if (S.screen === 'settings') { fillStorageInfo(); wireBackupInput(); }
   if (S.screen === 'addedit') wireAddEditFiles();
+  if (S.screen === 'book') afterRenderBook(update);
+  // A regra central para as capas da estante: a estante de Livros só está na
+  // tela quando S.screen === 'home' e S.tab === 'books'. Qualquer outro render —
+  // troca de aba, tela do livro, Configurações, o que vier depois — cai no
+  // else e revoga. Nada de espalhar revogarCapas() pelas ações que saem de
+  // Home; um render sem a estante já é o sinal certo, e é um só lugar.
+  if (S.screen === 'home' && S.tab === 'books') { wireBookFileInput(); carregarCapas(); }
+  else revogarCapas();
 
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
@@ -279,6 +306,14 @@ let apagandoFonte = false;
 // duas cópias.
 let duplicandoTom = false;
 
+// Mesma guarda, mesmo motivo: criarLivro grava o PDF inteiro no OPFS num await
+// que pode levar segundos para um songbook grande, e o botão "Salvar livro"
+// continua tocável durante ele. Sem isto, um duplo toque na tela — comum em
+// touchscreen — reentra com S.livroDraft ainda preenchido, e criarLivro cunha
+// um uid() novo e escreve uma SEGUNDA cópia completa do arquivo: duas entradas
+// na estante, o dobro do armazenamento, e nada que diga ao usuário qual é qual.
+let salvandoLivro = false;
+
 const actions = {
   // navegação
   goHome() { if (S.screen === 'play') leavePlay(); S.screen = 'home'; S.sortMenuOpen = false; update(); },
@@ -322,7 +357,13 @@ const actions = {
   navPick(d) { if (d.id !== S.currentSongId) openSongAction(d.id, S.navCtx?.kind); else actions.closeSongNav(); },
   songPrev() { const s = vizinhaNoContexto(-1); if (s) openSongAction(s.id, S.navCtx?.kind); },
   songNext() { const s = vizinhaNoContexto(1); if (s) openSongAction(s.id, S.navCtx?.kind); },
-  setTab(d) { S.tab = d.id; S.sortMenuOpen = false; update(); },
+  setTab(d) {
+    // A revogação das capas não mora mais aqui — afterRender() cobre a troca de
+    // aba (e toda outra saída da estante) num só lugar. Ver o comentário lá.
+    S.tab = d.id;
+    S.sortMenuOpen = false;
+    update();
+  },
   toggleLens(d) {
     S.modeFilter = S.modeFilter.includes(d.id)
       ? S.modeFilter.filter((x) => x !== d.id)
@@ -409,6 +450,119 @@ const actions = {
       const l = listById(S.openListId);
       if (l) { l.musicas = l.musicas.filter((x) => x !== d.id); DB.putList(l); }
     }
+    update();
+  },
+
+  // livros
+  pickLivro() { document.getElementById('file-livro')?.click(); },
+
+  // async e com update() no fim, como saveLivroDraft: sem isso a UI nunca
+  // reflete o cancelamento — o cartão do rascunho ficaria preso na tela
+  // apontando pra um object URL que acabamos de revogar (imagem quebrada), e o
+  // próximo PDF da fila só apareceria no próximo re-render de outro motivo.
+  async cancelLivroDraft() {
+    if (S.livroDraft?.capaURL) URL.revokeObjectURL(S.livroDraft.capaURL);
+    S.livroDraft = null;
+    await proximoLivroDaFila();
+    update();
+  },
+
+  async saveLivroDraft() {
+    if (salvandoLivro) return;
+    const d = S.livroDraft;
+    if (!d) return;
+    salvandoLivro = true;
+    d.titulo = document.getElementById('f-livro-titulo')?.value.trim() || d.titulo;
+    d.autor = document.getElementById('f-livro-autor')?.value.trim() || '';
+    try {
+      const livro = await criarLivro(d.file, {
+        titulo: d.titulo, autor: d.autor, paginas: d.paginas, capaBlob: d.capaBlob,
+      });
+      toast(t('books.saved', { title: livro.titulo }));
+    } catch (e) {
+      // Erro daqui é do OPFS (escrever o PDF/a capa), não do pdf.js — a esta
+      // altura o arquivo já abriu, é assim que o rascunho existe. books.error.open
+      // culparia a coisa errada.
+      toast(t('books.error.save', { msg: e.message }));
+    } finally {
+      salvandoLivro = false;
+    }
+    if (d.capaURL) URL.revokeObjectURL(d.capaURL);
+    S.livroDraft = null;
+    await proximoLivroDaFila();
+    update();
+  },
+
+  // tela de leitura do livro
+  openBook(d) {
+    const b = livroById(d.id);
+    if (!b) return;
+    S.livroId = b.id;
+    S.livroPagina = Math.min(Math.max(1, b.ultimaPagina || 1), b.paginas || 1);
+    S.livroZoom = 1;
+    S.livroGrade = false;
+    S.livroMenu = false;
+    S.livroRenomeando = false;
+    S.screen = 'book';
+    update();
+  },
+  async sairDoLivro() { await sairDoLivro(); S.screen = 'home'; S.tab = 'books'; update(); },
+  async paginaAnterior() { if (await viraPagina(-1)) update(); },
+  async proximaPagina() { if (await viraPagina(1)) update(); },
+  bookZoomIn() { bookZoomBy(0.2); },
+  bookZoomOut() { bookZoomBy(-0.2); },
+  toggleBookGrid() { S.livroGrade = !S.livroGrade; update(); },
+  irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; marcaPaginaMudou(); update(); },
+
+  // menu do livro: renomear, exportar, apagar
+  toggleBookMenu() { S.livroMenu = !S.livroMenu; update(); },
+
+  renomearLivro() { S.livroMenu = false; S.livroRenomeando = true; update(); },
+  cancelRenomearLivro() { S.livroRenomeando = false; update(); },
+  async confirmRenomearLivro() {
+    await renomearLivro(S.livroId, {
+      titulo: document.getElementById('f-ren-titulo')?.value.trim() || undefined,
+      autor: document.getElementById('f-ren-autor')?.value.trim() ?? undefined,
+    });
+    S.livroRenomeando = false;
+    update();
+  },
+
+  // `songIds: new Set()` e `listIds: new Set()` vazios, e não `null`: `null`
+  // significa "tudo" no recorte (backup.js:recorteParaExport), e exportar um
+  // livro arrastaria a biblioteca inteira — músicas, áudio e tudo mais — para
+  // dentro de um arquivo com nome de um único livro.
+  async exportarLivro() {
+    const b = livroById(S.livroId);
+    if (!b) return;
+    S.livroMenu = false;
+    const nome = nomeDoExport(`livro-${b.titulo}`, stampDeHoje(), ['livros'], {});
+    // Mesma forma de doShare (main.js) e do export de Configurações: o toast de
+    // sucesso só dispara quando entregaArquivo() de fato entrega algo — ela
+    // devolve false, sem lançar, quando a pessoa desiste na folha do sistema
+    // (AbortError), e nesse caso o silêncio é o comportamento certo, não um
+    // "Livro exportado." mentindo sobre um arquivo que não saiu. O try/catch é
+    // o que dá uma mensagem a uma falha de verdade, em vez de nada.
+    try {
+      const file = await exportLibrary({
+        songIds: new Set(), listIds: new Set(), bookIds: new Set([b.id]),
+        partes: ['livros'], fileName: nome,
+      });
+      if (await entregaArquivo(file)) toast(t('book.exported'));
+    } catch (e) { toast(t('msg.backup.exportFailed', { error: e.message })); }
+    update();
+  },
+
+  async apagarLivro() {
+    const b = livroById(S.livroId);
+    if (!b) return;
+    S.livroMenu = false;
+    if (!confirm(t('book.delete.confirm', { title: b.titulo }))) { update(); return; }
+    await sairDoLivro();
+    await apagarLivro(b.id);
+    if (S.capaURLs[b.id]) { URL.revokeObjectURL(S.capaURLs[b.id]); delete S.capaURLs[b.id]; }
+    S.screen = 'home'; S.tab = 'books';
+    toast(t('book.deleted'));
     update();
   },
 
@@ -770,13 +924,14 @@ const actions = {
     S.exportFontes = todas.every((x) => prox.includes(x)) ? null : prox;
     update();
   },
-  // A remarcação reconstrói a partir de PARTES_TODAS para a ordem do array ser
-  // sempre a canônica — assim o `partes` gravado no arquivo não depende da
-  // ordem em que as caixas foram clicadas.
+  // A remarcação reconstrói a partir de PARTES_DE_MUSICA para a ordem do array
+  // ser sempre a canônica — assim o `partes` gravado no arquivo não depende da
+  // ordem em que as caixas foram clicadas. 'livros' nunca passa por aqui:
+  // Settings não tem caixa para ele (F1 do review final) — ver exportBackup.
   toggleExportParte(d) {
     S.exportPartes = S.exportPartes.includes(d.id)
       ? S.exportPartes.filter((p) => p !== d.id)
-      : [...PARTES_TODAS.filter((p) => p === d.id || S.exportPartes.includes(p))];
+      : [...PARTES_DE_MUSICA.filter((p) => p === d.id || S.exportPartes.includes(p))];
     update();
   },
   toggleExportListas() { S.exportListas = !S.exportListas; update(); },
@@ -816,7 +971,9 @@ const actions = {
   },
   async exportBackup() {
     const fontes = S.exportFontes;
-    const partes = S.exportPartes;
+    // partesDoExport (backup.js) decide se isto é um backup completo — e só o
+    // completo carrega a estante de livros junto (F1 do review final).
+    const partes = partesDoExport({ fontes, exportListas: S.exportListas, exportPartes: S.exportPartes });
     const sel = {
       songIds: fontes?.length ? songIdsDasFontes(S.songs, fontes) : null,
       listIds: S.exportListas ? null : new Set(),
@@ -1016,6 +1173,84 @@ function wireAddEditFiles() {
   };
 }
 
+// Um livro por vez: o rascunho aberto é o da frente da fila, e salvar (ou
+// cancelar) puxa o próximo. Importar 5 PDFs de uma vez sem passar por aqui
+// significaria 5 livros com título de arquivo cru e nenhum autor.
+async function proximoLivroDaFila() {
+  const file = (S.livroFila || []).shift();
+  if (!file) return;
+  toast(t('books.reading'));
+  try {
+    const { paginas, capaBlob } = await capaDoArquivo(file);
+    S.livroDraft = {
+      file, paginas, capaBlob,
+      capaURL: capaBlob ? URL.createObjectURL(capaBlob) : null,
+      titulo: tituloDeArquivo(file.name) || file.name,
+      autor: '',
+    };
+  } catch (e) {
+    toast(t('books.error.open', { msg: e.message }));
+    await proximoLivroDaFila();
+  }
+}
+
+export function wireBookFileInput() {
+  const inp = document.getElementById('file-livro');
+  if (!inp || inp._wired) return;
+  inp._wired = true;
+  inp.addEventListener('change', async () => {
+    const files = [...inp.files].filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    const recusados = [...inp.files].filter((f) => !files.includes(f));
+    for (const f of recusados) toast(t('books.error.notPdf', { name: f.name }));
+    inp.value = '';
+    S.livroFila = (S.livroFila || []).concat(files);
+    if (!S.livroDraft) await proximoLivroDaFila();
+    update();
+  });
+}
+
+// As capas entram depois do render, uma vez cada. Sem a guarda do `capaURLs`,
+// cada re-render (digitar na busca, trocar de aba) criaria object URL novo para
+// as mesmas capas e vazaria memória até o app engasgar.
+async function carregarCapas() {
+  let mudou = false;
+  for (const b of S.books) {
+    if (!b.capaBlobId || S.capaURLs[b.id]) continue;
+    const url = await DB.blobURL(b.capaBlobId);
+    if (url) { S.capaURLs[b.id] = url; mudou = true; }
+  }
+  if (mudou) {
+    // Uma capa pode acabar de chegar enquanto o rascunho de importação está
+    // aberto e a pessoa está digitando título/autor. updateHomeResults() troca
+    // o innerHTML da lista inteira — inclusive o formulário do rascunho —, e
+    // ele é montado a partir de `d.titulo`/`d.autor`: sem sincronizar primeiro,
+    // o re-render voltaria a mostrar o que o rascunho tinha ao nascer,
+    // descartando o que já tinha sido digitado (F9 do review final).
+    syncLivroDraftDoDOM();
+    updateHomeResults();
+  }
+}
+
+function syncLivroDraftDoDOM() {
+  const d = S.livroDraft;
+  if (!d) return;
+  const titulo = document.getElementById('f-livro-titulo');
+  const autor = document.getElementById('f-livro-autor');
+  if (titulo) d.titulo = titulo.value;
+  if (autor) d.autor = autor.value;
+}
+
+// O par de carregarCapas: fecha o que ela abriu. Chamada de um único lugar,
+// afterRender() (acima), toda vez que a estante de Livros não está na tela —
+// não só na troca de aba: entrar num livro pela tela de leitura ou ir para
+// Configurações também sai da estante, e antes disso cada saída revogava (ou
+// esquecia de revogar) na própria ação, o que já deixou uma saída sem cobertura.
+// carregarCapas busca de novo, do zero, na próxima vez que a aba abrir.
+function revogarCapas() {
+  for (const url of Object.values(S.capaURLs)) URL.revokeObjectURL(url);
+  S.capaURLs = {};
+}
+
 // A tela de Configurações tem o <input id="file-backup">. Religado a cada render.
 function wireBackupInput() {
   const backup = document.getElementById('file-backup');
@@ -1034,13 +1269,18 @@ function wireBackupInput() {
     try { manifest = (await lerManifest(f)).manifest; }
     catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
 
+    // Um aparelho pode ser só uma estante de songbooks e não ter música
+    // nenhuma — exatamente o que a tarefa dos livros tornou possível. Sem
+    // contar `S.books` aqui, esse aparelho passava direto para o wipe() do
+    // "Substituir tudo" sem confirm nenhum, porque o portão só olhava músicas.
+    const temAlgoAPerder = total > 0 || S.books.length > 0;
     if (merge) {
       if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
-    } else if (total > 0) {
-      // O manifest inteiro, porque o aviso das listas depende de o arquivo
-      // trazer lista; e o aparelho ter lista, porque não há o que perder quem
-      // não tem nenhuma.
-      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0 })
+    } else if (temAlgoAPerder) {
+      // O manifest inteiro, porque os avisos de lista e de livro dependem do
+      // arquivo trazer (ou não) cada um; e do aparelho ter o que perder, porque
+      // não há o que perder quem não tem lista nenhuma, ou livro nenhum.
+      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0, temLivros: S.books.length > 0 })
         .map((k) => t(k)).join('\n');
       const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
       if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
@@ -1108,6 +1348,7 @@ document.addEventListener('click', (e) => {
   if (S.imgMenuOpen && !e.target.closest('.menu-wrap')) { S.imgMenuOpen = false; update(); }
   if (S.listMenuOpen && !e.target.closest('.menu-wrap')) { S.listMenuOpen = false; update(); }
   if (S.artistMenuOpen && !e.target.closest('.menu-wrap')) { S.artistMenuOpen = false; update(); }
+  if (S.livroMenu && !e.target.closest('.menu-wrap')) { S.livroMenu = false; update(); }
   if (S.chordPop && !e.target.closest('.chord-pop')) { S.chordPop = null; update(); }
   if (S.tomPop && !e.target.closest('.tom-pop') && !e.target.closest('.tag-tom')) { S.tomPop = null; update(); }
 });
@@ -1165,8 +1406,8 @@ document.addEventListener('keydown', (e) => {
     if (S.chordPop) { S.chordPop = null; update(); }
     else if (S.popoverSongId) { S.popoverSongId = null; update(); }
     else if (S.navOpen) { S.navOpen = false; update(); }
-    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen) {
-      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = false;
+    else if (S.imgMenuOpen || S.sortMenuOpen || S.listMenuOpen || S.artistMenuOpen || S.livroMenu) {
+      S.imgMenuOpen = S.sortMenuOpen = S.listMenuOpen = S.artistMenuOpen = S.livroMenu = false;
       update();
     }
   }
@@ -1204,6 +1445,10 @@ document.addEventListener('keydown', (e) => {
       actions.toggleTransport();
     }
   }
+  // setas = virar página na tela do livro
+  if (S.screen === 'book' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+    viraPagina(e.key === 'ArrowRight' ? 1 : -1).then((n) => { if (n) update(); });
+  }
 });
 
 let _setTimer = null;
@@ -1229,6 +1474,11 @@ async function manageWakeLock() {
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') manageWakeLock();
+  // Home button, app switch or the tab being evicted all fire this with
+  // 'hidden' first — the one moment the debounced page-position write (F4 do
+  // review final) has to have already landed, because there may be no next
+  // event on this page to land it later.
+  else flushLivroPagina();
 });
 
 // ---------- boot ----------

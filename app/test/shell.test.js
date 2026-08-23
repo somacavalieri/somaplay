@@ -20,8 +20,17 @@ const shell = [...SW.match(/const SHELL = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+
 
 function modulesOnDisk(dir = 'js') {
   return readdirSync(APP + dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? modulesOnDisk(`${dir}/${e.name}`)
+    e.isDirectory() ? (e.name === 'vendor' ? [] : modulesOnDisk(`${dir}/${e.name}`))
       : e.name.endsWith('.js') ? [`./${dir}/${e.name}`] : []);
+}
+
+const vendor = [...SW.match(/const VENDOR = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)]
+  .map((m) => m[1]);
+
+function vendorOnDisk(dir = 'js/vendor') {
+  if (!existsSync(APP + dir)) return [];
+  return readdirSync(APP + dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? vendorOnDisk(`${dir}/${e.name}`) : [`./${dir}/${e.name}`]);
 }
 
 test('todo caminho do SHELL existe em disco', () => {
@@ -46,4 +55,17 @@ test('VERSION segue o formato somaplay-X.Y.Z', () => {
   const m = SW.match(/const VERSION = '([^']+)'/);
   assert.ok(m, 'VERSION não encontrado em sw.js');
   assert.match(m[1], /^somaplay-\d+\.\d+\.\d+$/, `VERSION fora do formato: ${m[1]}`);
+});
+
+test('todo arquivo vendorizado está no VENDOR do Service Worker', () => {
+  // Sem isto, um .wasm esquecido some offline e o livro escaneado abre em branco
+  // — falha que só aparece no tablet, depois de instalado.
+  const naoPrecacheados = vendorOnDisk().filter((f) => !vendor.includes(f) && !f.endsWith('.md'));
+  assert.deepEqual(naoPrecacheados, [],
+    `arquivos em js/vendor fora do VENDOR: ${naoPrecacheados.join(', ')}`);
+});
+
+test('todo caminho do VENDOR existe em disco', () => {
+  const faltando = vendor.filter((p) => !existsSync(APP + p));
+  assert.deepEqual(faltando, [], `caminhos no VENDOR sem arquivo: ${faltando.join(', ')}`);
 });

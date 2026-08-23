@@ -135,6 +135,17 @@ todo compartilhamento** — o pior tipo de bug, porque o caminho que você testa
 funciona. O mesmo mapa é lido pela poda da exportação e pela fusão da importação, de
 propósito: duas verdades ali é como as duas passam a discordar.
 
+**O pdf.js é vendorizado e ninguém edita `app/js/vendor/`.** É a única dependência de
+terceiro do projeto, fixada em v6.2.108 e precacheada por um array `VENDOR` separado
+do `SHELL` — separado porque `cache.addAll()` rejeita inteiro quando um caminho falta,
+e um `.wasm` esquecido não pode derrubar a instalação do app todo. `shell.test.js`
+compara o array com o que existe em disco. Atualizar: `app/js/vendor/pdfjs/VERSAO.md`.
+
+**`PARTES_TODAS` deixou de ser o que `todasAsPartes()` mede.** Quem mede é
+`PARTES_DE_MUSICA` (`partes.js`). Acrescentar uma parte nova ao primeiro é seguro;
+acrescentar ao segundo faz **todo backup já gravado** cair na cópia campo a campo e
+perder, em silêncio e na restauração, qualquer campo fora de `CAMPOS`.
+
 ## How changes get made
 
 **spec → plan → implementation.** A design decision is written to

@@ -71,6 +71,8 @@ export const I = {
   tbMono: (w = 19) => stroke(w, '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>'),
   tbUndo: (w = 19) => stroke(w, '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'),
   tbRedo: (w = 19) => stroke(w, '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/>'),
+  chevL: (w = 18) => stroke(w, '<path d="M15 18l-6-6 6-6"/>', 2.2),
+  book: (w = 18) => stroke(w, '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'),
 };
 
 export const eqBars = () => '<div class="eq"><span></span><span></span><span></span></div>';

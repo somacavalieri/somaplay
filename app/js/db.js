@@ -2,11 +2,12 @@
 // Modelo (v1): artists { id, name, av } · songs { id, artistId, title, tom, favorita,
 //   createdAt, cifra{tipo,imagens[],texto,acordes[],digitacoes{}}, letra, stems[], full[] }
 //   lists { id, nome, fixada, musicas[] } · settings { key:'main', ... }
+//   books { id, titulo, autor, fileName, blobId, capaBlobId, paginas, bytes, ultimaPagina, createdAt }
 
 import { t } from './i18n.js';
 
 const DB_NAME = 'somaplay';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let _db = null;
 let _opfsRoot = null; // null = ainda não checado; false = indisponível
@@ -23,6 +24,7 @@ function idb() {
       if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
       if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'id' }); // fallback OPFS
       if (!d.objectStoreNames.contains('chordbook')) d.createObjectStore('chordbook', { keyPath: 'name' });
+      if (!d.objectStoreNames.contains('books')) d.createObjectStore('books', { keyPath: 'id' });
     };
     // Outra aba/janela do Soma Play com uma conexão v1 aberta impede o upgrade —
     // sem isto, open() nunca resolve nem rejeita e o boot fica travado em silêncio.
@@ -83,8 +85,8 @@ export const DB = {
 
   // ---------- metadados ----------
   loadAll() {
-    return Promise.all([reqAll('artists'), reqAll('songs'), reqAll('lists')])
-      .then(([artists, songs, lists]) => ({ artists, songs: songs.map(normalizaCifra), lists }));
+    return Promise.all([reqAll('artists'), reqAll('songs'), reqAll('lists'), reqAll('books')])
+      .then(([artists, songs, lists, books]) => ({ artists, songs: songs.map(normalizaCifra), lists, books }));
   },
   putArtist(a) { return tx('artists', 'readwrite', (s) => s.put(a)); },
   deleteArtist(id) { return tx('artists', 'readwrite', (s) => s.delete(id)); },
@@ -92,6 +94,8 @@ export const DB = {
   deleteSong(id) { return tx('songs', 'readwrite', (s) => s.delete(id)); },
   putList(l) { return tx('lists', 'readwrite', (s) => s.put(l)); },
   deleteList(id) { return tx('lists', 'readwrite', (s) => s.delete(id)); },
+  putBook(b) { return tx('books', 'readwrite', (s) => s.put(b)); },
+  deleteBook(id) { return tx('books', 'readwrite', (s) => s.delete(id)); },
 
   // Lote: uma transação para o conjunto inteiro. Apagar as 5.523 músicas de uma
   // fonte chamando deleteSong() seriam 5.523 transações — dezenas de segundos
@@ -174,7 +178,7 @@ export const DB = {
   // Apaga toda a biblioteca (artistas, músicas, listas e arquivos), preservando settings.
   // Usado pelo import "substituir" para o aparelho virar espelho exato do backup.
   async wipe() {
-    for (const store of ['artists', 'songs', 'lists']) {
+    for (const store of ['artists', 'songs', 'lists', 'books']) {
       await tx(store, 'readwrite', (s) => s.clear());
     }
     const ids = await this.listBlobIds();

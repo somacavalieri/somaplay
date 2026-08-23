@@ -1,5 +1,6 @@
 // render/settings.js — Configurações (tela mínima do MVP, §10 do PRD)
 import { S, fontesDaBiblioteca, songIdsDasFontes, SEM_FONTE } from '../state.js';
+import { partesDoExport } from '../backup.js';
 import { I, esc } from '../icons.js';
 import { DB } from '../db.js';
 import { SCROLL_MIN, SCROLL_MAX } from '../scroll-speed.js';
@@ -124,6 +125,23 @@ export async function fillStorageInfo() {
   }
 }
 
+// Decide se o botão Exportar tem o que fazer (F2 do review final; corrigido
+// na rodada seguinte — ver F1/F2 do segundo review). `n` já chega filtrado
+// por fonte — pode ser 0 numa biblioteca sem música nenhuma.
+//
+// `exportaLivros` NÃO é "a biblioteca tem livro" — é "este export, do jeito
+// que está configurado agora, vai carregar os livros junto" (a MESMA
+// pergunta que partesDoExport, em backup.js, responde na hora de exportar
+// de verdade). Usar só "a estante não é vazia" foi o bug: destravava o botão
+// e prometia livro no rótulo mesmo quando o recorte atual (uma fonte
+// escolhida, uma caixa desmarcada) já tinha decidido não levar livro
+// nenhum — inclusive no caso que motivou este parâmetro, uma biblioteca só
+// de livros com Cifras desmarcada, que baixava um arquivo vazio atrás de um
+// botão habilitado. Pura, para testar sem DOM.
+export function podeExportarBackup({ n, temConteudo, exportaLivros }) {
+  return (n > 0 && temConteudo) || !!exportaLivros;
+}
+
 // O bloco Exportar. As linhas vêm de fontesDaBiblioteca — mais usadas primeiro,
 // "Sem fonte" por último. O data-id carrega a GRAFIA SALVA da fonte, nunca
 // traduzida: ela é conteúdo do usuário. Só o balde usa o sentinela, com o
@@ -180,14 +198,27 @@ function blocoExportar() {
 
   // Cifras e Áudio ambas desmarcadas geram um arquivo sem conteúdo nenhum. É
   // acidente, não caso de uso — o botão trava, pela mesma regra de "nenhuma
-  // fonte marcada".
+  // fonte marcada". Mas um aparelho que só tem livros (F2 do review final) não
+  // tem cifra nem áudio para desmarcar, e mesmo assim tem o que exportar: as
+  // duas caixas não decidem mais sozinhas se o botão trava.
   const temConteudo = S.exportPartes.some((p) => p === 'cifra' || p === 'audio');
+  // A MESMA pergunta que partesDoExport (backup.js) responde na hora de
+  // exportar de verdade — não "a biblioteca tem livro", que era o bug do
+  // review anterior: um recorte por fonte ou por parte não leva livro
+  // nenhum mesmo com a estante cheia, e nem o botão nem o rótulo podem
+  // prometer o que o arquivo não vai entregar.
+  const exportaLivros = S.books.length > 0 && partesDoExport({
+    fontes: S.exportFontes, exportListas: S.exportListas, exportPartes: S.exportPartes,
+  }).includes('livros');
+  const podeExportar = podeExportarBackup({ n, temConteudo, exportaLivros });
 
-  const acao = !temConteudo
+  const acao = !temConteudo && !exportaLivros
     ? t('settings.export.nothingPart')
     : n
       ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
-      : t('settings.export.nothing');
+      : exportaLivros
+        ? t('settings.export.action', { count: S.books.length, song: t(S.books.length === 1 ? 'common.book' : 'common.books') })
+        : t('settings.export.nothing');
 
   return `<div class="setting-block" style="padding:20px;margin-top:6px">
     <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
@@ -195,7 +226,7 @@ function blocoExportar() {
     ${linhas}
     <div style="color:var(--muted);font-size:12px;margin:16px 2px 6px;text-transform:uppercase;letter-spacing:.04em">${t('settings.export.what')}</div>
     ${caixas}
-    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${n && temConteudo ? '' : 'disabled'}>${I.download()}${acao}</button>
+    <button class="btn-primary" style="width:100%;margin-top:12px" data-a="exportBackup" ${podeExportar ? '' : 'disabled'}>${I.download()}${acao}</button>
   </div>`;
 }
 

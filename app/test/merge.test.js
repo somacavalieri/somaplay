@@ -31,7 +31,8 @@ test('artista novo é adicionado; suas músicas mantêm o id', () => {
 });
 
 test('campos ausentes não quebram', () => {
-  assert.deepEqual(mergePlan({}, {}), { artists: [], songs: [], lists: [], added: 0, updated: 0, remap: {} });
+  assert.deepEqual(mergePlan({}, {}),
+    { artists: [], songs: [], lists: [], books: [], booksAdded: 0, added: 0, updated: 0, remap: {} });
 });
 
 // --- partes ----------------------------------------------------------------
