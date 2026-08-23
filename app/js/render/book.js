@@ -319,6 +319,29 @@ async function adiantaProxima() {
   finally { paginaOcupada = false; }
 }
 
+// The last page successfully painted, kept as a bitmap so a re-render that
+// only replaces the <canvas> — the ⋯ menu opening or closing, its
+// click-outside handler, the grid overlay mounting — can repaint instantly
+// instead of asking pdf.js to rasterize the SAME page a second time (F7 do
+// review final: one menu tap used to cost two full 300 dpi rasters and two
+// white flashes). Distinct from `adiantada`, which is the NEXT page, not yet
+// shown; this is the page already on screen. Cleared in sairDoLivro, same as
+// the other session-lived caches above.
+let atualCache = null; // { id, n, z, bitmap, w, h } | null
+
+function descartaAtual() {
+  if (!atualCache) return;
+  try { atualCache.bitmap.close(); } catch (e) { /* já fechado */ }
+  atualCache = null;
+}
+
+function desenhaBitmapNoCanvas(canvas, cache) {
+  canvas.width = cache.bitmap.width;
+  canvas.height = cache.bitmap.height;
+  canvas.getContext('2d', { alpha: false }).drawImage(cache.bitmap, 0, 0);
+  aplicaTamanhoCanvas(canvas, cache.w, cache.h);
+}
+
 // Draws the current page. Every call carries a token: a fast reader can turn
 // three pages while the first is still rasterising, and without the token the
 // slow one would land on top of the fast one — the same guard loadSongMedia has.
@@ -329,6 +352,17 @@ export async function desenhaPagina() {
   const alvo = { n: S.livroPagina, z: S.livroZoom };
   desenhando = alvo;
   try {
+    // Nothing actually changed since the last successful draw — the canvas
+    // here is a brand-new, empty element (update() rebuilt the whole screen),
+    // but the pixels for THIS page at THIS zoom are already decoded.
+    if (atualCache && atualCache.id === b.id && atualCache.n === alvo.n
+        && Math.abs(atualCache.z - alvo.z) < 0.001) {
+      desenhaBitmapNoCanvas(canvas, atualCache);
+      const wrap = document.querySelector('[data-bookscroll] .inner');
+      if (wrap) wrap.style.alignItems = S.livroZoom > 1.001 ? 'flex-start' : 'center';
+      setStatus(null);
+      return;
+    }
     if (!doc || docId !== b.id) {
       setStatus(t('book.rendering'));
       await abreLivro(b);
@@ -342,23 +376,27 @@ export async function desenhaPagina() {
     }
     const el = document.querySelector('[data-bookscroll]');
     const largura = Math.max(320, el.clientWidth * S.livroZoom);
+    let bitmap, w, h;
     if (adiantada && adiantada.id === b.id && adiantada.n === alvo.n
         && Math.abs(adiantada.z - alvo.z) < 0.001) {
-      const cache = adiantada;
+      ({ bitmap, w, h } = adiantada);
       adiantada = null;
-      canvas.width = cache.bitmap.width;
-      canvas.height = cache.bitmap.height;
-      canvas.getContext('2d', { alpha: false }).drawImage(cache.bitmap, 0, 0);
-      aplicaTamanhoCanvas(canvas, cache.w, cache.h);
-      cache.bitmap.close();
+      desenhaBitmapNoCanvas(canvas, { bitmap, w, h });
     } else {
+      // Used to fire only while opening the document above — a plain page
+      // turn (or a redraw after a real zoom change) can take just as long,
+      // and a blank canvas with no status was a flash with no explanation
+      // (F7 do review final).
+      setStatus(t('book.rendering'));
       paginaOcupada = true;
-      let w, h;
       try { ({ w, h } = await renderPagina(doc, alvo.n, largura, window.devicePixelRatio || 1, canvas)); }
       finally { paginaOcupada = false; }
       if (desenhando !== alvo) return;
       aplicaTamanhoCanvas(canvas, w, h);
+      bitmap = await createImageBitmap(canvas);
     }
+    descartaAtual();
+    atualCache = { id: b.id, n: alvo.n, z: alvo.z, bitmap, w, h };
     el.querySelector('.inner').style.alignItems = S.livroZoom > 1.001 ? 'flex-start' : 'center';
     setStatus(null);
     setTimeout(() => adiantaProxima(), 120);
@@ -476,5 +514,6 @@ export async function sairDoLivro() {
   await fecharLivro(doc);
   doc = null; docId = null; desenhando = null;
   descartaAdiantada();
+  descartaAtual();
   minis.clear(); // session cache dies with the book — never hand book A's thumbnail to book B
 }
