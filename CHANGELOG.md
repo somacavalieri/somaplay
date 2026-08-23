@@ -44,8 +44,10 @@ Nothing yet.
 ### Changed
 
 - pdf.js v6.2.108 is vendored under `app/js/vendor/` — the project's first third-party
-  dependency. The precache goes from ~1 MB to ~5.7 MB; there is still no build step and
-  no package manager.
+  dependency. The precache goes from ~0.77 MB (`SHELL`) to ~5.45 MB (`SHELL` ~0.77 MB +
+  `VENDOR` ~4.68 MB, measured on disk); there is still no build step and no package
+  manager. The vendored module itself is loaded lazily, on first book open, so a user
+  who never opens a book never pays the ~95 ms / ~40 MB of parsing and executing it.
 - `PARTES_TODAS` gained `livros`; `todasAsPartes()` now measures `PARTES_DE_MUSICA`, so
   every `.somaplay` written before this release still restores untouched.
 

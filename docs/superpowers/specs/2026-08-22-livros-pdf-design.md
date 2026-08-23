@@ -75,7 +75,16 @@ v6.2.108:
 | `standard_fonts/` (16 arquivos) | 0,80 MB |
 | **total** | **~4,7 MB** |
 
-O app inteiro pesa 1,0 MB hoje, então o precache vai para cerca de 5,7 MB. Fica **de
+**Correção do review final (F13):** a estimativa original desta seção dizia "o app
+inteiro pesa 1,0 MB hoje, então o precache vai para cerca de 5,7 MB" — mas "1,0 MB" ali
+media a pasta `app/` inteira (fontes, ícones, tudo), não o `SHELL` do Service Worker, que
+é a medida que realmente decide o tamanho do precache. Medido em disco depois da
+implementação: `SHELL` pesa ~0,77 MB e `VENDOR` (a tabela acima) ~4,68 MB — o precache
+real vai de ~0,77 MB para **~5,45 MB**, não ~5,7 MB. O CHANGELOG tinha a mesma conflação
+e foi corrigido junto; `app/test/changelog-precache.test.js` mede os dois arrays do
+`sw.js` e prende o CHANGELOG a esse número.
+
+O que fica **de
 fora**, de propósito: os `*.map` (8 MB de sourcemap que ninguém lê no tablet),
 `web/cmaps/` (1,6 MB e 169 arquivos para codificação CJK, que o acervo não usa) e
 `quickjs-eval.wasm` (JavaScript embutido em formulário PDF, fora do escopo).
