@@ -514,3 +514,20 @@ test('desempenho: 5000 linhas de traço sem âncora não voltam a ser O(n²)', (
   assert.equal(p.every((l) => l.isTab === false), true);
   assert.ok(duracao < 500, `esperava bem menos de 500ms, levou ${duracao}ms`);
 });
+
+// --- Linha só de barra de compasso ----------------------------------------
+// Spec: docs/superpowers/specs/2026-08-23-linha-so-de-barra-design.md
+
+test('linha só de barra pareia com a letra seguinte', () => {
+  const p = parseCifraText([
+    'E7(#9)   /    /',
+    '   A sala cala e o jornal',
+    '   /     /    /',
+    'Manso        O tempo corre',
+  ].join('\n'));
+  assert.equal(p.length, 2, 'a barra e a letra têm de sair num bloco só');
+  assert.equal(p[1].hasChords, true);
+  assert.equal(p[1].chords, '   /     /    /');
+  assert.equal(p[1].hasLyric, true);
+  assert.equal(p[1].lyric, 'Manso        O tempo corre');
+});

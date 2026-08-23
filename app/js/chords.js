@@ -94,6 +94,18 @@ function chordsOfTok(tok) {
 const MARK = /^(N\.C\.|%|\|+|x\d+|\(\d+x\)|[-^!>~*.…()[\]/]+|(?=[\dxX]*[xX])(?=[\dxX]*\d)[\dxX]{4,})$/i;
 const isChordOrMark = (t) => chordsOfTok(t).length > 0 || MARK.test(t);
 
+// Linha só de barra de compasso. Nos songbooks do Chediak a harmonia segue de um
+// sistema para o outro sem o nome do acorde ser repetido, e a página imprime só
+// as barras. A linha É de acordes — marca em que coluna cai cada compasso — mas
+// `isChordLine` a reprova por não ter nenhum acorde nomeado. Essa guarda existe
+// para não promover uma linha de letra que seja só "..." ou "---", e continua
+// valendo: quem afrouxa é o PAREAMENTO em parseCifraText, não a função.
+//
+// Só `/`. Aceitar `|` capturaria as grades de diagrama em ASCII do acervo do
+// Vitor — 1720 linhas em 137 músicas, medidas — que não são linha de acordes.
+// Spec: docs/superpowers/specs/2026-08-23-linha-so-de-barra-design.md
+const SO_BARRA = /^[ \t/]*\/[ \t/]*$/;
+
 // Alfabeto de tablatura: nome da corda opcional, barra ou dois-pontos, e daí em
 // diante só traço, dígito, barra de compasso e os símbolos de técnica e
 // ornamento. Maiúscula fora do nome da corda derruba o casamento — é o que
@@ -213,6 +225,20 @@ export function parseCifraText(text) {
       // linha, e cai no fluxo normal — esta linha ainda pode ser letra ou,
       // grudada num acorde, linha de acordes.
       semAncoraAte = i + run.length;
+    }
+    // Barra pura seguida de letra: pareia, para `wrapBlock` refluir as duas na
+    // mesma coluna. Sem isto viram dois blocos soltos, que quebram em pontos
+    // diferentes e tiram a barra de cima da sílaba. Fica DEPOIS da corrida de
+    // tab (uma linha de barras casa em `isTabLine`) e ANTES do ramo de acordes,
+    // que esta linha não alcança.
+    if (SO_BARRA.test(raw)) {
+      const depois = lines[i + 1];
+      if (depois !== undefined && depois.trim() && !SO_BARRA.test(depois)
+          && !isChordLine(depois) && !/^\[.+\]$/.test(depois.trim())) {
+        out.push({ chords: semRabo(raw), lyric: semRabo(depois) });
+        i += 2;
+        continue;
+      }
     }
     if (isChordLine(raw)) {
       const next = lines[i + 1];
