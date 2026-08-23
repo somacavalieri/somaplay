@@ -15,7 +15,7 @@ import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
 import { renderHome, homeResults } from './render/home.js';
-import { renderBooksTab, capaDoArquivo } from './render/books.js';
+import { capaDoArquivo } from './render/books.js';
 import { renderArtist } from './render/artist.js';
 import { renderListScreen } from './render/listscreen.js';
 import { wireListDrag } from './render/listdrag.js';
@@ -1193,7 +1193,25 @@ async function carregarCapas() {
     const url = await DB.blobURL(b.capaBlobId);
     if (url) { S.capaURLs[b.id] = url; mudou = true; }
   }
-  if (mudou) updateHomeResults();
+  if (mudou) {
+    // Uma capa pode acabar de chegar enquanto o rascunho de importação está
+    // aberto e a pessoa está digitando título/autor. updateHomeResults() troca
+    // o innerHTML da lista inteira — inclusive o formulário do rascunho —, e
+    // ele é montado a partir de `d.titulo`/`d.autor`: sem sincronizar primeiro,
+    // o re-render voltaria a mostrar o que o rascunho tinha ao nascer,
+    // descartando o que já tinha sido digitado (F9 do review final).
+    syncLivroDraftDoDOM();
+    updateHomeResults();
+  }
+}
+
+function syncLivroDraftDoDOM() {
+  const d = S.livroDraft;
+  if (!d) return;
+  const titulo = document.getElementById('f-livro-titulo');
+  const autor = document.getElementById('f-livro-autor');
+  if (titulo) d.titulo = titulo.value;
+  if (autor) d.autor = autor.value;
 }
 
 // O par de carregarCapas: fecha o que ela abriu. Chamada de um único lugar,
