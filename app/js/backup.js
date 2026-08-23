@@ -6,7 +6,8 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
-import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { PARTES_TODAS, PARTES_DE_MUSICA, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { blobIdsDosLivros } from './books.js';
 import { limpaHTML } from './anotacoes.js';
 
 const MAGIC = 'SOMAPLAY1\n';
@@ -28,6 +29,20 @@ export function recorteParaExport(estado, sel) {
   const artistsOut = songIds ? artists.filter((a) => comMusica.has(a.id)) : artists;
   const listsOut = listIds ? lists.filter((l) => listIds.has(l.id)) : lists;
   return { artists: artistsOut, songs: songsOut, lists: listsOut };
+}
+
+// Decide se o export de Settings é um backup COMPLETO — nada restringido em
+// eixo nenhum: todas as fontes, as três partes de música, e as listas — ou um
+// RECORTE (uma fonte escolhida, uma caixa desmarcada, listas fora), feito para
+// compartilhar com alguém. Só o completo carrega a estante de livros junto
+// (F1 do review final): `exportPartes` nunca contém 'livros' — Settings não
+// tem caixa para ele — então 'livros' só é acrescentado aqui, no caminho sem
+// restrição nenhuma. `fontes` é `S.exportFontes`: `null` é "todas".
+export function partesDoExport({ fontes, exportListas, exportPartes }) {
+  const completo = fontes === null
+    && !!exportListas
+    && PARTES_DE_MUSICA.every((p) => exportPartes.includes(p));
+  return completo ? [...exportPartes, 'livros'] : exportPartes;
 }
 
 export function stampDeHoje(d = new Date()) {
@@ -65,7 +80,7 @@ export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
 
 // Sem argumento, o comportamento é o de sempre: a biblioteca inteira, todas as
 // partes.
-export async function exportLibrary({ songIds = null, listIds = null, partes = null, fileName = null } = {}) {
+export async function exportLibrary({ songIds = null, listIds = null, bookIds = null, partes = null, fileName = null } = {}) {
   const ps = partes || PARTES_TODAS;
   const corte = recorteParaExport({ artists: S.artists, songs: S.songs, lists: S.lists }, { songIds, listIds });
   // Podar PRIMEIRO, coletar depois: um pacote só de áudio tem registros sem
@@ -74,7 +89,12 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
   // são desta música" (state.js:279), e um segundo eixo de verdade ali é
   // exatamente como apagar e exportar passam a discordar.
   const podadas = podaPorPartes(corte.songs, ps);
-  const blobIds = blobIdsDasMusicas(podadas);
+  // Livro só viaja quando o arquivo declara que fala de livro. Um pacote de
+  // repertório não arrasta 300 MB de songbook junto.
+  const books = ps.includes('livros')
+    ? (bookIds ? S.books.filter((b) => bookIds.has(b.id)) : S.books)
+    : [];
+  const blobIds = [...blobIdsDasMusicas(podadas), ...blobIdsDosLivros(books)];
   const parts = [];
   const manifestBlobs = [];
   for (const id of blobIds) {
@@ -92,6 +112,7 @@ export async function exportLibrary({ songIds = null, listIds = null, partes = n
     artists: corte.artists,
     songs: podadas,
     lists: corte.lists,
+    books,
     blobs: manifestBlobs,
   };
   if (ps.includes('cifra')) manifest.chordbook = chordbookRecords();
@@ -149,9 +170,9 @@ export async function lerManifest(file) {
 // Devolve NOMES DE CHAVE, não texto traduzido: assim a função continua pura e o
 // teste não depende da tabela de i18n.
 //
-// Recebe o MANIFEST inteiro, e não só `partes`, porque os dois eixos que
-// somem num "substituir tudo" moram em lugares diferentes do arquivo: as partes
-// no campo `partes`, as listas na presença de `lists`.
+// Recebe o MANIFEST inteiro, e não só `partes`, porque os eixos que somem num
+// "substituir tudo" moram em lugares diferentes do arquivo: cifra/áudio/pessoal
+// no campo `partes`, listas e livros na presença de `lists` e `books`.
 //
 // `pessoal` avisa. A regra antiga — "perder as favoritas num substituir tudo é o
 // que substituir sempre fez" — era verdade até esta branch: ANTES dela todo
@@ -165,7 +186,7 @@ export async function lerManifest(file) {
 // normalizaPartes o lê como completo — a mesma leitura de importLibrary. A
 // guarda mora aqui, e não em quem chama, para a função ser total: ela roda ANTES
 // do try do diálogo.
-export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false } = {}) {
+export function avisosDeSubstituir({ partes, lists, books } = {}, { temListas = false, temLivros = false } = {}) {
   const ps = normalizaPartes(partes);
   const out = [];
   if (!ps.includes('audio')) out.push('msg.backup.replaceNoAudio');
@@ -179,6 +200,23 @@ export function avisosDeSubstituir({ partes, lists } = {}, { temListas = false }
   // Só avisa quando há o que perder: um aparelho sem lista nenhuma não perde
   // nada, e o aviso viraria ruído no import de quem nunca criou uma lista.
   if (!(Array.isArray(lists) && lists.length) && temListas) out.push('msg.backup.replaceNoLists');
+  // `livros` olha o CONTEÚDO (`books`), não a declaração (`partes`) — ao
+  // contrário de cifra/áudio/pessoal, e pelo MESMO motivo de `lists` acima.
+  // cifra/áudio/pessoal podem confiar em `partes` porque as três existiam em
+  // todo .somaplay já escrito: um arquivo antigo sem o campo `partes` volta de
+  // normalizaPartes() como "declara as três", e essa leitura sempre foi
+  // verdade para elas. `livros` é conceito novo — todo .somaplay gravado antes
+  // desta tarefa não tem a MENOR ideia do que é um livro, e ainda assim
+  // normalizaPartes(undefined) devolve PARTES_TODAS, que agora INCLUI
+  // 'livros'. Testar `ps.includes('livros')` nesse arquivo dá `true` — a
+  // leitura "arquivo completo" o lê como se declarasse livro — e um "Substituir
+  // tudo" com exatamente esse arquivo (todo backup existente até ontem) apagaria
+  // a estante inteira sem aviso nenhum, restaurando zero livros porque um
+  // arquivo desses estruturalmente não pode carregar nenhum. Olhar `books` em
+  // vez de `partes` é o que faz "o arquivo nunca falou de livro" e "o arquivo
+  // fala de livro mas não trouxe nenhum" avisarem igual, que é a distinção que
+  // `lists` já resolve há mais tempo.
+  if (!(Array.isArray(books) && books.length) && temLivros) out.push('msg.backup.replaceNoBooks');
   return out;
 }
 
@@ -271,10 +309,11 @@ export async function importLibrary(file, { merge = false, decisaoNotas = 'subst
 
   let result;
   if (merge) {
-    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists }, manifest, agora);
+    const plan = mergePlan({ artists: S.artists, songs: S.songs, lists: S.lists, books: S.books }, manifest, agora);
     for (const a of plan.artists) await DB.putArtist(a);
     for (const s of plan.songs) await DB.putSong(s);
     for (const l of plan.lists) await DB.putList(l);
+    for (const b of plan.books) await DB.putBook(b);
     // Ausência não é deleção, também aqui: um pacote só de áudio não fala do
     // dicionário, e não pode encostar nele.
     if (partes.includes('cifra')) await mergeChordbookRecords(manifest.chordbook || []);
@@ -286,6 +325,10 @@ export async function importLibrary(file, { merge = false, decisaoNotas = 'subst
     // assume que existe.
     for (const s of manifest.songs) await DB.putSong(fundeMusica(null, s, partes, agora));
     for (const l of manifest.lists || []) await DB.putList(l);
+    // Ausência não é deleção, também aqui: um arquivo que não fala de livro
+    // não pode gravar `manifest.books` por acidente — o mesmo guard que
+    // `cifra` e `pessoal` já têm logo abaixo.
+    if (partes.includes('livros')) for (const b of manifest.books || []) await DB.putBook(b);
     if (partes.includes('pessoal') && manifest.settings) {
       // lang/notação são preferências do aparelho: não viajam entre bibliotecas
       const { lang, chordNotation, chordNotationTouched, ...rest } = manifest.settings;
@@ -301,5 +344,9 @@ export async function importLibrary(file, { merge = false, decisaoNotas = 'subst
   S.artists = all.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   S.songs = all.songs;
   S.lists = all.lists;
+  // wipe() (modo espelho) já limpou o store books e apagou os blobs no OPFS —
+  // sem esta linha o espelho em memória continuaria com registros antigos
+  // apontando para PDF e capa que não existem mais no disco.
+  S.books = (all.books || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   return result;
 }

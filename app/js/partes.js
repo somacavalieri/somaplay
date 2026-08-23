@@ -9,12 +9,24 @@
 // it is exactly how the two would drift apart.
 // Design: docs/superpowers/specs/2026-08-15-partes-do-arquivo-design.md
 
-export const PARTES_TODAS = ['cifra', 'audio', 'pessoal', 'anotacoes'];
+// As partes que descrevem uma MÚSICA — todas elas têm entrada em CAMPOS.
+export const PARTES_DE_MUSICA = ['cifra', 'audio', 'pessoal', 'anotacoes'];
 
 // As partes que existiam antes da 0.16.0. Um arquivo que declara todas ELAS era
 // completo na época em que foi escrito, e continua sendo — completude é
 // propriedade do arquivo, não da versão do código que o lê.
 const PARTES_LEGADO = ['cifra', 'audio', 'pessoal'];
+
+// Tudo que um arquivo pode declarar que carrega: as partes de música mais as
+// coleções de topo. `livros` é a primeira coleção de topo a entrar aqui, e por
+// isso NÃO tem entrada em CAMPOS — livro não é campo de música, é uma coleção
+// ao lado de `lists`.
+//
+// As duas coleções entram no arquivo por regras diferentes, de propósito:
+// `anotacoes` é campo de música e viaja junto com a música, inclusive num
+// recorte; `livros` pesa centenas de megabytes e só viaja quando o export é
+// irrestrito (ver partesDoExport, em backup.js).
+export const PARTES_TODAS = [...PARTES_DE_MUSICA, 'livros'];
 
 // How the file says "this song". Never pruned: without it an audio-only pack
 // would carry orphan bytes instead of a named song.
@@ -45,7 +57,11 @@ export function normalizaPartes(partes) {
 // declarou.
 //
 // Na entrada: "este arquivo era completo quando foi escrito?" — e aí vale o
-// vocabulário da época dele.
+// vocabulário da época dele. É esta assimetria que faz todo .somaplay já gravado
+// continuar restaurando o registro INTEIRO: exigir dele as partes que nem
+// existiam quando foi escrito o derrubaria na cópia campo a campo, e ele perderia
+// em silêncio qualquer campo fora de CAMPOS — na volta, que é a direção que
+// ninguém confere.
 const exportCompleto = (ps) => PARTES_TODAS.every((p) => ps.includes(p));
 const arquivoCompleto = (ps) => PARTES_LEGADO.every((p) => ps.includes(p));
 

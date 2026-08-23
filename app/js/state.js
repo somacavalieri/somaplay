@@ -4,12 +4,13 @@ import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
-import { PARTES_TODAS } from './partes.js';
+import { PARTES_DE_MUSICA } from './partes.js';
 import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
+import { tituloDeArquivo } from './books.js';
 
 export const S = {
   // navegação
-  screen: 'home',          // home | artist | list | play | addedit | settings | chordbook
+  screen: 'home',          // home | artist | list | play | addedit | settings | chordbook | book
   tab: 'artists',          // artists | songs | estilos | lists
   // De onde a tela play foi aberta — o tipo E qual. Só na sessão: um contexto
   // que sobrevive ao fechar o app é uma promessa que a biblioteca pode não
@@ -39,18 +40,37 @@ export const S = {
   // Vive só na sessão, como exportFontes: uma seleção que sobrevive ao fechar o
   // app vira um arquivo misteriosamente incompleto no próximo ensaio.
   shareSheet: null,        // { titulo, songIds:Set, listIds:Set|null, opcao, tamanhos, incluirNotas }
+  // Rascunho de importação de livro, pelo mesmo motivo do shareSheet: uma
+  // seleção que sobrevive ao fechar o app vira mistério no próximo ensaio.
+  livroDraft: null,        // { file, titulo, autor, paginas, capaBlob, capaURL } | null
+  livroFila: [],           // PDFs escolhidos aguardando virar rascunho
+  // id do livro → object URL da capa. Revogado por afterRender() (main.js) toda
+  // vez que a estante de Livros não está na tela — sai da aba, entra num livro
+  // pela tela de leitura, vai para Configurações, o que for — e não só na troca
+  // de aba: um render sem a estante é o sinal, não a rota que levou até ele.
+  capaURLs: {},
+  livroId: null,           // livro aberto na tela book
+  livroPagina: 1,
+  livroZoom: 1,
+  livroGrade: false,       // a grade de miniaturas está aberta?
+  livroMenu: false,        // o menu ⋯ da topbar do livro está aberto?
+  livroRenomeando: false,  // a faixa de renomear substituiu a página?
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
   // O que de cada música; todas = backup. Cópia, e não a constante: o estado da
   // sessão é mutável e não pode escrever no vocabulário de partes.js.
-  exportPartes: [...PARTES_TODAS],
+  // Só os três eixos de MÚSICA moram aqui — Settings não tem caixa para
+  // 'livros' (F1 do review final), e livro nunca é controlado por caixa: ele
+  // viaja só quando o export inteiro é irrestrito (ver exportBackup em main.js).
+  exportPartes: [...PARTES_DE_MUSICA],
   exportListas: true,                           // as listas viajam? backup quer que sim
 
   // biblioteca (cache em memória, espelho do IDB)
   artists: [],
   songs: [],
   lists: [],
+  books: [],
 
   // tela de toque
   currentSongId: null,
@@ -386,6 +406,7 @@ export async function initState() {
   S.artists = lib.artists.sort((a, b) => a.name.localeCompare(b.name, 'pt'));
   S.songs = lib.songs;
   S.lists = lib.lists;
+  S.books = (lib.books || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   await loadChordbook();
   const st = await DB.loadSettings();
   if (st) { delete st.key; S.settings = { ...S.settings, ...st }; }
@@ -606,6 +627,81 @@ export function favList() {
     id: '__fav', nome: 'Favoritas', sistema: true, fixada: false,
     musicas: S.songs.filter((s) => s.favorita).map((s) => s.id),
   };
+}
+
+// ---------- livros ----------
+export function livroById(id) { return S.books.find((b) => b.id === id) || null; }
+
+// `capaBlob` e `paginas` chegam prontos de quem já abriu o PDF: state.js não
+// conhece pdf.js, e não é aqui que essa dependência entra.
+//
+// Os blobs são escritos ANTES do registro (`DB.putBook`), e se o registro
+// falhar — cota esgotada, ou a conexão fechada pelo `onversionchange` de
+// db.js quando outra aba faz upgrade — os bytes já gravados (até 301 MB)
+// ficariam no disco sem nada apontando para eles: não existe varredura de
+// blob órfão (ver o comentário de apagarLivro). Uma retentativa mintaria um
+// `blobId` novo e escreveria outra cópia inteira. Por isso o corpo inteiro
+// roda num try, e qualquer falha apaga o que já foi escrito antes de
+// relançar — mesma ordem de apagarLivro (capa primeiro, PDF por último),
+// ainda que aqui nada esteja referenciado por um registro publicado.
+export async function criarLivro(file, { titulo, autor, paginas, capaBlob }) {
+  const id = uid();
+  const blobId = uid();
+  let capaBlobId = null;
+  try {
+    await DB.saveBlob(blobId, file);
+    if (capaBlob) { capaBlobId = uid(); await DB.saveBlob(capaBlobId, capaBlob); }
+    const livro = {
+      id, blobId, capaBlobId,
+      titulo: (titulo || tituloDeArquivo(file.name) || file.name),
+      autor: autor || '',
+      fileName: file.name || '',
+      paginas: paginas || 0,
+      bytes: file.size || 0,
+      ultimaPagina: 1,
+      createdAt: Date.now(),
+    };
+    await DB.putBook(livro);
+    S.books.unshift(livro);
+    return livro;
+  } catch (e) {
+    if (capaBlobId) { try { await DB.deleteBlob(capaBlobId); } catch (_) { /* melhor esforço */ } }
+    try { await DB.deleteBlob(blobId); } catch (_) { /* melhor esforço */ }
+    throw e;
+  }
+}
+
+export async function salvaLivro(livro) {
+  await DB.putBook(livro);
+  const i = S.books.findIndex((b) => b.id === livro.id);
+  if (i >= 0) S.books[i] = livro; else S.books.unshift(livro);
+  return livro;
+}
+
+export async function renomearLivro(id, { titulo, autor }) {
+  const b = livroById(id);
+  if (!b) return null;
+  return salvaLivro({ ...b, titulo: titulo ?? b.titulo, autor: autor ?? b.autor });
+}
+
+// Apaga o registro E os dois blobs. Não existe varredura de órfão no app: o que
+// não for apagado aqui fica ocupando disco para sempre.
+//
+// Ordem deliberada, e diferente da de blobIdsDosLivros (que devolve
+// [blobId, capaBlobId] — uma ordem que uma tarefa futura usa como contrato do
+// export, e não é para mudar): aqui apagamos a CAPA primeiro e o PDF por
+// último. deleteBlob() normalmente engole falha do OPFS e tolera chave
+// ausente no fallback IDB, então só aborta no meio por algo raro — cota
+// esgotada, corrida de troca de versão entre abas. Se isso acontecer entre os
+// dois deletes, queremos que o ponteiro que sobrevive seja o do PDF, não o da
+// capa: um livro sem miniatura ainda abre; um livro sem PDF não abre nada.
+export async function apagarLivro(id) {
+  const b = livroById(id);
+  if (!b) return;
+  if (b.capaBlobId) await DB.deleteBlob(b.capaBlobId);
+  if (b.blobId) await DB.deleteBlob(b.blobId);
+  await DB.deleteBook(id);
+  S.books = S.books.filter((x) => x.id !== id);
 }
 
 // ---------- contexto de navegação (spec 2026-08-17) ----------
