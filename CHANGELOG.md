@@ -32,6 +32,27 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.18.0] - 2026-08-24
+
+### Added
+
+- **A "Books" checkbox on the export screen.** The shelf is now something you choose
+  to send, alongside Charts, Audio, My lists and My favorites — checked by default,
+  with the shelf's count beside it. Unchecking it produces a backup you can actually
+  file away; leaving only it checked produces a file of nothing but books.
+
+### Changed
+
+- **Books no longer ride along by a hidden rule.** Until now they travelled only when
+  an export restricted nothing at all — pick one source, uncheck one box, and the
+  shelf silently stayed behind. The checkbox replaces that heuristic, which also means
+  a source-filtered export *does* carry the books when the box is checked.
+- The export button names both counts when the file carries both ("Export 40 songs and
+  3 books"), and a books-only file is named `somaplay-backup-books-<date>.somaplay` —
+  before, it was indistinguishable from a full backup in the Downloads folder.
+
+  Precache is unchanged in substance: SHELL ~0.80 MB + VENDOR ~4.68 MB = ~5.48 MB.
+
 ## [0.17.1] - 2026-08-23
 
 ### Fixed
