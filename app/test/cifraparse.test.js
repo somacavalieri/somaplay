@@ -531,3 +531,53 @@ test('linha só de barra pareia com a letra seguinte', () => {
   assert.equal(p[1].hasLyric, true);
   assert.equal(p[1].lyric, 'Manso        O tempo corre');
 });
+
+test('barra pura SEM letra depois continua bloco de letra, como antes', () => {
+  const p = parseCifraText('C   G\ndó  sol\n/  /  /');
+  assert.equal(p.length, 2);
+  assert.equal(p[1].hasChords, false, 'sem letra depois, nada muda');
+  assert.equal(p[1].lyric, '/  /  /');
+});
+
+test('barra pura seguida de outra barra pura não pareia', () => {
+  const p = parseCifraText('/  /  /\n/  /  /');
+  assert.equal(p.length, 2);
+  assert.equal(p[0].hasChords, false);
+  assert.equal(p[1].hasChords, false);
+});
+
+// Esta é a trava que protege 137 músicas do acervo do Vitor: linha só de pipe é
+// grade de diagrama desenhada em ASCII, não linha de acordes.
+test('linha só de pipe NÃO pareia com a letra seguinte', () => {
+  const p = parseCifraText('||||||   ||||||\n O ooo    O ooo');
+  assert.equal(p.length, 2);
+  assert.equal(p[0].hasChords, false);
+  assert.equal(p[1].hasChords, false);
+});
+
+// A spec diz que a regra NÃO olha a linha anterior. Uma barra pura abrindo a
+// música, sem nenhum acorde nomeado antes, pareia igual.
+test('barra pura abrindo a música pareia, sem acorde antes dela', () => {
+  const p = parseCifraText('/   /   /\numa letra qualquer');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].chords, '/   /   /');
+  assert.equal(p[0].lyric, 'uma letra qualquer');
+});
+
+test('linha de letra que é só reticências ou traços não pareia', () => {
+  for (const marca of ['...', '---']) {
+    const p = parseCifraText(`${marca}\numa letra qualquer`);
+    assert.equal(p[0].hasChords, false, `"${marca}" não pode virar linha de acordes`);
+  }
+});
+
+// isChordLine não é exportado; a prova de que continua reprovando a barra pura é
+// que uma barra pura SEM letra depois segue caindo no ramo de letra (teste
+// acima) e que uma linha de acordes seguida de barra pura continua pareando as
+// duas como acorde/letra, que é o comportamento de hoje.
+test('acorde seguido de barra pura continua pareando como acorde/letra', () => {
+  const p = parseCifraText('C   G\n/   /');
+  assert.equal(p.length, 1);
+  assert.equal(p[0].chords, 'C   G');
+  assert.equal(p[0].lyric, '/   /');
+});

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { wrapBlock, layoutChordRow, chordDiagWidth, chordName } from '../js/chords.js';
+import { wrapBlock, layoutChordRow, chordDiagWidth, chordName, parseCifraText } from '../js/chords.js';
 
 // Coluna em que cada acorde começa numa linha de acordes.
 function chordCols(line) {
@@ -260,4 +260,17 @@ test('preferir o vão não perde nem parte acorde nenhum', () => {
     const depois = wrapBlock(MB_CH, MB_LY, cols).flatMap((p) => chordCols(p.chords).map((x) => x[0]));
     assert.deepEqual(depois, antes, `cols=${cols}`);
   }
+});
+
+// Spec: docs/superpowers/specs/2026-08-23-linha-so-de-barra-design.md
+// O defeito relatado: dois blocos soltos quebravam em pontos diferentes. Pareados,
+// acorde e letra saem no mesmo pedaço e na mesma coluna.
+test('barra pura e letra quebram juntas, no mesmo pedaço', () => {
+  const p = parseCifraText('   /     /    /\nManso        O tempo corre');
+  assert.equal(p.length, 1, 'o pré-requisito é sair num bloco só');
+  const r = wrapBlock(p[0].chords, p[0].lyric, 14);
+  assert.deepEqual(r, [
+    { chords: '   /     /', lyric: 'Manso' },
+    { chords: ' /', lyric: 'O tempo corre' },
+  ]);
 });
