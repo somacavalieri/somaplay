@@ -104,7 +104,7 @@ const isChordOrMark = (t) => chordsOfTok(t).length > 0 || MARK.test(t);
 // Só `/`. Aceitar `|` capturaria as grades de diagrama em ASCII do acervo do
 // Vitor — 1720 linhas em 137 músicas, medidas — que não são linha de acordes.
 // Spec: docs/superpowers/specs/2026-08-23-linha-so-de-barra-design.md
-const SO_BARRA = /^[ \t/]*\/[ \t/]*$/;
+const SO_BARRA = /^[ /]*\/[ /]*$/;
 
 // Alfabeto de tablatura: nome da corda opcional, barra ou dois-pontos, e daí em
 // diante só traço, dígito, barra de compasso e os símbolos de técnica e
@@ -228,12 +228,21 @@ export function parseCifraText(text) {
     }
     // Barra pura seguida de letra: pareia, para `wrapBlock` refluir as duas na
     // mesma coluna. Sem isto viram dois blocos soltos, que quebram em pontos
-    // diferentes e tiram a barra de cima da sílaba. Fica DEPOIS da corrida de
-    // tab (uma linha de barras casa em `isTabLine`) e ANTES do ramo de acordes,
-    // que esta linha não alcança.
+    // diferentes e tiram a barra de cima da sílaba.
+    // Fica ANTES do ramo de acordes por leitura, não por necessidade: esta linha
+    // nunca passa em `isChordLine`. Fica DEPOIS da corrida de tab porque é lá que
+    // `semAncoraAte` é mantido, e a guarda de tab acima depende dele.
     if (SO_BARRA.test(raw)) {
       const depois = lines[i + 1];
-      if (depois !== undefined && depois.trim() && !SO_BARRA.test(depois)
+      // Tab ancorada logo abaixo não é letra: pareá-la reflui a pauta como texto
+      // e desmancha a grade. Nesse caso a linha cai no fluxo de hoje.
+      let tabAbaixo = false;
+      if (depois !== undefined && (i + 1) >= semAncoraAte && isTabLine(depois)) {
+        const run = corridaTab(i + 1);
+        if (run.some(isTabAnchor)) tabAbaixo = true;
+        else semAncoraAte = i + 1 + run.length;
+      }
+      if (!tabAbaixo && depois !== undefined && depois.trim() && !SO_BARRA.test(depois)
           && !isChordLine(depois) && !/^\[.+\]$/.test(depois.trim())) {
         out.push({ chords: semRabo(raw), lyric: semRabo(depois) });
         i += 2;
