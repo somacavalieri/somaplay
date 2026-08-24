@@ -32,6 +32,18 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.17.1] - 2026-08-23
+
+### Fixed
+
+- **A measure bar falls on its syllable again when the line wraps.** A chord line
+  carrying only bars — the Chediak songbooks do not repeat the chord name while the
+  harmony holds — was not paired with its lyric line, so the two wrapped at different
+  points on screen. Only the `/` bar qualifies: a line of `|` is ASCII chord-box art
+  and is left alone.
+
+  Precache is unchanged in substance: SHELL ~0.80 MB + VENDOR ~4.68 MB = ~5.48 MB.
+
 ## [0.17.0] - 2026-08-23
 
 ### Added
