@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { recorteParaExport, recorteDeFontes, nomeDoExport, stampDeHoje, avisosDeSubstituir,
-  partesDoExport, conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
+  conflitosDeNotas, aplicaDecisaoNotas } from '../js/backup.js';
 import { PARTES_TODAS, PARTES_DE_MUSICA, fundeMusica } from '../js/partes.js';
 
 // 'ar3' não tem música de propósito: sem ele, o teste do recorte nulo passaria
@@ -88,7 +88,7 @@ test('tolera biblioteca com campos ausentes', () => {
 // Quatro arquivos chamados somaplay-backup-2026-08-11 na pasta de Downloads não
 // servem para nada. O nome diz o recorte e, quando cifra e áudio se separam,
 // diz também qual metade é esta.
-const PALAVRAS = { cifras: 'cifras', audio: 'audio' };
+const PALAVRAS = { cifras: 'cifras', audio: 'audio', livros: 'livros' };
 
 test('sem recorte, o miolo é o de sempre', () => {
   assert.equal(recorteDeFontes(null, 'fontes'), 'backup');
@@ -131,6 +131,32 @@ test('cifra sozinha e audio sozinho viram sufixo', () => {
 
 test('tirar só o pessoal não muda o nome', () => {
   assert.equal(nomeDoExport('backup', '2026-08-15', ['cifra', 'audio'], PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
+});
+
+// Um arquivo só de livros precisa se chamar de livros. Sem isto ele sai como
+// `somaplay-backup-<data>.somaplay` — o MESMO nome de um backup completo — e a
+// pessoa com os dois na pasta de Downloads não tem como saber qual é qual antes
+// de importar. O qualificador só aparece quando cifra e áudio estão os DOIS
+// fora: com música dentro, o arquivo é sobre a música, e livro é bagagem.
+test('só livros vira sufixo — senão o arquivo tem o nome de um backup completo', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['livros'], PALAVRAS), 'somaplay-backup-livros-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['livros', 'pessoal'], PALAVRAS), 'somaplay-backup-livros-2026-08-15.somaplay');
+});
+
+test('com cifra ou áudio dentro, o nome continua sendo sobre a música', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['cifra', 'audio', 'livros'], PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['cifra', 'livros'], PALAVRAS), 'somaplay-backup-cifras-2026-08-15.somaplay');
+});
+
+test('a palavra de livros também vem traduzida de fora', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['livros'], { cifras: 'charts', audio: 'audio', livros: 'books' }),
+    'somaplay-backup-books-2026-08-15.somaplay');
+});
+
+// Nem cifra, nem áudio, nem livro: não há sufixo que descreva isso, e um
+// `undefined` no meio do nome seria pior que nenhum.
+test('sem cifra, sem áudio e sem livro não há sufixo', () => {
+  assert.equal(nomeDoExport('backup', '2026-08-15', ['pessoal'], PALAVRAS), 'somaplay-backup-2026-08-15.somaplay');
 });
 
 test('a palavra do sufixo vem traduzida de fora', () => {
@@ -338,41 +364,4 @@ test('aplicaDecisaoNotas não mexe em nada quando a decisão é "substituir"', (
   const doArquivo = [{ id: 's1', anotacoes: '<p>do arquivo</p>' }];
   aplicaDecisaoNotas(doArquivo, 'substituir', ['s1']);
   assert.equal(doArquivo[0].anotacoes, '<p>do arquivo</p>');
-});
-
-// --- partesDoExport (F1 do review final) ------------------------------------
-// A regra inteira é uma linha: 'livros' só entra em `partes` quando o export
-// não restringiu NADA — nem fonte, nem parte de música, nem listas. Qualquer
-// restrição é um recorte para compartilhar, e um recorte não pode arrastar a
-// estante (até centenas de MB) para dentro do arquivo.
-test('backup sem restrição nenhuma acrescenta livros às partes', () => {
-  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
-  assert.deepEqual(partes, [...PARTES_DE_MUSICA, 'livros']);
-});
-
-test('uma fonte escolhida é um recorte: livros fica de fora', () => {
-  // O cenário do achado: desmarcar Áudio E escolher só a fonte VJ.
-  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: ['cifra'] });
-  assert.deepEqual(partes, ['cifra']);
-  assert.ok(!partes.includes('livros'));
-});
-
-test('uma fonte escolhida, mesmo com as três partes marcadas, ainda é recorte', () => {
-  const partes = partesDoExport({ fontes: ['VJ'], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
-  assert.ok(!partes.includes('livros'));
-});
-
-test('uma caixa desmarcada, mesmo com todas as fontes, é recorte', () => {
-  const partes = partesDoExport({ fontes: null, exportListas: true, exportPartes: ['cifra', 'audio'] });
-  assert.ok(!partes.includes('livros'));
-});
-
-test('listas fora do export também tira o backup de "completo"', () => {
-  const partes = partesDoExport({ fontes: null, exportListas: false, exportPartes: [...PARTES_DE_MUSICA] });
-  assert.ok(!partes.includes('livros'));
-});
-
-test('fontes como array vazio (nenhuma fonte marcada) não é "todas": não é completo', () => {
-  const partes = partesDoExport({ fontes: [], exportListas: true, exportPartes: [...PARTES_DE_MUSICA] });
-  assert.ok(!partes.includes('livros'));
 });

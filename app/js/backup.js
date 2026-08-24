@@ -6,7 +6,7 @@ import { S, blobIdsDasMusicas } from './state.js';
 import { mergePlan } from './merge.js';
 import { chordbookRecords, replaceChordbook, mergeChordbookRecords } from './chordbook.js';
 import { t } from './i18n.js';
-import { PARTES_TODAS, PARTES_DE_MUSICA, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
+import { PARTES_TODAS, normalizaPartes, podaPorPartes, fundeMusica } from './partes.js';
 import { blobIdsDosLivros } from './books.js';
 import { limpaHTML } from './anotacoes.js';
 
@@ -29,20 +29,6 @@ export function recorteParaExport(estado, sel) {
   const artistsOut = songIds ? artists.filter((a) => comMusica.has(a.id)) : artists;
   const listsOut = listIds ? lists.filter((l) => listIds.has(l.id)) : lists;
   return { artists: artistsOut, songs: songsOut, lists: listsOut };
-}
-
-// Decide se o export de Settings é um backup COMPLETO — nada restringido em
-// eixo nenhum: todas as fontes, as três partes de música, e as listas — ou um
-// RECORTE (uma fonte escolhida, uma caixa desmarcada, listas fora), feito para
-// compartilhar com alguém. Só o completo carrega a estante de livros junto
-// (F1 do review final): `exportPartes` nunca contém 'livros' — Settings não
-// tem caixa para ele — então 'livros' só é acrescentado aqui, no caminho sem
-// restrição nenhuma. `fontes` é `S.exportFontes`: `null` é "todas".
-export function partesDoExport({ fontes, exportListas, exportPartes }) {
-  const completo = fontes === null
-    && !!exportListas
-    && PARTES_DE_MUSICA.every((p) => exportPartes.includes(p));
-  return completo ? [...exportPartes, 'livros'] : exportPartes;
 }
 
 export function stampDeHoje(d = new Date()) {
@@ -74,7 +60,16 @@ export function nomeDoExport(recorte, stamp, partes, palavras = {}) {
   const ps = partes || PARTES_TODAS;
   const temCifra = ps.includes('cifra');
   const temAudio = ps.includes('audio');
-  const qual = temCifra === temAudio ? '' : slug(temCifra ? palavras.cifras : palavras.audio);
+  // `livros` só qualifica quando cifra e áudio estão os DOIS fora — um arquivo
+  // que leva música é sobre a música, e o livro é bagagem. Sem esta linha um
+  // export só de livros sai como `somaplay-backup-<data>.somaplay`, o MESMO
+  // nome de um backup completo, e os dois na pasta de Downloads ficam
+  // indistinguíveis antes de importar. Nem cifra, nem áudio, nem livro não
+  // ganha sufixo: não há palavra que descreva isso, e um `undefined` no meio do
+  // nome seria pior que nenhum sufixo.
+  const qual = temCifra !== temAudio
+    ? slug(temCifra ? palavras.cifras : palavras.audio)
+    : (!temCifra && ps.includes('livros') ? slug(palavras.livros) : '');
   return `somaplay-${slug(recorte) || 'backup'}-${qual ? `${qual}-` : ''}${stamp}.somaplay`;
 }
 
@@ -123,7 +118,7 @@ export async function exportLibrary({ songIds = null, listIds = null, bookIds = 
   // fallback perderia o qualificador (cifras/áudio) do nome, e um backup
   // parcial ficaria com o mesmo nome de um completo.
   const nome = fileName || nomeDoExport('backup', stampDeHoje(), ps, {
-    cifras: t('share.word.cifras'), audio: t('share.word.audio'),
+    cifras: t('share.word.cifras'), audio: t('share.word.audio'), livros: t('share.word.livros'),
   });
   return new File([header, ...parts], nome, { type: 'application/octet-stream' });
 }

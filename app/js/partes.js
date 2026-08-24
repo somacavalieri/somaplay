@@ -24,8 +24,10 @@ const PARTES_LEGADO = ['cifra', 'audio', 'pessoal'];
 //
 // As duas coleções entram no arquivo por regras diferentes, de propósito:
 // `anotacoes` é campo de música e viaja junto com a música, inclusive num
-// recorte; `livros` pesa centenas de megabytes e só viaja quando o export é
-// irrestrito (ver partesDoExport, em backup.js).
+// recorte; `livros` pesa centenas de megabytes, então quem decide se ele viaja
+// é uma caixa própria em Settings — a única parte cuja pergunta vale a pena
+// fazer em voz alta, porque é a única que muda o arquivo de dezenas para
+// centenas de MB.
 export const PARTES_TODAS = [...PARTES_DE_MUSICA, 'livros'];
 
 // How the file says "this song". Never pruned: without it an audio-only pack

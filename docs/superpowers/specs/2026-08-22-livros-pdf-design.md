@@ -246,6 +246,15 @@ Três superfícies, e só uma é nova:
 
 - **Backup completo** passa a carregar os livros. Um backup que deixa a estante para trás
   mente sobre o que é.
+
+  > **Revisto em 2026-08-24 (0.18.0).** "Passa a carregar" virou "carrega se a caixa estiver
+  > marcada". A implementação de 0.16.0 leu esta seção como *só* o backup irrestrito leva
+  > livro — `partesDoExport()` conferia fonte, partes e listas — e o efeito prático foi o
+  > inverso do pretendido: quem tem uma estante grande não conseguia gerar backup NENHUM
+  > sem arrastar centenas de MB junto, e um recorte por fonte deixava a estante para trás
+  > sem dizer nada. Agora `Livros` é a quinta caixa em **O que incluir**, marcada por
+  > padrão, e `S.exportPartes` é o `partes` do arquivo sem intermediário. A frase acima
+  > continua valendo para o default; o que mudou é que existe uma forma de dizer não.
 - **Compartilhar um livro**: ação no menu do próprio livro, gerando
   `somaplay-livro-the-beatles-essential-songs-2026-08-22.somaplay`.
 - **A folha de compartilhar músicas não muda.** Ela recorta repertório por fonte e por
