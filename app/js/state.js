@@ -4,7 +4,7 @@ import { AudioEngine } from './audio.js';
 import { loadChordbook, songsUsingVar, shapeKey } from './chordbook.js';
 import { setLang, detectLang } from './i18n.js';
 import { clampSpeed } from './scroll-speed.js';
-import { PARTES_DE_MUSICA } from './partes.js';
+import { PARTES_TODAS } from './partes.js';
 import { textoTransposto, transporAcorde, tomDeSemitons, tituloNoTom } from './transpose.js';
 import { tituloDeArquivo } from './books.js';
 
@@ -58,12 +58,15 @@ export const S = {
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
   exportFontes: null,      // seleção do export: null = todas | array de grafias
-  // O que de cada música; todas = backup. Cópia, e não a constante: o estado da
+  // O que o arquivo leva; todas = backup. Cópia, e não a constante: o estado da
   // sessão é mutável e não pode escrever no vocabulário de partes.js.
-  // Só os três eixos de MÚSICA moram aqui — Settings não tem caixa para
-  // 'livros' (F1 do review final), e livro nunca é controlado por caixa: ele
-  // viaja só quando o export inteiro é irrestrito (ver exportBackup em main.js).
-  exportPartes: [...PARTES_DE_MUSICA],
+  //
+  // Nasce com TUDO marcado, 'livros' inclusive, e a escolha do default é a
+  // parte que importa: vindo desmarcado, um "backup completo" pararia de
+  // carregar a estante calado, e a pessoa só descobriria ao restaurar. Marcado,
+  // o backup completo continua completo e desmarcar é um toque — que é
+  // exatamente o pedido que criou a caixa (um backup sem centenas de MB de PDF).
+  exportPartes: [...PARTES_TODAS],
   exportListas: true,                           // as listas viajam? backup quer que sim
 
   // biblioteca (cache em memória, espelho do IDB)

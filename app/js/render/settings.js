@@ -1,6 +1,5 @@
 // render/settings.js — Configurações (tela mínima do MVP, §10 do PRD)
 import { S, fontesDaBiblioteca, songIdsDasFontes, SEM_FONTE } from '../state.js';
-import { partesDoExport } from '../backup.js';
 import { I, esc } from '../icons.js';
 import { DB } from '../db.js';
 import { SCROLL_MIN, SCROLL_MAX } from '../scroll-speed.js';
@@ -130,14 +129,10 @@ export async function fillStorageInfo() {
 // por fonte — pode ser 0 numa biblioteca sem música nenhuma.
 //
 // `exportaLivros` NÃO é "a biblioteca tem livro" — é "este export, do jeito
-// que está configurado agora, vai carregar os livros junto" (a MESMA
-// pergunta que partesDoExport, em backup.js, responde na hora de exportar
-// de verdade). Usar só "a estante não é vazia" foi o bug: destravava o botão
-// e prometia livro no rótulo mesmo quando o recorte atual (uma fonte
-// escolhida, uma caixa desmarcada) já tinha decidido não levar livro
-// nenhum — inclusive no caso que motivou este parâmetro, uma biblioteca só
-// de livros com Cifras desmarcada, que baixava um arquivo vazio atrás de um
-// botão habilitado. Pura, para testar sem DOM.
+// que está configurado agora, vai carregar os livros junto": a caixa Livros
+// marcada E uma estante não vazia. Usar só "a estante não é vazia" foi o bug
+// do review anterior — destravava o botão e prometia livro no rótulo quando o
+// arquivo não ia levar nenhum. Pura, para testar sem DOM.
 export function podeExportarBackup({ n, temConteudo, exportaLivros }) {
   return (n > 0 && temConteudo) || !!exportaLivros;
 }
@@ -182,18 +177,25 @@ function blocoExportar() {
     </div>`;
   }).join('');
 
-  // As quatro caixas SÃO o vocabulário de partes, sem tradução de conceito. O
-  // data-id vai cru: nome de parte é constante interna, nunca conteúdo do
-  // usuário, e por isso nunca passa por t().
+  // As caixas SÃO o vocabulário de partes, sem tradução de conceito. O data-id
+  // vai cru: nome de parte é constante interna, nunca conteúdo do usuário, e
+  // por isso nunca passa por t().
+  //
+  // Livros vem por último, e é a única com contagem: é uma coleção de topo como
+  // as listas, e é a única cuja marcação decide entre um arquivo de dezenas e
+  // um de centenas de MB. A contagem é o aviso de peso que o registro de livro
+  // permite dar — ele não guarda tamanho, então é quantos, não quanto.
   const caixas = [
     { id: 'cifra', label: t('settings.export.partCifra'), on: S.exportPartes.includes('cifra') },
     { id: 'audio', label: t('settings.export.partAudio'), on: S.exportPartes.includes('audio') },
     { id: 'listas', label: t('settings.export.partListas'), on: S.exportListas },
     { id: 'pessoal', label: t('settings.export.partPessoal'), on: S.exportPartes.includes('pessoal') },
+    { id: 'livros', label: t('settings.export.partLivros'), on: S.exportPartes.includes('livros'), ct: S.books.length },
   ].map((c) => `
     <button class="check-row" data-a="${c.id === 'listas' ? 'toggleExportListas' : 'toggleExportParte'}" data-id="${c.id}">
       <span class="checkbox ${c.on ? 'on' : ''}">${c.on ? I.check(15) : ''}</span>
       <span class="nm">${c.label}</span>
+      ${c.ct === undefined ? '' : `<span class="ct">${c.ct}</span>`}
     </button>`).join('');
 
   // Cifras e Áudio ambas desmarcadas geram um arquivo sem conteúdo nenhum. É
@@ -202,23 +204,30 @@ function blocoExportar() {
   // tem cifra nem áudio para desmarcar, e mesmo assim tem o que exportar: as
   // duas caixas não decidem mais sozinhas se o botão trava.
   const temConteudo = S.exportPartes.some((p) => p === 'cifra' || p === 'audio');
-  // A MESMA pergunta que partesDoExport (backup.js) responde na hora de
-  // exportar de verdade — não "a biblioteca tem livro", que era o bug do
-  // review anterior: um recorte por fonte ou por parte não leva livro
-  // nenhum mesmo com a estante cheia, e nem o botão nem o rótulo podem
-  // prometer o que o arquivo não vai entregar.
-  const exportaLivros = S.books.length > 0 && partesDoExport({
-    fontes: S.exportFontes, exportListas: S.exportListas, exportPartes: S.exportPartes,
-  }).includes('livros');
+  const exportaLivros = S.books.length > 0 && S.exportPartes.includes('livros');
   const podeExportar = podeExportarBackup({ n, temConteudo, exportaLivros });
 
-  const acao = !temConteudo && !exportaLivros
-    ? t('settings.export.nothingPart')
-    : n
-      ? t('settings.export.action', { count: n, song: t(n === 1 ? 'common.song' : 'common.songs') })
-      : exportaLivros
-        ? t('settings.export.action', { count: S.books.length, song: t(S.books.length === 1 ? 'common.book' : 'common.books') })
-        : t('settings.export.nothing');
+  // As duas contagens do rótulo, cada uma zerada pela sua própria condição —
+  // e é aqui que o rótulo para de mentir. `n` sozinho conta as músicas da fonte
+  // marcada mesmo com Cifras e Áudio desmarcadas, quando na verdade música
+  // nenhuma viaja; sem o `temConteudo &&` um export só de livros diria
+  // "Exportar 6058 músicas". Habilitado ⟺ uma das duas é > 0, que é
+  // exatamente podeExportarBackup — o teste varre as combinações para
+  // as duas leituras não poderem divergir de novo.
+  const nMusicas = temConteudo ? n : 0;
+  const nLivros = exportaLivros ? S.books.length : 0;
+  const palavraM = t(nMusicas === 1 ? 'common.song' : 'common.songs');
+  const palavraL = t(nLivros === 1 ? 'common.book' : 'common.books');
+
+  const acao = nMusicas && nLivros
+    ? t('settings.export.actionBoth', { count: nMusicas, song: palavraM, countBooks: nLivros, book: palavraL })
+    : nMusicas
+      ? t('settings.export.action', { count: nMusicas, song: palavraM })
+      : nLivros
+        ? t('settings.export.action', { count: nLivros, song: palavraL })
+        : !temConteudo && !exportaLivros
+          ? t('settings.export.nothingPart')
+          : t('settings.export.nothing');
 
   return `<div class="setting-block" style="padding:20px;margin-top:6px">
     <div style="font-family:var(--f-title);font-weight:600;font-size:17px;margin-bottom:4px">${t('settings.export.heading')}</div>
