@@ -93,6 +93,36 @@ test('isChordTok continua aceitando baixo depois da barra', () => {
   ['D/F#', 'Am/E', 'C/E', 'Cm6/Eb', 'E6/B', 'G7/B'].forEach((t) => assert.equal(isChordTok(t), true, t));
 });
 
+// --- tensão empilhada de TRÊS andares (spec 2026-08-25) -------------------
+// O Chediak imprime a tensão empilhada dentro do parêntese, e com três andares o
+// miolo passa de 7 caracteres: `C#7(#9/#11/b13)` tem 10. O token reprovado não
+// ficava sozinho na sombra — pela regra de isChordLine ele derrubava a LINHA
+// inteira, e os acordes vizinhos sumiam da grade sem nada dar erro.
+
+test('isChordTok aceita a tensão de três andares dentro do parêntese', () => {
+  ['C#7(#9/#11/b13)', 'F7(9/#11/13)', 'A7(4/9/13)', 'E7(b9/b13)', 'Bm7(9/11)',
+  ].forEach((t) => assert.equal(isChordTok(t), true, `${t} deveria ser acorde`));
+});
+
+test('o acorde de três andares NÃO derruba a linha: os vizinhos continuam na grade', () => {
+  const linha = 'Cm6 E7(4/9) / E7 C#7(#9/#11/b13)  C7M / F7(9)';
+  assert.equal(parseCifraText(linha)[0].hasChords, true);
+  assert.deepEqual(extractChords(parseCifraText(linha)),
+    ['Cm6', 'E7(4/9)', 'E7', 'C#7(#9/#11/b13)', 'C7M', 'F7(9)']);
+});
+
+test('chordName não mexe no acorde de três andares (o parêntese é extensão)', () => {
+  assert.equal(chordName('C#7(#9/#11/b13)'), 'C#7(#9/#11/b13)');
+});
+
+// O teto continua existindo. Sem ele o limite viraria "qualquer coisa entre
+// parênteses", e a ancoragem em ^...$ sozinha não segura isso.
+test('parêntese de 13 caracteres passa do teto e não é acorde', () => {
+  assert.equal('#9/#11/#13/b5'.length, 13);
+  assert.equal(isChordTok('C7(#9/#11/#13/b5)'), false);
+  assert.equal(isChordTok('Bem(alguma coisa)'), false);
+});
+
 // --- diminuto escrito com "o" minúsculo (spec 2026-08-10) -----------------
 // Quem digita a cifra num teclado comum escreve "Ebo" em vez de "Eb°". O token
 // reprovado derrubava a linha inteira e levava junto os acordes vizinhos.

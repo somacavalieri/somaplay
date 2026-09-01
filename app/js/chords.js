@@ -23,7 +23,16 @@ import { defaultShape } from './chordbook.js';
 // letra continua sendo a nota inicial: "Como", "Bom", "Dom" e "C/Como" seguem
 // fora, porque sobra letra depois do 'o' terminal.
 const QUAL = '(?:m|maj|min|dim|aug|sus2|sus4|sus|add\\d+|M|°|º|\\+|-|\\d)*';
-const PAREN = '(?:\\([^)]{1,7}\\))*';
+// O miolo do parêntese vai a 12 caracteres porque o Chediak empilha a tensão em
+// TRÊS andares — `C#7(#9/#11/b13)`, 10 caracteres —, e com 7 o token reprovava
+// e derrubava a LINHA inteira pela regra de isChordLine: os outros acordes do
+// sistema sumiam da grade em silêncio. A/B sobre as 6098 cifras do acervo: duas
+// mudam, as duas ganhando linha de acorde de volta (*A Nível De…* do João Bosco,
+// 55 -> 61 linhas; *Fotografia* do Tom Jobim, 25 -> 26). A folga é segura porque
+// PAREN só é testado depois de um corpo de acorde e a expressão é ancorada em
+// ^...$ — parêntese maior não promove palavra de letra a acorde.
+// Spec: docs/superpowers/specs/2026-08-25-tensao-de-tres-andares-design.md
+const PAREN = '(?:\\([^)]{1,12}\\))*';
 const CORPO = `[A-G][#b]?${QUAL}o?${PAREN}`;
 const EXT_CC = '\\d+[M+\\-#b]?';        // extensão estilo CifraClub: /7, /13, /5-
 const RE_ACORDE = new RegExp(`^${CORPO}(?:\\/(?:${CORPO}|${EXT_CC}))*${PAREN}$`);
