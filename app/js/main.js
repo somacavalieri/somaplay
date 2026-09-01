@@ -10,7 +10,7 @@ import {
   duplicarMusicaNoTom, vizinhaNoContexto,
   criarLivro, apagarLivro, renomearLivro, livroById,
 } from './state.js';
-import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy, marcaPaginaMudou, flushLivroPagina } from './render/book.js';
+import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy, bookZoomFit, marcaPaginaMudou, flushLivroPagina } from './render/book.js';
 import { tituloDeArquivo } from './books.js';
 import { DB } from './db.js';
 import { esc } from './icons.js';
@@ -509,8 +509,9 @@ const actions = {
   async sairDoLivro() { await sairDoLivro(); S.screen = 'home'; S.tab = 'books'; update(); },
   async paginaAnterior() { if (await viraPagina(-1)) update(); },
   async proximaPagina() { if (await viraPagina(1)) update(); },
-  bookZoomIn() { bookZoomBy(0.2); },
-  bookZoomOut() { bookZoomBy(-0.2); },
+  bookZoomIn() { bookZoomBy(1); },
+  bookZoomOut() { bookZoomBy(-1); },
+  bookZoomFit() { bookZoomFit(); },
   toggleBookGrid() { S.livroGrade = !S.livroGrade; update(); },
   irParaPagina(d) { S.livroPagina = +d.id; S.livroGrade = false; marcaPaginaMudou(); update(); },
 

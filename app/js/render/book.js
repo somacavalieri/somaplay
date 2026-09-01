@@ -3,12 +3,20 @@
 // The page is REDRAWN at the zoom level, never stretched — that is what makes a
 // 300 dpi scan actually readable when you lean in, and the reason the app keeps
 // the PDF instead of a pile of images.
+//
+// ZOOM IS MEASURED AGAINST "THE WHOLE PAGE FITS", not against the container
+// width. 100% is Acrobat's "fit page": the book opens showing the cover whole,
+// and 200% is twice that. It used to be "fit width", which on a portrait page
+// meant a book opened with its bottom already off screen, and no zoom level
+// reached the whole page — the floor was a fraction of the WIDTH while the page
+// was limited by its HEIGHT. The geometry lives in pdf.js (larguraQueCabe),
+// the range and the step in panzoom.js (LIVRO_ZOOM_*).
 import { S, livroById, salvaLivro } from '../state.js';
 import { DB } from '../db.js';
 import { I, esc } from '../icons.js';
 import { t } from '../i18n.js';
-import { abrirLivro, paginasDe, renderPagina, fecharLivro } from '../pdf.js';
-import { wireGestos, clampZoom } from '../panzoom.js';
+import { abrirLivro, paginasDe, renderPagina, fecharLivro, medidaPagina, larguraQueCabe } from '../pdf.js';
+import { wireGestos, clampZoomLivro, passoZoomLivro } from '../panzoom.js';
 
 // The open document lives here, not in S: it is a handle, not state, and putting
 // it in S would tempt someone to serialise it.
@@ -75,7 +83,7 @@ export function renderBook() {
       <button data-a="proximaPagina" title="${t('book.next')}" ${n >= b.paginas ? 'disabled' : ''}>${I.chevR(20)}</button>
       <div class="zoom-ctl">
         <button data-a="bookZoomOut" title="−">−</button>
-        <div class="pct" id="book-zoom-pct">${Math.round(S.livroZoom * 100)}%</div>
+        <button class="pct" id="book-zoom-pct" data-a="bookZoomFit" title="${t('book.zoom.fit')}">${Math.round(S.livroZoom * 100)}%</button>
         <button data-a="bookZoomIn" title="+">+</button>
       </div>
     </div>
@@ -213,6 +221,26 @@ async function desenhaMiniaturas() {
   }
 }
 
+// .book-page .inner carries padding:10px (app.css); the page has to fit inside
+// it, not inside the raw scroll box, or "fit page" lands a few pixels short and
+// leaves a scrollbar with nothing to scroll to.
+const RESPIRO = 20;
+
+// The smallest page the reader will draw. It used to be 320 CSS px, and that
+// was a second, hidden zoom floor: on a phone-width column, 320 px was already
+// the whole width, so zooming out simply stopped doing anything before the page
+// ever fit. 120 px is small enough to be out of the way and big enough that a
+// mis-set zoom still shows something recognisable rather than a speck.
+const PISO_PX = 120;
+
+// The CSS width to draw page `n` at, for zoom `z`. One place, so the page draw
+// and its one-page-ahead prefetch can never disagree about what 100% means.
+async function larguraAlvo(el, n, z) {
+  const medida = await medidaPagina(doc, n);
+  const cabe = larguraQueCabe(el.clientWidth - RESPIRO, el.clientHeight - RESPIRO, medida.w, medida.h);
+  return Math.max(PISO_PX, cabe * z);
+}
+
 function setStatus(msg) {
   const el = document.getElementById('book-status');
   if (!el) return;
@@ -309,7 +337,7 @@ async function adiantaProxima() {
   const canvas = document.createElement('canvas');
   paginaOcupada = true;
   try {
-    const { w, h } = await renderPagina(doc, n, Math.max(320, el.clientWidth * z), window.devicePixelRatio || 1, canvas);
+    const { w, h } = await renderPagina(doc, n, await larguraAlvo(el, n, z), window.devicePixelRatio || 1, canvas);
     const bitmap = await createImageBitmap(canvas);
     // A newer prefetch replaces whatever was cached before — close it here,
     // not leave it for whoever notices next.
@@ -358,8 +386,6 @@ export async function desenhaPagina() {
     if (atualCache && atualCache.id === b.id && atualCache.n === alvo.n
         && Math.abs(atualCache.z - alvo.z) < 0.001) {
       desenhaBitmapNoCanvas(canvas, atualCache);
-      const wrap = document.querySelector('[data-bookscroll] .inner');
-      if (wrap) wrap.style.alignItems = S.livroZoom > 1.001 ? 'flex-start' : 'center';
       setStatus(null);
       return;
     }
@@ -375,7 +401,11 @@ export async function desenhaPagina() {
       if (desenhando !== alvo) return;
     }
     const el = document.querySelector('[data-bookscroll]');
-    const largura = Math.max(320, el.clientWidth * S.livroZoom);
+    if (!el) return;
+    const largura = await larguraAlvo(el, alvo.n, alvo.z);
+    // medidaPagina() yields, and a fast reader can turn two more pages inside
+    // that gap — same guard the render below already needed.
+    if (desenhando !== alvo) return;
     let bitmap, w, h;
     if (adiantada && adiantada.id === b.id && adiantada.n === alvo.n
         && Math.abs(adiantada.z - alvo.z) < 0.001) {
@@ -397,7 +427,10 @@ export async function desenhaPagina() {
     }
     descartaAtual();
     atualCache = { id: b.id, n: alvo.n, z: alvo.z, bitmap, w, h };
-    el.querySelector('.inner').style.alignItems = S.livroZoom > 1.001 ? 'flex-start' : 'center';
+    // Centring is CSS now (margin:auto on the canvas), not a style set from
+    // here: an auto margin centres the page while it fits AND collapses to zero
+    // when it overflows, which is what keeps the left edge reachable by
+    // scrolling. `justify-content:center` could not do the second half.
     setStatus(null);
     setTimeout(() => adiantaProxima(), 120);
   } catch (e) {
@@ -414,7 +447,9 @@ export function afterRenderBook(onUpdate) {
     el._panWired = true;
     wireGestos(el, {
       getZoom: () => S.livroZoom,
-      setZoom: (z) => { S.livroZoom = z; atualizaPct(); descartaAdiantada(); desenhaPagina(); },
+      setZoom: aplicaZoom,
+      clamp: clampZoomLivro,
+      zoomPasso: passoZoomLivro,
       onSwipe: (dir) => { viraPagina(dir).then((n) => { if (n) onUpdate(); }); },
     });
   }
@@ -424,6 +459,10 @@ export function afterRenderBook(onUpdate) {
   // *scheduled* here (agendaMiniaturas, not called directly) so it starts at
   // idle priority, after this redraw has had the chance to claim
   // paginaOcupada first — see the comment on that flag above.
+  if (!resizeLigado) {
+    resizeLigado = true;
+    window.addEventListener('resize', aoRedimensionar);
+  }
   desenhaPagina();
   if (S.livroGrade) {
     const caixa = document.querySelector('.book-grid-overlay .minis');
@@ -451,16 +490,52 @@ export function afterRenderBook(onUpdate) {
   }
 }
 
+// Rotating a tablet, or dragging a desktop window, changes what "the whole page
+// fits" means — so the page has to be drawn again at the new size, and both
+// caches (this page and the next) are bitmaps rasterised for the OLD one.
+// Nothing redrew on resize before, and it did not show: with zoom measured
+// against the container WIDTH, a rotation only stretched the canvas a little.
+// Measured against "fits", the same rotation leaves a page visibly the wrong
+// size. Debounced because a window drag fires this per frame, and each redraw
+// is a full 300 dpi raster.
+let resizeTimer = null;
+let resizeLigado = false;
+function aoRedimensionar() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (S.screen !== 'book') return;
+    descartaAtual();
+    descartaAdiantada();
+    desenhaPagina();
+  }, 180);
+}
+
 function atualizaPct() {
   const pct = document.getElementById('book-zoom-pct');
   if (pct) pct.textContent = Math.round(S.livroZoom * 100) + '%';
 }
 
-export function bookZoomBy(d) {
-  S.livroZoom = clampZoom(S.livroZoom + d);
+// The one way the zoom changes, whatever asked for it — buttons, pinch, wheel,
+// or the reset. The no-op guard matters for the pinch: it fires setZoom on
+// every touchmove, and most of those land on the same clamped value.
+function aplicaZoom(z) {
+  if (Math.abs(z - S.livroZoom) < 0.001) return;
+  S.livroZoom = z;
   atualizaPct();
   descartaAdiantada();
   desenhaPagina();
+}
+
+// `dir` is +1 in, -1 out — a proportional step, not a fixed one (passoZoomLivro).
+export function bookZoomBy(dir) {
+  aplicaZoom(passoZoomLivro(S.livroZoom, dir));
+}
+
+// One tap on the percentage puts the whole page back on screen. It is the state
+// a book opens in, and the way back from having zoomed in and lost the page —
+// without spending another button on a HUD meant to stay out of the way.
+export function bookZoomFit() {
+  aplicaZoom(1);
 }
 
 // Page turns are persisted, but lazily: a debounced write, not one write to

@@ -32,6 +32,66 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.19.0] - 2026-09-01
+
+### Changed
+
+- **A book now opens showing the whole page, and the zoom goes where you send it.**
+  The reader measured zoom against the width of the screen, so 100% meant "as wide
+  as the screen" — and a portrait page, always taller than wide, opened with its
+  bottom already cut off. Zooming out did not rescue it either: the floor was 40% of
+  the *width*, while the page was limited by its *height*, so on a laptop the whole
+  page needed something near 28% and was simply unreachable. 100% now means the whole
+  page fits, the way Acrobat's "fit page" does, which is also the state a book opens
+  in. Below it the page gets smaller than the screen; above it you lean in.
+- The zoom range for books is its own — 50% to 500%, no longer the chart screen's
+  40%–400% — and the − / + buttons step *proportionally* (×1.25) instead of adding a
+  fixed 0.2, which used to take 23 taps to cross the range. The chart screen keeps
+  exactly the range and step it had.
+- **Tapping the percentage puts the whole page back.** The way out of having zoomed
+  in and lost the page, without another button on a HUD meant to stay out of the way.
+
+### Fixed
+
+- **The left edge of a zoomed page is reachable again.** Zoomed past the width of the
+  screen, the page was centred by the layout, which pushed the overflow out both
+  sides at once and left the left edge with nothing to scroll to. It now pins to the
+  edge when it overflows and stays centred when it fits.
+- **Rotating the tablet redraws the page.** Nothing in the app listened for a resize;
+  it barely showed while zoom was measured against the width, but "the whole page
+  fits" changes meaning the moment the screen does.
+
+  Precache: SHELL ~0.82 MB + VENDOR ~4.68 MB = ~5.50 MB.
+
+## [0.18.2] - 2026-08-25
+
+### Added
+
+- Chord dictionary: five more voicings — `Em7(9)`, `A7(4/9)`, `C#7(b9)`, `A7(9)`
+  and `F#7(13)`. These are the names *Marina* needs that its printed diagram grid
+  could not give: those boxes come out badly bounded at every threshold, so the
+  dictionary covers them instead. Same method as the 0.14.3 batch — picked by
+  search and validated against the chord name, with `A7(4/9)` treated as sus4
+  (no third), which the stacked `⁷₄` of the songbook calls for.
+
+  Precache is unchanged in substance: SHELL ~0.81 MB + VENDOR ~4.68 MB = ~5.49 MB.
+
+## [0.18.1] - 2026-08-25
+
+### Fixed
+
+- **A chord whose tension is stacked three high no longer takes its whole line down.**
+  The Chediak songbooks print the tension inside the parenthesis, stacked; at three
+  levels — `C#7(#9/#11/b13)` — the name overran the parser's 7-character limit, and
+  because a chord line must be made *entirely* of chords, the line stopped being a
+  chord line. Its other chords silently left the "Chords in this song" grid, lost
+  their diagram and popover, and no longer wrapped together with the lyric. Measured
+  across every chart in the library: two songs were affected — *A Nível De…* (João
+  Bosco) recovers six chord lines and *Fotografia* (Tom Jobim) one; nothing else
+  changes.
+
+  Precache is unchanged in substance: SHELL ~0.81 MB + VENDOR ~4.68 MB = ~5.49 MB.
+
 ## [0.18.0] - 2026-08-24
 
 ### Added
