@@ -334,6 +334,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .zoom-ctl{display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:3px;flex-shrink:0;animation:ctlIn .22s ease}
 .zoom-ctl button{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);cursor:pointer;font-size:19px}
 .zoom-ctl .pct{min-width:48px;text-align:center;font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+/* In the book reader the percentage is a button ("fit page"); on the chart
+   screen it is still a plain div, so this only lands where it should. */
+.zoom-ctl button.pct{width:auto;height:auto;padding:0 6px;background:transparent;border:0;cursor:pointer}
+.zoom-ctl button.pct:hover{color:var(--text)}
 
 .play-body{flex:1;display:flex;overflow:hidden;position:relative}
 .cifra-col{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0}
@@ -836,8 +840,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .book-page-wrap{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .book-page{flex:1;min-height:0;overflow:auto;touch-action:none;background:var(--bg);cursor:grab}
 .book-page.grabbing{cursor:grabbing}
-.book-page .inner{min-height:100%;display:flex;align-items:center;justify-content:center;padding:10px}
-.book-page canvas{display:block;background:#fff;border-radius:4px;box-shadow:0 2px 14px rgba(0,0,0,.35)}
+/* margin:auto on the canvas, not justify/align-content on .inner: an auto
+   margin centres the page while it fits and collapses to zero when it does
+   not, which is what keeps the left and top edges reachable by scrolling once
+   the reader zooms past the viewport. Centring the flex line instead put the
+   overflow on BOTH sides and made the left edge unreachable. */
+.book-page .inner{min-height:100%;display:flex;padding:10px}
+.book-page canvas{display:block;margin:auto;background:#fff;border-radius:4px;box-shadow:0 2px 14px rgba(0,0,0,.35)}
 .book-status{position:absolute;top:10px;left:50%;transform:translateX(-50%);
   background:var(--surface);border:1px solid var(--border);color:var(--muted);
   font-size:12px;padding:6px 12px;border-radius:20px;pointer-events:none;

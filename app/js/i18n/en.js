@@ -114,6 +114,7 @@ export const EN = {
   'book.next': 'Next page',
   'book.grid': 'Pages',
   'book.goTo': 'Go to page',
+  'book.zoom.fit': 'Fit page',
   'book.rendering': 'Rendering…',
   'book.error.page': "Couldn't render this page.",
   'book.menu.rename': 'Rename',

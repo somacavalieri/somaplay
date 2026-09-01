@@ -127,6 +127,41 @@ export async function abrirLivro(file) {
 
 export function paginasDe(doc) { return doc.numPages; }
 
+// The page's natural size, in PDF points, with the page's own rotation already
+// applied — getViewport({ scale: 1 }) is what pdf.js itself measures a page by.
+// The reader needs this BEFORE drawing anything: the zoom is measured against
+// "the whole page fits", and what fits depends on the page's proportion. A
+// songbook is not uniform — a fold-out chart in the middle of a portrait book
+// is a different shape from the cover — so this is asked per page, never once
+// per document. Cheap to call repeatedly: pdf.js caches getPage() internally.
+export async function medidaPagina(doc, n) {
+  const v = (await doc.getPage(n)).getViewport({ scale: 1 });
+  return { w: v.width, h: v.height };
+}
+
+// The CSS width that makes a page of `pagW × pagH` fit ENTIRELY inside a
+// `dispW × dispH` display area — Acrobat's "fit page", and the unit the
+// reader's zoom is measured in.
+//
+// The reader used to measure zoom against the container width alone, which
+// meant 100% was "fit width": on a portrait page (always taller than wide)
+// the bottom of the page was off screen the moment a book opened, and no
+// amount of zooming out reached the whole page, because the zoom floor was a
+// fraction of the WIDTH and the page was limited by its HEIGHT.
+//
+// Pure geometry on purpose: no DOM, no document, so the one calculation the
+// whole feature rests on is testable without a browser (bookzoom.test.js).
+// Falls back to the full display width whenever the page measure is not
+// usable — a corrupt PDF reporting a zero dimension would otherwise divide
+// into Infinity and hand the canvas an invalid width — and likewise when the
+// display height is still 0, which is what a container measured before layout
+// reports.
+export function larguraQueCabe(dispW, dispH, pagW, pagH) {
+  const largura = Math.max(0, dispW || 0);
+  if (!(pagW > 0) || !(pagH > 0) || !(dispH > 0)) return largura;
+  return Math.min(largura, dispH * (pagW / pagH));
+}
+
 // Draws page `n` into `canvas` at `larguraCss` CSS pixels wide, times the device
 // pixel ratio, capped by MAX_CANVAS_PX. Returns the CSS size the caller should
 // give the element. Redrawing — not stretching — is what makes the 300 dpi scan

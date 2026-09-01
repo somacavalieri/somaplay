@@ -114,6 +114,7 @@ export const PT = {
   'book.next': 'Próxima página',
   'book.grid': 'Páginas',
   'book.goTo': 'Ir para a página',
+  'book.zoom.fit': 'Página inteira',
   'book.rendering': 'Desenhando…',
   'book.error.page': 'Não deu para desenhar esta página.',
   'book.menu.rename': 'Renomear',

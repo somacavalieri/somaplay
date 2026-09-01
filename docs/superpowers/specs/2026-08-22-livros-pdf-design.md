@@ -209,6 +209,29 @@ blob órfão** — o registro só é gravado depois de a contagem de páginas e 
 A página ocupa a tela. Em cima: voltar, título, menu (renomear · exportar · apagar).
 Embaixo, o HUD: `‹ 42 de 401 ›`, o controle de zoom e o botão da grade.
 
+#### A régua do zoom: 100% é a página inteira
+
+> **Revisto em 2026-09-01 (0.19.0).** A primeira versão media o zoom contra a **largura**
+> da tela: 100% era "tão largo quanto a tela". Numa página retrato — e um songbook é
+> retrato — isso significa que o livro **abria já cortado**, com o pé da página fora da
+> tela. E não havia como resgatar: o piso do zoom era 40% da *largura*, enquanto a página
+> era limitada pela *altura*, então num monitor deitado a página inteira exigia algo perto
+> de 28% e era simplesmente inalcançável. Os dois sintomas eram o mesmo defeito — a régua
+> estava presa na dimensão errada.
+
+**100% é a página inteira cabendo na tela** — o "ajustar à página" do Acrobat, e o estado
+em que o livro abre. Abaixo de 100% a página fica menor que a tela; acima, aproxima-se.
+A conta é `min(largura_útil, altura_útil × proporção_da_página)` e mora em `larguraQueCabe`
+(`pdf.js`), pura, com teste em `app/test/bookzoom.test.js` — é o cálculo em que a tela
+inteira se apoia, e ele não precisa de navegador para ser verificado.
+
+A faixa do livro é **50% a 500%**, dele, não da tela de cifra (que continua em 40%–400%):
+medido a partir de uma unidade que já mostra tudo, descer é um passo atrás e não um
+resgate, e passar dos 400% da cifra é o que ler um scan de 300 dpi na estante realmente
+pede. Os botões − / + **multiplicam por 1,25** em vez de somar um valor fixo — somando,
+atravessar a faixa custava 23 toques, e o mesmo 0,2 que é um salto em 50% é invisível em
+500%. Um toque na porcentagem devolve a página inteira.
+
 A regra de gesto, que é onde esse tipo de tela costuma ficar irritante:
 
 - **zoom = 100%** → deslizar na horizontal vira a página;
@@ -217,7 +240,13 @@ A regra de gesto, que é onde esse tipo de tela costuma ficar irritante:
 Pinça dá zoom nos dois casos. A página é **redesenhada** na resolução do zoom, nunca
 esticada — é o ganho da abordagem escolhida, e o motivo de os 300 dpi do Beatles aparecerem
 de verdade quando se aproxima. A próxima página é desenhada em segundo plano enquanto a
-atual é lida, para a virada ser instantânea.
+atual é lida, para a virada ser instantânea. Girar o tablet redesenha também: "caber"
+depende do tamanho da tela, então mudar a tela muda o que a régua significa.
+
+Ampliada além da tela, a página **encosta na borda** em vez de ficar centralizada — uma
+margem `auto` no canvas, que centraliza enquanto cabe e vira zero quando não cabe. Centralizar
+a linha do flex jogava o transbordo para os dois lados ao mesmo tempo e deixava a borda
+esquerda sem rolagem que a alcançasse.
 
 O canvas tem teto de dimensão (o Chrome tem limite de área de canvas, e 300 dpi × zoom 4
 passa dele em tablet). Acima do teto, o zoom continua ampliando por escala em vez de
