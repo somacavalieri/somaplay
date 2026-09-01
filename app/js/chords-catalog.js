@@ -260,6 +260,19 @@ export const CATALOG = {
   'F7(4/9)':    [{ frets: [1, -1, 1, 3, 1, 3], default: true }],
   'E7(4/9)':    [{ frets: [0, 0, 0, 2, 0, 2], default: true }],
   'Bb7(4/9)':   [{ frets: [6, -1, 6, 8, 6, 8], default: true }],
+
+  // — formas para o repertório do vol. 2 das 101 (v0.18.2) —
+  // Mesmo critério da leva da 0.14.3: escolhidas por busca e validadas contra o
+  // nome (notas obrigatórias presentes, nenhuma estranha, fundamental no baixo,
+  // vão <= 4 casas, sem corda muda no meio). Estas cinco são as que a grade
+  // impressa de *Marina* não entregou — as caixas saem mal delimitadas em todo
+  // limiar, então o dicionário cobre. `A7(4/9)` é sus4: a terça fica fora, como
+  // manda o `⁷₄` empilhado do Chediak, e a forma é toda em cordas soltas.
+  'Em7(9)':   [{ frets: [0, 2, 0, 0, 0, 2], default: true }],
+  'A7(4/9)':  [{ frets: [-1, 0, 0, 0, 0, 0], default: true }],
+  'C#7(b9)':  [{ frets: [-1, 4, 3, 4, 3, 4], default: true }],
+  'A7(9)':    [{ frets: [-1, 0, 2, 4, 2, 3], default: true }],
+  'F#7(13)':  [{ frets: [2, 1, 1, 3, 2, 0], default: true }],
 };
 
 export function catalogShapes(name) {
