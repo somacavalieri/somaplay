@@ -35,6 +35,12 @@ python3 scripts/chords/progresso.py -new-songbook   # limita a um acervo
 **Nunca edite nada entre `<!-- chord:auto -->` e `<!-- /chord:auto -->`.** Vai ser
 sobrescrito. Para mudar um número, mude o status no `INDICE.md` e rode o script.
 
+O dashboard da raiz nomeia **só os documentos em progresso** (começados e
+inacabados), com a justificativa da dificuldade ao lado; os ainda não começados e
+os concluídos viram uma linha de contagem por acervo. A lista completa de
+documentos de um acervo está sempre no `PROGRESSO.md` daquele acervo — é lá que os
+168 artistas do Vitor aparecem um a um.
+
 Há ainda uma lista plana por acervo, para procurar uma música sem abrir os
 índices um a um:
 

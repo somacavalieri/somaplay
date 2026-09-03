@@ -2,15 +2,18 @@ import unittest
 from pathlib import Path
 
 from indice import Documento
-from render import barra, tabela_de_documentos, bloco_acervo, bloco_dashboard
+from render import (barra, concluido, em_progresso, tabela_de_documentos,
+                    bloco_acervo, bloco_dashboard)
 
 
-def doc(nome, acervo="-new-songbook", dif="5", **contagem):
+def doc(nome, acervo="-new-songbook", dif="5", por_que="scan limpo",
+        **contagem):
     return Documento(
         caminho=Path("chords/%s/%s/INDICE.md" % (acervo, nome)),
         meta={
             "documento": nome, "acervo": acervo, "tipo": "pdf-scan",
-            "dificuldade": dif, "atualizado": "2026-08-12",
+            "dificuldade": dif, "dificuldade_por_que": por_que,
+            "atualizado": "2026-08-12",
         },
         contagem=contagem,
     )
@@ -99,6 +102,101 @@ class TestBlocos(unittest.TestCase):
     def test_saida_e_deterministica(self):
         por_acervo = {"-new-songbook": [doc("A", gerada=1, nao_extraida=3)]}
         self.assertEqual(bloco_dashboard(por_acervo), bloco_dashboard(por_acervo))
+
+
+class TestEmProgresso(unittest.TestCase):
+    def test_comecado_e_inacabado(self):
+        self.assertTrue(em_progresso(doc("A", gerada=2, nao_extraida=60)))
+
+    def test_intocado_nao_esta_em_progresso(self):
+        self.assertFalse(em_progresso(doc("A", nao_extraida=60)))
+
+    def test_concluido_nao_esta_em_progresso(self):
+        self.assertFalse(em_progresso(doc("A", gerada=10)))
+
+    def test_denominador_zerado_continua_visivel(self):
+        """Tudo 🚫: 0 feitas, mas some se cair na contagem de não começados."""
+        d = doc("A", nao_extraivel=3)
+        self.assertFalse(concluido(d))
+        self.assertTrue(em_progresso(d))
+        self.assertIn("A", bloco_dashboard({"-new-songbook": [d]}))
+
+
+class TestConcluido(unittest.TestCase):
+    def test_tudo_feito_e_concluido(self):
+        self.assertTrue(concluido(doc("A", gerada=10)))
+
+    def test_com_uma_pendente_nao_e_concluido(self):
+        self.assertFalse(concluido(doc("A", gerada=9, nao_extraida=1)))
+
+    def test_denominador_zerado_nao_conta_como_concluido(self):
+        """Tudo 🚫 é anomalia; virar linha de contagem esconderia a perda."""
+        self.assertFalse(concluido(doc("A", nao_extraivel=3)))
+
+
+class TestDashboardEnxuto(unittest.TestCase):
+    def _dash(self):
+        return bloco_dashboard({
+            "-new-songbook": [doc("Bossa Nova 1", gerada=2, nao_extraida=60)],
+            "-pasta-vitor": [
+                doc("Fagner", acervo="-pasta-vitor", dif="3", gerada=147),
+                doc("Gal Costa", acervo="-pasta-vitor", dif="3", gerada=112),
+            ],
+        })
+
+    def test_documento_concluido_nao_vira_linha_de_tabela(self):
+        b = self._dash()
+        self.assertIn("Bossa Nova 1", b)
+        self.assertNotIn("Fagner", b)
+        self.assertNotIn("Gal Costa", b)
+
+    def test_documento_zerado_nao_vira_linha_de_tabela(self):
+        """Livro que ninguém começou não é frente de trabalho; é fila."""
+        b = bloco_dashboard({"-new-songbook": [
+            doc("Bossa Nova 1", gerada=2, nao_extraida=60),
+            doc("Cazuza vol. 1", nao_extraida=32),
+        ]})
+        self.assertIn("Bossa Nova 1", b)
+        self.assertNotIn("Cazuza vol. 1", b)
+        self.assertIn("Ainda não começados", b)
+        self.assertIn("| `-new-songbook` | 1 | 32 |", b)
+
+    def test_acervo_separa_em_progresso_de_zerado(self):
+        b = bloco_dashboard({"-new-songbook": [
+            doc("A", gerada=2, nao_extraida=60),
+            doc("B", nao_extraida=32),
+            doc("C", gerada=10),
+        ]})
+        linha = [l for l in b.splitlines()
+                 if l.startswith("| `-new-songbook`")][0]
+        self.assertTrue(linha.rstrip().endswith("| 3 | 1 | 1 |"), linha)
+
+    def test_concluidos_aparecem_somados_por_acervo(self):
+        b = self._dash()
+        self.assertIn("Documentos concluídos", b)
+        self.assertIn("| `-pasta-vitor` | 2 | 259 |", b)
+        self.assertIn("chords/-pasta-vitor/PROGRESSO.md", b)
+
+    def test_o_porque_da_dificuldade_vem_junto(self):
+        b = bloco_dashboard({"-new-songbook": [
+            doc("Bossa Nova 3", dif="8", por_que="bitonal 100 dpi",
+                gerada=1, nao_extraida=56),
+        ]})
+        self.assertIn("bitonal 100 dpi", b)
+
+    def test_porque_muito_longo_e_cortado(self):
+        b = bloco_dashboard({"-new-songbook": [
+            doc("X", por_que="palavra " * 40, gerada=1, nao_extraida=5),
+        ]})
+        linha = [l for l in b.splitlines() if l.startswith("| X |")][0]
+        self.assertIn("…", linha)
+        self.assertLess(len(linha), 250)
+
+    def test_acervo_continua_listando_documento_concluido(self):
+        """A lista completa não some — ela mora no PROGRESSO.md do acervo."""
+        b = bloco_acervo("-pasta-vitor",
+                         [doc("Fagner", acervo="-pasta-vitor", gerada=147)])
+        self.assertIn("Fagner", b)
 
 
 if __name__ == "__main__":

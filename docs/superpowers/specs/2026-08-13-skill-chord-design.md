@@ -149,6 +149,35 @@ Gerado inteiro. Mostra, por acervo e no total:
   observação de cada um. É o que evita redescobrir a página faltante do Bossa Nova 2
   daqui a seis meses.
 
+### O dashboard lista só o que está em progresso (2026-08-30, revisto em 31)
+
+A tabela por documento começou listando os cinco acervos inteiros. Com o acervo do
+Vitor extraído, isso virou 199 linhas — 172 delas em 100% — e a frente de trabalho
+real, os 24 songbooks com música ⬜, ficava três telas abaixo do topo. Um dashboard
+que obriga a rolar para achar o que fazer não é dashboard.
+
+A tabela por documento passa a nomear **só os documentos em progresso** — começados
+e inacabados, `0 < feitas < extraíveis`. Os outros dois estados viram uma linha por
+acervo, com contagem de documentos e de músicas, apontando para o `PROGRESSO.md` do
+acervo — que continua listando todos, um a um:
+
+- **ainda não começados** (`feitas = 0`), contados pelas músicas **mapeadas**: é a
+  fila, e o que interessa dela é o tamanho;
+- **concluídos**, contados pelas músicas **feitas**.
+
+Nada some: muda o nível da hierarquia em que cada coisa é lida. A tabela por acervo
+ganha as colunas **Em progresso** e **Zerados** — juntas com **Docs**, dizem de longe
+onde há trabalho andando, onde há fila e o que já fechou.
+
+Um documento com `extraíveis = 0` (tudo 🚫 ou ⏸️) **não** conta como concluído nem
+como não começado: fica nomeado na tabela, marcando 0 de 0. Não há trabalho ali, mas
+cair numa linha de contagem esconderia uma perda inteira.
+
+E como a tabela encolheu, cabe nela a coluna que faltava: **por que essa
+dificuldade**, copiada de `dificuldade_por_que`. O número sozinho não decide nada —
+"8" não diz se o problema é resolução, offset ou página faltando. A justificativa
+é cortada em 90 caracteres na borda de palavra; a íntegra está no `INDICE.md`.
+
 ## A escala de dificuldade
 
 Um número de 1 a 10 por documento, **1 é o mais fácil**. Mora no front matter junto
