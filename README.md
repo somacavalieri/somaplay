@@ -10,7 +10,7 @@ to install. Everything lives on your device.
 
 See what's new in the [changelog](CHANGELOG.md).
 
-![Karaoke mode](screens/karaoke.png)
+![The chart mode — chord chart with auto-scroll and diagrams above the chord line](screens/chords-1.png)
 
 ---
 
@@ -42,6 +42,11 @@ library filters itself to whatever is available in the active mode.
 | **T2 · Accompaniment** | A multitrack mixer — volume and mute per channel, one shared transport |
 | **T3 · Karaoke** | Backing track playing, lyrics on screen |
 
+| | |
+|---|---|
+| ![Accompaniment mode](screens/mixer.png) | ![Karaoke mode](screens/karaoke.png) |
+| **T2** — one fader per stem, one shared transport | **T3** — backing track with the lyrics on screen |
+
 Playing a song is a single tap — there's no intermediate mode picker. Inside a song, the
 T1/T2/T3 switch doubles as a feature indicator: a disabled mode means that song has no
 content for it.
@@ -71,6 +76,15 @@ content for it.
 - Lists are global — they ignore the mode lens, and opening a song from a list plays it
   in its best available mode
 - Interface in **English or Portuguese**, with chord notation in Brazilian or international convention
+
+| | |
+|---|---|
+| ![Browsing by artist](screens/artists.png) | ![Browsing by song](screens/songs.png) |
+| By **artist** | By **song** |
+| ![Browsing by style](screens/estilos.png) | ![Setlists](screens/lists.png) |
+| By **style**, each with its song count | **Lists** — setlists and favourites, drag to reorder |
+
+![A songbook PDF in the library — cover, page-by-page reading, pinch zoom](screens/books.png)
 
 **Offline & data**
 - Service Worker for full offline operation; installable as a PWA
