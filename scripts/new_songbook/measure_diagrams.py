@@ -92,6 +92,12 @@ def notas_do_nome(nome):
     elif base.startswith('add'):
         pass
     for e in exts:
+        # '7M' entre parênteses é sétima MAIOR (Cm(7M) = Dó menor com si natural).
+        # Sem esta linha o '7' cairia no GRAU comum e viraria sétima menor — o
+        # acorde soaria Cm7 e nenhuma casa-base fecharia com o desenho do livro.
+        if re.search(r'7M|maj7', e):
+            graus.add(11)
+            e = re.sub(r'7M|maj7', '', e)
         for tok in re.findall(r'[b#]?\d+', e):
             if tok in GRAU:
                 graus.add(GRAU[tok])
@@ -136,7 +142,7 @@ def agrupa(vals, folga):
     return out
 
 
-def acha_fileiras(m_est, ymin, ymax):
+def acha_fileiras(m_est, ymin, ymax, corrida=80):
     """Fileiras de caixas -> [[y dos trastes], ...].
 
     Parte das linhas HORIZONTAIS, não das verticais: as cordas saem com tinta
@@ -147,7 +153,15 @@ def acha_fileiras(m_est, ymin, ymax):
     # 80 px, não 100: na p.188 do Chico vol.1 os dois últimos trastes da fileira
     # 2 saem claros e com 100 a caixa vira de 2 espaços — as 4 últimas caixas
     # ficam sem ponto nenhum e nada fecha.
-    ys = [y for y in range(ymin, ymax) if maxrun(m_est[y]) >= 80]
+    #
+    # E 80 não serve em toda página: na p.24 do vol. 1 das 101 (A paz) o scan
+    # comeu os trastes e deixou as CORDAS intactas — a maior corrida horizontal
+    # da grade inteira é 81 px, então nada é achado e a premissa desta função
+    # ("o traste atravessa a caixa e é o traço mais confiável") se inverte. Ali
+    # a grade só aparece com `--corrida-traste 15`. Baixar isto admite ruído,
+    # e o juiz continua sendo o TESTE DAS NOTAS: grade errada não fecha com o
+    # nome do acorde, e a ferramenta diz que não fechou.
+    ys = [y for y in range(ymin, ymax) if maxrun(m_est[y]) >= corrida]
     if not ys:
         return []
     linhas = agrupa(ys, 4)
@@ -177,10 +191,10 @@ def acha_fileiras(m_est, ymin, ymax):
     return saida
 
 
-def acha_caixas(m_est, ymin, ymax):
+def acha_caixas(m_est, ymin, ymax, corrida=80):
     """Devolve [(trastes, [x das 6 cordas]), ...] na ordem de leitura."""
     caixas = []
-    for tr in acha_fileiras(m_est, ymin, ymax):
+    for tr in acha_fileiras(m_est, ymin, ymax, corrida):
         y0, y1 = tr[0], tr[-1]
         # corda = coluna com tinta em quase toda a altura da caixa
         xs = [x for x in range(m_est.shape[1])
@@ -208,6 +222,8 @@ def main():
     ap.add_argument('-y1', type=float, default=0.50)
     ap.add_argument('--dpi', type=int, default=300)
     ap.add_argument('--thr-estrutura', type=int, default=170)
+    ap.add_argument('--corrida-traste', type=int, default=80,
+                    help='corrida horizontal mínima (px) para a linha valer como traste')
     ap.add_argument('--thr-ponto', type=int, default=128)
     a = ap.parse_args()
 
@@ -218,7 +234,7 @@ def main():
     H = arr.shape[0]
     m_est, m_pt = arr < a.thr_estrutura, arr < a.thr_ponto
 
-    caixas = acha_caixas(m_est, int(H * a.y0), int(H * a.y1))
+    caixas = acha_caixas(m_est, int(H * a.y0), int(H * a.y1), a.corrida_traste)
     print(f'{len(caixas)} caixas achadas, {len(nomes)} nomes dados')
     if len(caixas) != len(nomes):
         print('!! contagem diferente — confira -y0/-y1 e a lista de acordes')
@@ -237,7 +253,12 @@ def main():
                 if max(maxrun(faixa[r]) for r in range(faixa.shape[0])) >= 14:
                     casa = e + 1
                     break
-            solta = m_pt[tr[0] - 26:tr[0] - 4, x - 12:x + 13].sum() > 50
+            # 15, não 50: o ○ varia muito de força neste scan — 63-96 nos nítidos,
+            # 42-48 no 'A#°'/'Bb°' de Logo eu? (p.135), 23 no 'Fm6' de Retrato em
+            # branco e preto (p.182). Sem ele o acorde perde uma nota e não fecha
+            # com nome nenhum. Corda SEM marca mede 0, então mesmo a 15 a folga é
+            # larga — e quem confere no fim é o teste das notas.
+            solta = m_pt[tr[0] - 26:tr[0] - 4, x - 12:x + 13].sum() > 15
             rel.append(casa if casa else (0 if solta else None))
 
         obrig, perm, baixo, raiz = notas_do_nome(nome)
@@ -256,6 +277,14 @@ def main():
             return out
 
         opcoes, nota_rodape = fecha(obrig), ''
+        # Acorde simétrico (aumentado) fecha em várias casas-base: transpor a
+        # forma por terça maior devolve as mesmas notas. O desempate é do livro —
+        # caixa SEM algarismo romano à esquerda começa na 1ª casa.
+        if len(opcoes) > 1 and 1 in opcoes:
+            faixa = m_est[tr[0]:tr[-1] + 1, max(0, xs[0] - 95):xs[0] - 12]
+            if faixa.size and faixa.mean() < 0.01:
+                opcoes = [1]
+                nota_rodape = '  (várias casas fecham; sem algarismo = 1ª)'
         # Voicing sem a fundamental é idiomático quando o acorde nomeia o baixo
         # (Cm7(9)/G no "Samba e amor" é Sol-Mib-Sib-Ré, sem o Dó). Só vale para
         # acorde com baixo nomeado, e sai marcado — não é o caso comum.

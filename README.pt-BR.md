@@ -10,7 +10,7 @@ sem instalar nada. Tudo vive no seu aparelho.
 
 Veja as novidades no [changelog](CHANGELOG.md).
 
-![Modo karaokê](screens/karaoke.png)
+![O modo cifra — cifra com rolagem automática e diagramas acima da linha de acordes](screens/chords-1.png)
 
 ---
 
@@ -42,6 +42,11 @@ filtra para o que existe no modo ativo.
 | **T2 · Acompanhamento** | Mixer multicanal — volume e mute por stem, transporte único |
 | **T3 · Karaokê** | Base tocando, letra na tela |
 
+| | |
+|---|---|
+| ![Modo acompanhamento](screens/mixer.png) | ![Modo karaokê](screens/karaoke.png) |
+| **T2** — um fader por stem, transporte único | **T3** — base tocando com a letra na tela |
+
 Tocar uma música é **um toque só** — não existe seletor de modo no meio do caminho.
 Dentro da música, o switch T1/T2/T3 funciona também como indicador: modo desabilitado
 significa que aquela música não tem conteúdo para ele.
@@ -72,6 +77,15 @@ significa que aquela música não tem conteúdo para ele.
 - Listas são globais — ignoram a lente de modo, e abrir uma música pela lista toca ela no
   melhor modo disponível
 - Interface em **português ou inglês**, com notação de acordes brasileira ou internacional
+
+| | |
+|---|---|
+| ![Navegando por artista](screens/artists.png) | ![Navegando por música](screens/songs.png) |
+| Por **artista** | Por **música** |
+| ![Navegando por estilo](screens/estilos.png) | ![Listas](screens/lists.png) |
+| Por **estilo**, cada um com a contagem de músicas | **Listas** — setlists e favoritas, reordenáveis por arrastar |
+
+![Um songbook em PDF na biblioteca — capa, leitura página a página, zoom por pinça](screens/books.png)
 
 **Offline e dados**
 - Service Worker para operação offline completa; instalável como PWA

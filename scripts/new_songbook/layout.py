@@ -34,10 +34,15 @@ def layout_system(chords, lyrics, x0, scale=SCALE):
 def build_text(systems, x0, scale=SCALE):
     """Lista de (acordes, letra) -> texto da cifra, um sistema por par de linhas.
 
-    Sistema sem letra (instrumental) sai como linha só de acorde.
+    Sistema sem letra (instrumental) sai como linha só de acorde, e sistema sem
+    ACORDE sai como linha só de letra — que é o caso da recitação: o Samba da
+    bênção tem 71 versos falados, sem acorde nenhum em cima. Emitir a linha de
+    acorde vazia ali encheria a cifra de linhas em branco alternadas.
+    Sistema vazio dos dois lados vira uma linha em branco, que é como se separa
+    um bloco de recitação do sistema seguinte.
     """
     blocos = []
     for chords, lyrics in systems:
         c, l = layout_system(chords, lyrics, x0, scale)
-        blocos.append(c if not l else f'{c}\n{l}')
+        blocos.append(c if not l else (l if not c else f'{c}\n{l}'))
     return '\n'.join(blocos)
