@@ -32,3 +32,7 @@ scripts/gil_songbook/
 # transcrita. A FERRAMENTA em scripts/new_songbook/ continua pública — é código
 # nosso; o que sai é só o conteúdo dos livros.
 scripts/new_songbook/books/
+
+# Sobras de depuracao das ferramentas de medicao
+anotada.png
+bandas.json
