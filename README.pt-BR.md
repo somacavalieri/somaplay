@@ -160,3 +160,7 @@ amigos pediram. Espere as arestas de um software escrito para um público de uma
 
 As três fontes embutidas — Sora, Inter e JetBrains Mono — estão sob a
 [SIL Open Font License 1.1](app/fonts/LICENSES/); veja [app/fonts/](app/fonts/README.md).
+
+---
+
+Feito por [Flavio Soma Cavalieri](https://www.linkedin.com/in/flaviosoma/) — [mais projetos](https://github.com/somacavalieri).

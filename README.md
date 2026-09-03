@@ -160,3 +160,7 @@ of one.
 
 The three bundled typefaces — Sora, Inter and JetBrains Mono — are under the
 [SIL Open Font License 1.1](app/fonts/LICENSES/); see [app/fonts/](app/fonts/README.md).
+
+---
+
+Built by [Flavio Soma Cavalieri](https://www.linkedin.com/in/flaviosoma/) — [more projects](https://github.com/somacavalieri).
