@@ -55,6 +55,34 @@ def find_existing_artist_id(name):
     return None
 
 
+def confere_digitacoes(titulo, dig):
+    """Recusa `digitacoes` fora do contrato do app, ANTES de gravar o arquivo.
+
+    O contrato é nome -> {'frets': [6 casas], 'barre'?: {...}, 'varId'?: str}.
+    A lista crua (`{'Bm7': [-1,2,-1,2,3,2]}`) parece certa, passa nas duas
+    conferências da recipe e produz um .somaplay que o app importa sem reclamar
+    — e aí `chordSVG` faz `d.frets.filter(...)` sobre uma lista, dá TypeError no
+    meio do render, e a música APARECE NA LISTA MAS NÃO ABRE, sem erro visível
+    em lugar nenhum. Três músicas do Caetano vol. 2 saíram assim.
+
+    Falhar aqui é barato; descobrir no tablet, no palco, não é.
+    """
+    for nome, forma in (dig or {}).items():
+        onde = f'{titulo!r}, acorde {nome!r}'
+        if not isinstance(forma, dict):
+            raise SystemExit(
+                f'digitacoes de {onde}: esperava dict com "frets", veio '
+                f'{type(forma).__name__}. Use {{"frets": [...]}}, não a lista crua.')
+        casas = forma.get('frets')
+        if not isinstance(casas, list) or len(casas) != 6:
+            raise SystemExit(f'digitacoes de {onde}: "frets" tem de ser lista de 6 casas, veio {casas!r}')
+        if not all(isinstance(c, int) and c >= -1 for c in casas):
+            raise SystemExit(f'digitacoes de {onde}: casa inválida em {casas!r} (-1 não toca, 0 solta)')
+        sobra = set(forma) - {'frets', 'barre', 'varId'}
+        if sobra:
+            raise SystemExit(f'digitacoes de {onde}: chave desconhecida {sorted(sobra)}')
+
+
 def build(book_module_name):
     mod = importlib.import_module(f'books.{book_module_name}')
     book, folder, songs = mod.BOOK, mod.FOLDER, mod.SONGS
@@ -62,6 +90,7 @@ def build(book_module_name):
     artists = {}
     out_songs = []
     for s in songs:
+        confere_digitacoes(s['title'], s.get('digitacoes'))
         aid = artists.get(s['artist']) or find_existing_artist_id(s['artist'])
         if not aid:
             aid = 'nsb-' + md5(s['artist'])[:16]

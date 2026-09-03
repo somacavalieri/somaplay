@@ -81,6 +81,15 @@ def main():
     ap.add_argument('--min-tinta', type=int, default=15,
                     help='token com menos tinta que isto (px) é respingo e sai')
     ap.add_argument('--min-gap-linhas', type=int, default=6)
+    # `measure_cifra` já tinha isto e o esqueleto não repassava, o que deixava
+    # este script sem saída justo nas páginas mais difíceis. Quando a linha de
+    # acorde encosta na de letra — em *Detalhes* é a diagonal do `A7M/E`, que
+    # desce e toca a letra — não sobra linha 100% branca entre as duas e elas
+    # saem como UMA banda de ~96px. Com densidade, uma linha só conta como
+    # tinta se tiver essa fração de colunas escuras, e o fio da diagonal deixa
+    # de costurar as bandas. 0.004 basta em *Detalhes*.
+    ap.add_argument('--densidade', type=float, default=0.0,
+                    help='fração mínima de colunas com tinta para a linha contar')
     ap.add_argument('--marg', type=float, default=0.04)
     ap.add_argument('--primeira', choices=['acorde', 'letra'], default='acorde')
     ap.add_argument('--so-acorde', default='', help='bandas sem letra embaixo, 1-based')
@@ -92,7 +101,15 @@ def main():
     arr = np.asarray(img)
     H, W = arr.shape
     y0 = int(H * a.y0)
-    bs = bands(masked(arr, y0, int(H * a.y1), a.marg), a.min_gap_linhas)
+    m = masked(arr, y0, int(H * a.y1), a.marg)
+    # Banda que só tem respingo tem de sair AQUI, antes da tipagem. Descartar o
+    # token adiante não bastava: a banda continuava na lista, consumia uma vez
+    # da alternância acorde/letra e INVERTIA todos os sistemas seguintes — foi o
+    # que quebrou *Detalhes*, com quatro delas na mesma página. Mesmo critério do
+    # `--min-tinta`, um nível acima: banda de verdade tem milhares de px de tinta.
+    bs, vazias = [], []
+    for b0, b1 in bands(m, a.min_gap_linhas, a.densidade):
+        (bs if m[b0:b1].sum() >= a.min_tinta else vazias).append((b0, b1))
     so_acorde = {int(x) for x in a.so_acorde.split(',') if x.strip()}
 
     # tipo de cada banda: acorde/letra alternando, salvo as marcadas como só-acorde
@@ -106,8 +123,10 @@ def main():
             esperado = 'letra' if esperado == 'acorde' else 'acorde'
 
     os.makedirs(a.out, exist_ok=True)
-    m = masked(arr, y0, int(H * a.y1), a.marg)
     linhas, todos, respingos = [], [], 0
+    for b0, b1 in vazias:
+        linhas.append(f'# banda descartada y={b0}-{b1}: só respingo '
+                      f'({int(m[b0:b1].sum())}px de tinta)')
     for i, ((b0, b1), tipo) in enumerate(zip(bs, tipos), 1):
         gap = a.gap_acorde if tipo == 'acorde' else a.gap_letra
         ts = tokens(m, b0, b1, max(int(round(gap * a.scale)), 1))
