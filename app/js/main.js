@@ -309,6 +309,11 @@ let apagandoFonte = false;
 // disparam dois merges do mesmo id.
 let carregandoDemo = false;
 
+// O convite de instalação do Chrome. Não existe no iOS nem no Firefox, e não
+// chega com o app já instalado: nesses casos S.podeInstalar fica falso e o
+// botão simplesmente não aparece.
+let convite = null;
+
 // Mesma guarda, mesmo motivo: duplicateInKey copia áudio no meio de um await, e
 // o botão continua clicável durante ele — sem isto dois toques rápidos criam
 // duas cópias.
@@ -1074,6 +1079,16 @@ const actions = {
       toast(t('msg.demo.failed', { error: e.message }));
     } finally { carregandoDemo = false; }
   },
+  async instalarApp() {
+    if (!convite) return;
+    const e = convite;
+    // O evento é de uso único: descartar ANTES de esperar a escolha evita dois
+    // prompts se o botão for tocado duas vezes.
+    convite = null;
+    S.podeInstalar = false;
+    update();
+    try { await e.prompt(); } catch { /* o navegador já explicou na tela */ }
+  },
   // A tela de boas-vindas não tem abas, então ela mesma emite o input de PDF. A
   // aba certa é marcada ANTES do seletor abrir: quando o rascunho do livro
   // chegar, o próximo render já cai na estante, que é onde o rascunho aparece.
@@ -1505,6 +1520,27 @@ document.addEventListener('visibilitychange', () => {
   else flushLivroPagina();
 });
 
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  convite = e;
+  S.podeInstalar = true;
+  if (S.screen === 'home') update();
+});
+window.addEventListener('appinstalled', () => {
+  convite = null;
+  S.podeInstalar = false;
+  if (S.screen === 'home') update();
+});
+
+// A demo é a única coisa nesta tela que precisa de rede. O resto do app não.
+const marcaRede = () => {
+  const antes = S.online;
+  S.online = navigator.onLine;
+  if (antes !== S.online && S.screen === 'home') update();
+};
+window.addEventListener('online', marcaRede);
+window.addEventListener('offline', marcaRede);
+
 // ---------- boot ----------
 (async function boot() {
   try {
@@ -1522,6 +1558,7 @@ document.addEventListener('visibilitychange', () => {
     </div>`;
     return;
   }
+  S.online = navigator.onLine;
   update();
   manageWakeLock();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
