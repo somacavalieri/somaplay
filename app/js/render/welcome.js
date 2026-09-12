@@ -10,7 +10,7 @@
 // chord on the first screen of a chord app costs more than the shortcut saves.
 import { I, esc } from '../icons.js';
 import { chordSVG } from '../chords.js';
-import { S } from '../state.js';
+import { S, FONTE_DEMO } from '../state.js';
 import { t } from '../i18n.js';
 import { DEMO_URL } from '../samples.js';
 
@@ -127,5 +127,24 @@ export function welcomeHTML() {
 
     <input type="file" id="file-backup" accept=".somaplay" hidden>
     <input type="file" id="file-livro" accept="application/pdf" multiple hidden>
+  </div>`;
+}
+
+// What is left of the welcome screen once the demo is in: where to start, and
+// the way out. "Tirar a demo" is deleteFonteAsk with the demo's source — the
+// same door any other source leaves by, confirmation and toasts included.
+//
+// The song title is a parameter, never part of the translated string: it is
+// content, and t() does not escape parameters, so it arrives escaped.
+export function guiaDemoHTML(song) {
+  const titulo = song ? esc(song.title) : '';
+  return `<div class="wc-guia">
+    <div class="wc-guia-txt">
+      <div class="wc-guia-t">${t('home.guia.title')}</div>
+      <div class="wc-guia-s">${t('home.guia.text', { title: titulo })}</div>
+    </div>
+    ${song ? `<button class="btn-primary small" data-a="openSong" data-id="${esc(song.id)}" data-from="home">${I.play(16)}${t('home.guia.open', { title: titulo })}</button>` : ''}
+    <button class="btn-ghost" data-a="deleteFonteAsk" data-id="${FONTE_DEMO}">${I.trash(17)}${t('home.guia.remove')}</button>
+    <button class="btn-icon xs" data-a="fecharGuiaDemo" title="${t('home.guia.close')}">${I.close(18)}</button>
   </div>`;
 }

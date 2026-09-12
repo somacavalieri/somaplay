@@ -919,6 +919,9 @@ const actions = {
     S.settings.chordNotationTouched = true;
     saveSettings(); update();
   },
+  // O × é para sempre: quem fechou já sabe por onde começar. O ajuste viaja na
+  // parte `pessoal` de um backup, o que é inofensivo.
+  fecharGuiaDemo() { S.settings.guiaDemoFechado = true; saveSettings(); update(); },
   toggleExportAll() {
     // null = todas. Marcada, desmarca tudo; desmarcada ou parcial, marca tudo.
     S.exportFontes = S.exportFontes === null ? [] : null;

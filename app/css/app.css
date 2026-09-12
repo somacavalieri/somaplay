@@ -923,6 +923,11 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .wc-trust{display:flex;flex-wrap:wrap;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 18px}
 .wc-trust-txt{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:14px;flex:1;min-width:240px}
 
+.wc-guia{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--accent-soft3);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.wc-guia-txt{flex:1;min-width:240px}
+.wc-guia-t{font-family:var(--f-title);font-weight:600;font-size:16px;margin-bottom:3px}
+.wc-guia-s{color:var(--muted);font-size:13px;line-height:1.5}
+
 /* .btn-ghost não separa ícone e rótulo (só .btn-primary faz isso); esta é a
    primeira tela a colocar um ícone dentro de um botão ghost. Escopado à Home
    de primeira visita para não mexer no .btn-ghost compartilhado — cobre também

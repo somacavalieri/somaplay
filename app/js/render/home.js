@@ -1,11 +1,11 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, songsDaBusca, primeiraVisita } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, songsDaBusca, primeiraVisita, mostraGuiaDemo, FONTE_DEMO, fonteCasa } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { iniciais } from '../initials.js';
 import { t } from '../i18n.js';
 import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 import { renderBooksTab } from './books.js';
-import { welcomeHTML } from './welcome.js';
+import { welcomeHTML, guiaDemoHTML } from './welcome.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 
@@ -189,10 +189,19 @@ function listsTab() {
     <div class="rows narrow">${rows}</div>`;
 }
 
+// O cartão mora acima do conteúdo das três abas de MÚSICA. Listas e Livros não
+// falam de música solta, e o cartão ali seria um aviso fora de lugar.
+function guiaHTML() {
+  if (!mostraGuiaDemo(S.songs, S.settings)) return '';
+  if (!['artists', 'songs', 'estilos'].includes(S.tab)) return '';
+  return guiaDemoHTML(S.songs.find((s) => fonteCasa(fonteOf(s), FONTE_DEMO)) || null);
+}
+
 export function homeResults() {
-  if (S.tab === 'artists') return artistCards();
-  if (S.tab === 'songs') return songsTab();
-  if (S.tab === 'estilos') return estiloCards();
+  const guia = guiaHTML();
+  if (S.tab === 'artists') return guia + artistCards();
+  if (S.tab === 'songs') return guia + songsTab();
+  if (S.tab === 'estilos') return guia + estiloCards();
   if (S.tab === 'books') return renderBooksTab();
   return listsTab();
 }
