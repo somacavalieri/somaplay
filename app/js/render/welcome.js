@@ -37,7 +37,7 @@ function previaCifra() {
     <div class="wc-preview-hd">
       <span class="wc-badge t1">T1</span>
       <span class="wc-preview-nm">${esc(DEMO_TITULO)}</span>
-      <span class="wc-preview-tom">${t('home.welcome.previewKey', { tom: esc(DEMO_TOM) })}</span>
+      <span>${t('home.welcome.previewKey', { tom: esc(DEMO_TOM) })}</span>
     </div>
     <div class="wc-preview-body">
       ${trechoHTML()}
@@ -56,6 +56,13 @@ function previaMixer() {
       <span class="wc-fader-nm">${esc(nome)}</span>
       <span class="wc-fader-track"><span class="wc-fader-fill" style="width:${pct}%"></span></span>
     </div>`).join('')}</div>`;
+}
+
+// Same fragment as previaCifra's chart, wrapped like previaMixer/previaKaraoke
+// so a screen reader does not announce a bar of chart text with no context —
+// every preview here is decorative (spec 2026-09-11-home-primeira-visita-design.md).
+function previaChart() {
+  return `<div class="wc-mode-chart" aria-hidden="true">${trechoHTML()}</div>`;
 }
 
 function previaKaraoke() {
@@ -115,7 +122,7 @@ export function welcomeHTML() {
 
     <div class="wc-modes-t">${t('home.welcome.modes.title')}</div>
     <div class="wc-modes">
-      ${modo('t1', 'T1', t('home.welcome.modes.t1'), t('home.welcome.modes.t1sub'), trechoHTML())}
+      ${modo('t1', 'T1', t('home.welcome.modes.t1'), t('home.welcome.modes.t1sub'), previaChart())}
       ${modo('t2', 'T2', t('home.welcome.modes.t2'), t('home.welcome.modes.t2sub'), previaMixer())}
       ${modo('t3', 'T3', t('home.welcome.modes.t3'), t('home.welcome.modes.t3sub'), previaKaraoke())}
     </div>

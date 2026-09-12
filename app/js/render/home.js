@@ -207,6 +207,16 @@ export function homeResults() {
 }
 
 export function renderHome() {
+  // A tela de boas-vindas toma a Home inteira enquanto não houver música nem
+  // livro — menos com um livro a caminho: o rascunho do PDF mora na aba Livros,
+  // e sem a aba ele não teria onde aparecer.
+  const isWelcome = primeiraVisita(S.songs, S.books) && !S.livroDraft && !(S.livroFila || []).length;
+  // A caixa de busca continua viva na tela de boas-vindas (a spec manteve o
+  // campo), mas sem efeito visível ali — não há nada ainda para filtrar. Sem
+  // isto, uma query digitada antes do primeiro conteúdo chegar sobrevive à
+  // transição e filtra a biblioteca recém-carregada até dar vazio.
+  if (isWelcome) S.query = '';
+
   const topbar = `<div class="topbar home">
       <div class="logo">Soma<em>_play</em></div>
       ${offlineBadge}
@@ -214,10 +224,7 @@ export function renderHome() {
       <button class="btn-icon" data-a="goSettings" title="${t('settings.title')}">${I.gear()}</button>
     </div>`;
 
-  // A tela de boas-vindas toma a Home inteira enquanto não houver música nem
-  // livro — menos com um livro a caminho: o rascunho do PDF mora na aba Livros,
-  // e sem a aba ele não teria onde aparecer.
-  if (primeiraVisita(S.songs, S.books) && !S.livroDraft && !(S.livroFila || []).length) {
+  if (isWelcome) {
     return `<div class="screen">${topbar}${welcomeHTML()}</div>`;
   }
 

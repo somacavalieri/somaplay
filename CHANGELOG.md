@@ -43,7 +43,10 @@ Nothing yet.
 - **A demo that loads with one tap.** "Carregar demo" fetches a real `.somaplay`
   file — Groove de teste with four channels and lyrics, so it covers chart,
   mixer and karaoke — and imports it through the ordinary merge path. It comes
-  in under the source "Demo" and leaves the way any source leaves.
+  in under the source "Demo" and leaves the way any source leaves. The file
+  itself is deliberately outside the precache: it is fetched on demand and
+  cached by the Service Worker on first use, so installing the app does not
+  carry it.
 - **A "Comece por aqui" card** while the demo is in the library, with a way out.
 - **An install button**, where the browser offers to install.
 

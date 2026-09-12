@@ -1089,10 +1089,12 @@ const actions = {
     update();
     try { await e.prompt(); } catch { /* o navegador já explicou na tela */ }
   },
-  // A tela de boas-vindas não tem abas, então ela mesma emite o input de PDF. A
-  // aba certa é marcada ANTES do seletor abrir: quando o rascunho do livro
-  // chegar, o próximo render já cai na estante, que é onde o rascunho aparece.
-  pickLivroHome() { S.tab = 'books'; document.getElementById('file-livro')?.click(); },
+  // A tela de boas-vindas não tem abas, então ela mesma emite o input de PDF.
+  // A aba certa só é marcada quando um PDF de fato chega (wireBookFileInput,
+  // abaixo) — marcar aqui deixaria S.tab preso em 'books' se a pessoa
+  // desistir do seletor do sistema ou escolher um arquivo que não é PDF, e a
+  // tela de boas-vindas não tem abas que denunciem o estado escondido.
+  pickLivroHome() { document.getElementById('file-livro')?.click(); },
   abrirSomaplayHome() { S.importMode = 'merge'; document.getElementById('file-backup')?.click(); },
 
   // dicionário de acordes
@@ -1239,6 +1241,10 @@ export function wireBookFileInput() {
     const recusados = [...inp.files].filter((f) => !files.includes(f));
     for (const f of recusados) toast(t('books.error.notPdf', { name: f.name }));
     inp.value = '';
+    // A tela de boas-vindas não tem abas: é aqui, com pelo menos um PDF de fato
+    // aceito, que a aba certa é marcada — não no toque que abriu o seletor
+    // (pickLivroHome), que pode terminar em desistência ou num arquivo recusado.
+    if (files.length) S.tab = 'books';
     S.livroFila = (S.livroFila || []).concat(files);
     if (!S.livroDraft) await proximoLivroDaFila();
     update();
@@ -1520,11 +1526,21 @@ document.addEventListener('visibilitychange', () => {
   else flushLivroPagina();
 });
 
+// beforeinstallprompt/online/offline podem chegar do navegador ANTES de
+// initState() resolver (rede muda de estado, ou o Chrome já teria o convite de
+// instalação pronto assim que a página carrega). S.screen começa em 'home', e
+// um update() disparado por um desses eventos nesse intervalo pintaria a tela
+// de boas-vindas com o estado ainda vazio (o dicionário de acordes vazio faz o
+// diagrama da prévia cair no "?" de fallback) — re-render que o próprio boot()
+// substitui um instante depois. A trava é só no re-render: o estado
+// (S.online, S.podeInstalar) continua sendo atualizado mesmo antes de booted.
+let booted = false;
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   convite = e;
   S.podeInstalar = true;
-  if (S.screen === 'home') update();
+  if (booted && S.screen === 'home') update();
 });
 window.addEventListener('appinstalled', () => {
   convite = null;
@@ -1536,7 +1552,7 @@ window.addEventListener('appinstalled', () => {
 const marcaRede = () => {
   const antes = S.online;
   S.online = navigator.onLine;
-  if (antes !== S.online && S.screen === 'home') update();
+  if (booted && antes !== S.online && S.screen === 'home') update();
 };
 window.addEventListener('online', marcaRede);
 window.addEventListener('offline', marcaRede);
@@ -1564,4 +1580,5 @@ window.addEventListener('offline', marcaRede);
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+  booted = true;
 })();
