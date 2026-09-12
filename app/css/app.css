@@ -923,6 +923,12 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .wc-trust{display:flex;flex-wrap:wrap;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 18px}
 .wc-trust-txt{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:14px;flex:1;min-width:240px}
 
+/* .btn-ghost não separa ícone e rótulo (só .btn-primary faz isso); esta é a
+   primeira tela a colocar um ícone dentro de um botão ghost. Escopado à Home
+   de primeira visita para não mexer no .btn-ghost compartilhado — cobre também
+   o botão de instalar que a Task 6 vai desenhar na faixa de confiança. */
+.wc .btn-ghost{display:inline-flex;align-items:center;gap:9px}
+
 /* Retrato e telas estreitas: tudo empilha, e a prévia vai para baixo do texto */
 @media (max-width:1100px){
   .wc{padding:24px 20px 40px}
