@@ -699,7 +699,7 @@ Em `app/js/state.js`, junto dos outros campos de sessão (perto de `importMode`)
 // chord on the first screen of a chord app costs more than the shortcut saves.
 import { I, esc } from '../icons.js';
 import { chordSVG } from '../chords.js';
-import { S, FONTE_DEMO } from '../state.js';
+import { S } from '../state.js';
 import { t } from '../i18n.js';
 import { DEMO_URL } from '../samples.js';
 
@@ -1063,7 +1063,7 @@ Com a demo carregada a biblioteca deixa de estar vazia, e a tela de boas-vindas 
 
 - [ ] **Step 1: A função em `welcome.js`**
 
-No fim de `app/js/render/welcome.js`:
+No fim de `app/js/render/welcome.js` — e acrescentar `FONTE_DEMO` ao import de `../state.js` no topo do arquivo, que hoje traz só `S`:
 
 ```js
 // What is left of the welcome screen once the demo is in: where to start, and
@@ -1194,14 +1194,18 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Segurar o convite do navegador**
 
-Em `app/js/main.js`, junto dos outros listeners de módulo (perto do `visibilitychange`, no fim do arquivo):
+Em `app/js/main.js`, a variável fica junto das outras flags de módulo (perto de `carregandoDemo`, da Task 3), e não no fim do arquivo — é lá que se procura por ela, e a ação `instalarApp` a lê:
 
 ```js
-// O convite de instalação do Chrome chega uma vez, logo depois do load, e some
-// se ninguém o segurar — por isso ele mora aqui em cima, e não dentro de um
-// render. Não existe no iOS nem no Firefox, e não chega com o app já instalado:
-// nesses casos S.podeInstalar fica falso e o botão simplesmente não aparece.
+// O convite de instalação do Chrome. Não existe no iOS nem no Firefox, e não
+// chega com o app já instalado: nesses casos S.podeInstalar fica falso e o
+// botão simplesmente não aparece.
 let convite = null;
+```
+
+Os listeners ficam junto dos outros listeners de módulo (perto do `visibilitychange`, no fim do arquivo). O evento chega uma vez, logo depois do load, e some se ninguém o segurar — por isso ele é capturado aqui, e não dentro de um render:
+
+```js
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   convite = e;
