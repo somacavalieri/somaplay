@@ -1284,6 +1284,8 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 Recurso novo, e o `SHELL` mudou: MINOR, pela régua de `docs/superpowers/specs/2026-08-14-versionamento-design.md`. `app/test/changelog-precache.test.js` exige uma entrada no CHANGELOG para a versão atual — sem ela, a suíte fica vermelha.
 
+**Corrigido depois de a task rodar:** o mesmo teste exige **pelo menos três números `~X MB`** dentro do bloco da versão (SHELL, VENDOR e o total, cada um a no máximo 5% do disco). A primeira versão deste plano dizia o contrário — que a entrada não citava megabyte nenhum — e estava errada: a linha do precache é obrigatória, e é a convenção das cinco entradas anteriores.
+
 **Files:**
 - Modify: `app/js/version.js`, `app/sw.js` (a linha 2), `CHANGELOG.md`, `README.md`, `README.pt-BR.md`
 
@@ -1326,7 +1328,11 @@ No topo de `CHANGELOG.md`, abaixo de `## [Unreleased]`:
   only Settings renders.
 - Settings: "Importar exemplos" is now "Carregar a demo", and loads the same file
   the home does. The example song is no longer built in code.
+
+  Precache: SHELL ~X MB + VENDOR ~Y MB = ~Z MB.
 ```
+
+Os três números saem do disco (o teste os confere a 5%): some os tamanhos dos caminhos de `SHELL` e de `VENDOR` em `app/sw.js`. Medidos nesta release: 0,84 MB, 4,68 MB e 5,51 MB.
 
 - [ ] **Step 3: Os dois READMEs**
 
