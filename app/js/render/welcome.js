@@ -145,6 +145,6 @@ export function guiaDemoHTML(song) {
     </div>
     ${song ? `<button class="btn-primary small" data-a="openSong" data-id="${esc(song.id)}" data-from="home">${I.play(16)}${t('home.guia.open', { title: titulo })}</button>` : ''}
     <button class="btn-ghost" data-a="deleteFonteAsk" data-id="${FONTE_DEMO}">${I.trash(17)}${t('home.guia.remove')}</button>
-    <button class="btn-icon xs" data-a="fecharGuiaDemo" title="${t('home.guia.close')}">${I.close(18)}</button>
+    <button class="btn-icon sm" data-a="fecharGuiaDemo" title="${t('home.guia.close')}">${I.close(18)}</button>
   </div>`;
 }
