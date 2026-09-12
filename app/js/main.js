@@ -136,6 +136,9 @@ function afterRender() {
   // Home; um render sem a estante já é o sinal certo, e é um só lugar.
   if (S.screen === 'home' && S.tab === 'books') { wireBookFileInput(); carregarCapas(); }
   else revogarCapas();
+  // A tela de boas-vindas emite os dois inputs escondidos que Configurações e a
+  // estante emitem — é o preço de oferecer as mesmas portas sem as abas.
+  if (S.screen === 'home' && primeiraVisita(S.songs, S.books)) { wireBackupInput(); wireBookFileInput(); }
 
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
@@ -1068,6 +1071,11 @@ const actions = {
       toast(t('msg.demo.failed', { error: e.message }));
     } finally { carregandoDemo = false; }
   },
+  // A tela de boas-vindas não tem abas, então ela mesma emite o input de PDF. A
+  // aba certa é marcada ANTES do seletor abrir: quando o rascunho do livro
+  // chegar, o próximo render já cai na estante, que é onde o rascunho aparece.
+  pickLivroHome() { S.tab = 'books'; document.getElementById('file-livro')?.click(); },
+  abrirSomaplayHome() { S.importMode = 'merge'; document.getElementById('file-backup')?.click(); },
 
   // dicionário de acordes
   goChordbook() { S.screen = 'chordbook'; S.chordEd = null; S.cbQuery = ''; S.cbFilter = null; S.cbAdding = false; update(); },

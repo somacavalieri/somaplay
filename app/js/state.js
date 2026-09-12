@@ -57,6 +57,10 @@ export const S = {
   livroRenomeando: false,  // a faixa de renomear substituiu a página?
   artistMenuOpen: false,
   importMode: 'replace',   // replace | merge — modo do próximo import de backup
+  // Sessão, não ajuste: os dois são condição do aparelho AGORA. main.js os
+  // alimenta (Task 6); aqui eles nascem com o valor que não promete nada.
+  online: true,            // navigator.onLine, lido no boot e nos eventos
+  podeInstalar: false,     // o Chrome ofereceu instalar? (beforeinstallprompt)
   exportFontes: null,      // seleção do export: null = todas | array de grafias
   // O que o arquivo leva; todas = backup. Cópia, e não a constante: o estado da
   // sessão é mutável e não pode escrever no vocabulário de partes.js.

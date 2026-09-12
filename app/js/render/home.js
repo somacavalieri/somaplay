@@ -1,10 +1,11 @@
 // render/home.js — Home: abas Artistas · Músicas · Listas + lente de modo + busca
-import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, songsDaBusca } from '../state.js';
+import { S, songsOfArtist, modesOf, matchesLens, artistName, favList, listById, estiloOf, SEM_ESTILO, SEM_FONTE, lensAtiva, musicasPresentes, qualificadorDe, fonteOf, songsDaBusca, primeiraVisita } from '../state.js';
 import { I, esc, eqBars } from '../icons.js';
 import { iniciais } from '../initials.js';
 import { t } from '../i18n.js';
 import { fonteStripHTML, corDaFonte } from './fontestrip.js';
 import { renderBooksTab } from './books.js';
+import { welcomeHTML } from './welcome.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 
@@ -197,6 +198,20 @@ export function homeResults() {
 }
 
 export function renderHome() {
+  const topbar = `<div class="topbar home">
+      <div class="logo">Soma<em>_play</em></div>
+      ${offlineBadge}
+      <div class="searchbox">${I.search()}<input type="text" id="search-input" placeholder="${t('home.search.placeholder')}" value="${esc(S.query)}"></div>
+      <button class="btn-icon" data-a="goSettings" title="${t('settings.title')}">${I.gear()}</button>
+    </div>`;
+
+  // A tela de boas-vindas toma a Home inteira enquanto não houver música nem
+  // livro — menos com um livro a caminho: o rascunho do PDF mora na aba Livros,
+  // e sem a aba ele não teria onde aparecer.
+  if (primeiraVisita(S.songs, S.books) && !S.livroDraft && !(S.livroFila || []).length) {
+    return `<div class="screen">${topbar}${welcomeHTML()}</div>`;
+  }
+
   const isL = S.tab === 'lists';
   // A lente de modo não se aplica a Listas nem a Livros — nenhum dos dois é
   // "cifra, acompanhamento ou karaokê", os dois são materiais de outra ordem.
@@ -216,12 +231,7 @@ export function renderHome() {
   }).join('');
 
   return `<div class="screen">
-    <div class="topbar home">
-      <div class="logo">Soma<em>_play</em></div>
-      ${offlineBadge}
-      <div class="searchbox">${I.search()}<input type="text" id="search-input" placeholder="${t('home.search.placeholder')}" value="${esc(S.query)}"></div>
-      <button class="btn-icon" data-a="goSettings" title="${t('settings.title')}">${I.gear()}</button>
-    </div>
+    ${topbar}
     <div class="tabrow">
       <div class="segtab">
         <button class="${S.tab === 'artists' ? 'on' : ''}" data-a="setTab" data-id="artists">${I.grid()}${t('home.tabs.artists')}</button>
