@@ -86,9 +86,9 @@ export function renderSettings() {
           <div class="storage-bar" style="margin-bottom:0"><div id="storage-fill" style="width:2%"></div></div>
         </div>
 
-        <button class="setting-row link" data-a="importSamples">
+        <button class="setting-row link" data-a="carregarDemo">
           <div style="width:46px;height:46px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--teal-tint2);color:var(--teal)">${I.music(20)}</div>
-          <div class="info"><div class="t title">${t('settings.samples.title')}</div><div class="s">${t('settings.samples.sub')}</div></div>
+          <div class="info"><div class="t title">${t('settings.demo.title')}</div><div class="s">${t('settings.demo.sub')}</div></div>
           ${I.chevR()}
         </button>
 
