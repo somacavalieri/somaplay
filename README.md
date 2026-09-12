@@ -114,9 +114,10 @@ python3 -m http.server 8137
 In Chrome (desktop or Android tablet), use **menu → Install** to add it as an app. After
 the first visit it works with no internet at all.
 
-To see it working: **Settings → Load example** loads the demo song. Then
-**Settings → Add song** is where you add your own — chart images or pasted
-text, karaoke lyrics, and one audio file per channel.
+On the first visit, with an empty library, the home screen itself explains the
+app and offers **Load demo** — one example song with chart, mixer and karaoke,
+which one tap removes. **Add song** is where yours go in: chart images or pasted
+text, lyrics for karaoke, and one audio file per channel.
 
 ## How it works
 

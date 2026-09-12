@@ -115,9 +115,11 @@ python3 -m http.server 8137
 No Chrome (desktop ou tablet Android), use **menu → Instalar** para adicionar como app.
 Depois da primeira visita, funciona sem internet nenhuma.
 
-Para ver funcionando: **Configurações → Importar exemplos** carrega a música de
-demonstração. Depois, **Configurações → Adicionar música** é onde entram as suas —
-imagens de cifra ou texto colado, letra para karaokê e um arquivo de áudio por canal.
+Na primeira abertura, com a biblioteca vazia, a própria tela inicial explica o
+app e oferece **Carregar demo** — uma música de exemplo com cifra, mixer e
+karaokê, que sai com um toque. **Adicionar música** é onde entram as suas —
+imagens de cifra ou texto colado, letra para karaokê e um arquivo de áudio por
+canal.
 
 ## Como funciona
 
