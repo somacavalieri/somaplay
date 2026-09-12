@@ -108,6 +108,7 @@ export const S = {
   settings: {
     theme: 'dark', awake: true, cifraZoom: 110, defaultSpeed: 3, masterVol: 80,
     cifraMiniaturas: false,
+    guiaDemoFechado: false,        // o × do cartão "Comece por aqui"
     fonteFilter: [],               // persiste entre sessões; podado no boot
     lang: null,                    // null = ainda não resolvido; boot() detecta
     chordNotation: null,           // null = segue o idioma
@@ -219,6 +220,27 @@ const chaveFonte = (nome) => String(nome || '').trim().toLowerCase();
 export function fonteCasaAlguma(fonteDaMusica, filtros) {
   if (!filtros || !filtros.length) return true;
   return filtros.some((f) => fonteCasa(fonteDaMusica, f));
+}
+
+// A fonte que a demo carrega. É DADO, gravado na música: fica "Demo" nos dois
+// idiomas e nunca passa por t(). Sair da demo é a mesma porta de qualquer outra
+// fonte — "Excluir as músicas da fonte", que já existe.
+export const FONTE_DEMO = 'Demo';
+
+// A biblioteca está vazia? Livro conta. Um aparelho que só tem songbook em PDF é
+// um caso real — o import já trata dele — e, com a regra "sem música", ele veria
+// a tela de boas-vindas com as abas escondidas e nenhum caminho de volta para a
+// estante. Listas não entram: uma lista sem música não tem o que mostrar.
+export function primeiraVisita(songs, books) {
+  return !(songs || []).length && !(books || []).length;
+}
+
+// O cartão "Comece por aqui" vive enquanto a demo estiver na biblioteca e a
+// pessoa não o tiver fechado. A comparação é fonteCasa, a mesma da lente: quem
+// reimportar um arquivo com "demo" minúsculo continua com o mesmo cartão.
+export function mostraGuiaDemo(songs, settings) {
+  if ((settings || {}).guiaDemoFechado) return false;
+  return (songs || []).some((s) => fonteCasa(fonteOf(s), FONTE_DEMO));
 }
 
 // A regra de clique da faixa de pílulas, pura para poder ser testada sem DOM.
