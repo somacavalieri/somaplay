@@ -9,6 +9,11 @@ import { welcomeHTML, guiaDemoHTML } from './welcome.js';
 
 const offlineBadge = `<span class="badge-offline">Offline ${I.check()}</span>`;
 
+// Lembra se o render anterior da Home foi a tela de boas-vindas, para
+// detectar a transição (boas-vindas → biblioteca) em renderHome() sem depender
+// de reset a cada render — ver comentário lá.
+let eraBoasVindas = false;
+
 // O que está recortando a biblioteca agora, em texto puro. Quem imprime no HTML
 // escapa: o nome da fonte é conteúdo do usuário e t() não escapa parâmetro.
 function filtroAtivoLabel() {
@@ -212,10 +217,17 @@ export function renderHome() {
   // e sem a aba ele não teria onde aparecer.
   const isWelcome = primeiraVisita(S.songs, S.books) && !S.livroDraft && !(S.livroFila || []).length;
   // A caixa de busca continua viva na tela de boas-vindas (a spec manteve o
-  // campo), mas sem efeito visível ali — não há nada ainda para filtrar. Sem
-  // isto, uma query digitada antes do primeiro conteúdo chegar sobrevive à
-  // transição e filtra a biblioteca recém-carregada até dar vazio.
-  if (isWelcome) S.query = '';
+  // campo), mas sem efeito visível ali — não há nada ainda para filtrar. Uma
+  // query digitada antes do primeiro conteúdo chegar não pode sobreviver à
+  // transição e filtrar a biblioteca recém-carregada até dar vazio — mas o
+  // reset não pode acontecer a cada render: a tela de boas-vindas não tem
+  // #home-results, então o listener do campo cai em updateHomeResults() e daí
+  // num update() completo a cada tecla, e um reset incondicional aqui
+  // reconstruiria o input com value="" antes de o texto aparecer. Por isso
+  // limpamos só na transição — quando o render anterior era boas-vindas e
+  // este não é mais.
+  if (!isWelcome && eraBoasVindas) S.query = '';
+  eraBoasVindas = isWelcome;
 
   const topbar = `<div class="topbar home">
       <div class="logo">Soma<em>_play</em></div>
