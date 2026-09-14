@@ -9,6 +9,7 @@ import {
   musicasPresentes, songsOfArtist, artistById, matchesLens,
   duplicarMusicaNoTom, vizinhaNoContexto,
   criarLivro, apagarLivro, renomearLivro, livroById,
+  primeiraVisita,
 } from './state.js';
 import { renderBook, afterRenderBook, sairDoLivro, viraPagina, bookZoomBy, bookZoomFit, marcaPaginaMudou, flushLivroPagina } from './render/book.js';
 import { tituloDeArquivo } from './books.js';
@@ -29,7 +30,7 @@ import { renderChordbook } from './render/chordbookscreen.js';
 import { exportLibrary, entregaArquivo, baixaArquivo, importLibrary, recorteDeFontes, nomeDoExport,
   stampDeHoje, lerManifest, avisosDeSubstituir, conflitosDeNotas } from './backup.js';
 import { PARTES_TODAS } from './partes.js';
-import { importSamples } from './samples.js';
+import { buscaDemo } from './samples.js';
 import { openEditor, toggleBarre, tapCell, tapHead, setBase, suggestLabel, editorShape } from './render/chordeditor.js';
 import { defaultShape, shapeById, findShape, upsertVar, removeVar, setDefault, restoreBuiltins, labelsOf, pickerShapes } from './chordbook.js';
 import { isChordTok } from './chords.js';
@@ -135,6 +136,9 @@ function afterRender() {
   // Home; um render sem a estante já é o sinal certo, e é um só lugar.
   if (S.screen === 'home' && S.tab === 'books') { wireBookFileInput(); carregarCapas(); }
   else revogarCapas();
+  // A tela de boas-vindas emite os dois inputs escondidos que Configurações e a
+  // estante emitem — é o preço de oferecer as mesmas portas sem as abas.
+  if (S.screen === 'home' && primeiraVisita(S.songs, S.books)) { wireBackupInput(); wireBookFileInput(); }
 
   if (pendingHandleIdx != null) {
     document.querySelector(`.drag-handle[data-idx="${pendingHandleIdx}"]`)?.focus();
@@ -300,6 +304,15 @@ async function gravarNoDestino(st, shape, varId) {
 // diferentes rodam concorrentes, e o segundo S.songs = S.songs.filter(...)
 // escreve por cima do primeiro sem deixar rastro.
 let apagandoFonte = false;
+
+// Um toque só: sem a trava, dois toques seguidos baixam o arquivo duas vezes e
+// disparam dois merges do mesmo id.
+let carregandoDemo = false;
+
+// O convite de instalação do Chrome. Não existe no iOS nem no Firefox, e não
+// chega com o app já instalado: nesses casos S.podeInstalar fica falso e o
+// botão simplesmente não aparece.
+let convite = null;
 
 // Mesma guarda, mesmo motivo: duplicateInKey copia áudio no meio de um await, e
 // o botão continua clicável durante ele — sem isto dois toques rápidos criam
@@ -911,6 +924,9 @@ const actions = {
     S.settings.chordNotationTouched = true;
     saveSettings(); update();
   },
+  // O × é para sempre: quem fechou já sabe por onde começar. O ajuste viaja na
+  // parte `pessoal` de um backup, o que é inofensivo.
+  fecharGuiaDemo() { S.settings.guiaDemoFechado = true; saveSettings(); update(); },
   toggleExportAll() {
     // null = todas. Marcada, desmarca tudo; desmarcada ou parcial, marca tudo.
     S.exportFontes = S.exportFontes === null ? [] : null;
@@ -1052,13 +1068,34 @@ const actions = {
   },
   importBackup() { S.importMode = 'replace'; document.getElementById('file-backup').click(); },
   importBackupMerge() { S.importMode = 'merge'; document.getElementById('file-backup').click(); },
-  async importSamples() {
+  async carregarDemo() {
+    if (carregandoDemo) return;
+    carregandoDemo = true;
     try {
-      const done = await importSamples();
-      update();
-      toast(done.length ? t('msg.samples.imported', { items: done.join(' · ') }) : t('msg.samples.alreadyImported'));
-    } catch (e) { toast(t('msg.samples.importFailed', { error: e.message })); }
+      toast(t('msg.demo.loading'));
+      await importarArquivo(await buscaDemo(), { merge: true, confirmar: false });
+    } catch (e) {
+      // Offline e sem cache é o caso normal aqui, não um bug.
+      toast(t('msg.demo.failed', { error: e.message }));
+    } finally { carregandoDemo = false; }
   },
+  async instalarApp() {
+    if (!convite) return;
+    const e = convite;
+    // O evento é de uso único: descartar ANTES de esperar a escolha evita dois
+    // prompts se o botão for tocado duas vezes.
+    convite = null;
+    S.podeInstalar = false;
+    update();
+    try { await e.prompt(); } catch { /* o navegador já explicou na tela */ }
+  },
+  // A tela de boas-vindas não tem abas, então ela mesma emite o input de PDF.
+  // A aba certa só é marcada quando um PDF de fato chega (wireBookFileInput,
+  // abaixo) — marcar aqui deixaria S.tab preso em 'books' se a pessoa
+  // desistir do seletor do sistema ou escolher um arquivo que não é PDF, e a
+  // tela de boas-vindas não tem abas que denunciem o estado escondido.
+  pickLivroHome() { document.getElementById('file-livro')?.click(); },
+  abrirSomaplayHome() { S.importMode = 'merge'; document.getElementById('file-backup')?.click(); },
 
   // dicionário de acordes
   goChordbook() { S.screen = 'chordbook'; S.chordEd = null; S.cbQuery = ''; S.cbFilter = null; S.cbAdding = false; update(); },
@@ -1204,6 +1241,10 @@ export function wireBookFileInput() {
     const recusados = [...inp.files].filter((f) => !files.includes(f));
     for (const f of recusados) toast(t('books.error.notPdf', { name: f.name }));
     inp.value = '';
+    // A tela de boas-vindas não tem abas: é aqui, com pelo menos um PDF de fato
+    // aceito, que a aba certa é marcada — não no toque que abriu o seletor
+    // (pickLivroHome), que pode terminar em desistência ou num arquivo recusado.
+    if (files.length) S.tab = 'books';
     S.livroFila = (S.livroFila || []).concat(files);
     if (!S.livroDraft) await proximoLivroDaFila();
     update();
@@ -1252,7 +1293,61 @@ function revogarCapas() {
   S.capaURLs = {};
 }
 
-// A tela de Configurações tem o <input id="file-backup">. Religado a cada render.
+// O fluxo de importar um arquivo, sem o input: ler o cabeçalho, confirmar,
+// negociar as anotações, importar e reconciliar o que guardava grafia de fonte.
+// Três portas chamam isto — Configurações, "Abrir .somaplay" da home e "Carregar
+// demo" — e é por isso que a função não conhece nenhuma delas.
+//
+// `confirmar` é falso quando não há o que perder (biblioteca vazia) e quando a
+// pessoa já disse o que queria ao tocar em "Carregar demo": perguntar ali seria
+// pedir confirmação de um toque que acabou de acontecer.
+async function importarArquivo(f, { merge = false, confirmar = true } = {}) {
+  const total = S.songs.length;
+
+  // Só o cabeçalho — alguns KB, não o arquivo. Lido uma vez para os dois modos.
+  let manifest = null;
+  try { manifest = (await lerManifest(f)).manifest; }
+  catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
+
+  // Um aparelho pode ser só uma estante de songbooks e não ter música nenhuma.
+  const temAlgoAPerder = total > 0 || S.books.length > 0;
+  if (merge) {
+    if (confirmar && !confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
+  } else if (temAlgoAPerder) {
+    const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0, temLivros: S.books.length > 0 })
+      .map((k) => t(k)).join('\n');
+    const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
+    if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
+  }
+
+  // Só no merge há o que negociar (ver o comentário longo em importLibrary).
+  const conflitos = merge ? conflitosDeNotas(S.songs, manifest.songs, manifest.partes) : [];
+  const decisaoNotas = conflitos.length
+    ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
+    : 'substituir';
+
+  toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
+  try {
+    const res = await importLibrary(f, { merge, decisaoNotas, conflitosNotas: conflitos });
+    // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
+    // mudar por baixo dela — nos dois modos.
+    S.exportFontes = null;
+    podarFonteFilter();
+    applyTheme();
+    update();
+    toast(merge
+      ? t('msg.backup.mergedDone', {
+          added: res.added,
+          newWord: t(res.added === 1 ? 'msg.backup.mergedNew' : 'msg.backup.mergedNewPlural'),
+          updated: res.updated,
+          updatedWord: t(res.updated === 1 ? 'msg.backup.mergedUpdated' : 'msg.backup.mergedUpdatedPlural'),
+        })
+      : t('msg.backup.importedDone', { artists: res.artists, songs: res.songs }));
+  } catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); }
+}
+
+// O input existe em duas telas — Configurações e a tela de boas-vindas — e é
+// religado a cada render, como o de livro.
 function wireBackupInput() {
   const backup = document.getElementById('file-backup');
   if (!backup) return;
@@ -1260,63 +1355,12 @@ function wireBackupInput() {
     const f = backup.files[0];
     backup.value = '';
     if (!f) return;
-    const merge = S.importMode === 'merge';
-    const total = S.songs.length;
-
-    // Só o cabeçalho — alguns KB, não o arquivo. Lido uma vez para os dois
-    // modos: o aviso de substituir precisa dele, e a pergunta das anotações
-    // também, inclusive no merge (que é o caso do professor reenviando).
-    let manifest = null;
-    try { manifest = (await lerManifest(f)).manifest; }
-    catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); return; }
-
-    // Um aparelho pode ser só uma estante de songbooks e não ter música
-    // nenhuma — exatamente o que a tarefa dos livros tornou possível. Sem
-    // contar `S.books` aqui, esse aparelho passava direto para o wipe() do
-    // "Substituir tudo" sem confirm nenhum, porque o portão só olhava músicas.
-    const temAlgoAPerder = total > 0 || S.books.length > 0;
-    if (merge) {
-      if (!confirm(t('msg.backup.confirmMerge', { name: f.name }))) return;
-    } else if (temAlgoAPerder) {
-      // O manifest inteiro, porque os avisos de lista e de livro dependem do
-      // arquivo trazer (ou não) cada um; e do aparelho ter o que perder, porque
-      // não há o que perder quem não tem lista nenhuma, ou livro nenhum.
-      const avisos = avisosDeSubstituir(manifest, { temListas: S.lists.length > 0, temLivros: S.books.length > 0 })
-        .map((k) => t(k)).join('\n');
-      const pergunta = t('msg.backup.confirmReplace', { name: f.name, count: total, song: total === 1 ? t('common.song') : t('common.songs') });
-      if (!confirm(avisos ? `${avisos}\n\n${pergunta}` : pergunta)) return;
-    }
-
-    // Só no merge há o que negociar: no substituir a pessoa já confirmou
-    // trocar a biblioteca inteira (avisosDeSubstituir cobriu a falta de
-    // anotação ali em cima), e "manter a minha" não faz sentido quando ela
-    // está prestes a deixar de existir. Cancelar mantém as suas: a resposta
-    // destrutiva é a afirmativa.
-    const conflitos = merge ? conflitosDeNotas(S.songs, manifest.songs, manifest.partes) : [];
-    const decisaoNotas = conflitos.length
-      ? (confirm(t('msg.notas.confirmReplace', { n: conflitos.length })) ? 'substituir' : 'manter')
-      : 'substituir';
-
-    toast(merge ? t('msg.backup.merging') : t('msg.backup.importing'));
-    try {
-      const res = await importLibrary(f, { merge, decisaoNotas, conflitosNotas: conflitos });
-      // A seleção de export guarda GRAFIAS de fonte, e a biblioteca acabou de
-      // mudar por baixo dela — nos dois modos. Voltar para null ("todas") evita
-      // que as fontes novas apareçam desmarcadas e, no caso de uma seleção
-      // vazia, que o bloco inteiro suma deixando o botão travado sem controle.
-      S.exportFontes = null;
-      podarFonteFilter();
-      applyTheme();
-      update();
-      toast(merge
-        ? t('msg.backup.mergedDone', {
-            added: res.added,
-            newWord: t(res.added === 1 ? 'msg.backup.mergedNew' : 'msg.backup.mergedNewPlural'),
-            updated: res.updated,
-            updatedWord: t(res.updated === 1 ? 'msg.backup.mergedUpdated' : 'msg.backup.mergedUpdatedPlural'),
-          })
-        : t('msg.backup.importedDone', { artists: res.artists, songs: res.songs }));
-    } catch (e) { toast(t('msg.backup.importFailed', { error: e.message })); }
+    // Biblioteca vazia não tem o que perder: a pergunta do merge só existe para
+    // quem já tem biblioteca.
+    await importarArquivo(f, {
+      merge: S.importMode === 'merge',
+      confirmar: !primeiraVisita(S.songs, S.books),
+    });
   };
 }
 
@@ -1482,6 +1526,37 @@ document.addEventListener('visibilitychange', () => {
   else flushLivroPagina();
 });
 
+// beforeinstallprompt/online/offline podem chegar do navegador ANTES de
+// initState() resolver (rede muda de estado, ou o Chrome já teria o convite de
+// instalação pronto assim que a página carrega). S.screen começa em 'home', e
+// um update() disparado por um desses eventos nesse intervalo pintaria a tela
+// de boas-vindas com o estado ainda vazio (o dicionário de acordes vazio faz o
+// diagrama da prévia cair no "?" de fallback) — re-render que o próprio boot()
+// substitui um instante depois. A trava é só no re-render: o estado
+// (S.online, S.podeInstalar) continua sendo atualizado mesmo antes de booted.
+let booted = false;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  convite = e;
+  S.podeInstalar = true;
+  if (booted && S.screen === 'home') update();
+});
+window.addEventListener('appinstalled', () => {
+  convite = null;
+  S.podeInstalar = false;
+  if (S.screen === 'home') update();
+});
+
+// A demo é a única coisa nesta tela que precisa de rede. O resto do app não.
+const marcaRede = () => {
+  const antes = S.online;
+  S.online = navigator.onLine;
+  if (booted && antes !== S.online && S.screen === 'home') update();
+};
+window.addEventListener('online', marcaRede);
+window.addEventListener('offline', marcaRede);
+
 // ---------- boot ----------
 (async function boot() {
   try {
@@ -1499,9 +1574,11 @@ document.addEventListener('visibilitychange', () => {
     </div>`;
     return;
   }
+  S.online = navigator.onLine;
   update();
   manageWakeLock();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
+  booted = true;
 })();

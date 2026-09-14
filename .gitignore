@@ -6,6 +6,9 @@
 # Backups da biblioteca. São dados do usuário, podem passar de 30 MB, e podem conter
 # cifras e letras de terceiros — nada disso entra num repositório público.
 *.somaplay
+# O arquivo da demo é a única exceção: ele é servido pelo app, e o link de
+# download da home aponta para ele. Gerado por scripts/demo/gerar-demo.mjs.
+!app/demo/soma_play-demo.somaplay
 bkp/
 
 # Sessões de gravação (Audition) e sobras de trabalho

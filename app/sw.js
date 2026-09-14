@@ -1,5 +1,5 @@
 /* Soma_play — Service Worker: shell precache + cache-first (offline total) */
-const VERSION = 'somaplay-0.19.0';
+const VERSION = 'somaplay-0.20.0';
 const SHELL = [
   './',
   './index.html',
@@ -47,6 +47,7 @@ const SHELL = [
   './js/render/fontestrip.js',
   './js/render/books.js',
   './js/render/book.js',
+  './js/render/welcome.js',
   './fonts/sora-latin.woff2',
   './fonts/sora-latin-ext.woff2',
   './fonts/inter-latin.woff2',

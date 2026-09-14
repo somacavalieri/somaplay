@@ -32,6 +32,34 @@ Two rules keep the number honest:
 
 Nothing yet.
 
+## [0.20.0] - 2026-09-12
+
+### Added
+
+- **A first screen for someone who has never opened the app.** While the library
+  holds no song and no book, the home says what the app is and offers the three
+  actions one tap away: add a song, add a PDF book, open a `.somaplay` a friend
+  sent. The old empty state named a menu item inside Settings and stopped there.
+- **A demo that loads with one tap.** "Carregar demo" fetches a real `.somaplay`
+  file — Groove de teste with four channels and lyrics, so it covers chart,
+  mixer and karaoke — and imports it through the ordinary merge path. It comes
+  in under the source "Demo" and leaves the way any source leaves. The file
+  itself is deliberately outside the precache: it is fetched on demand and
+  cached by the Service Worker on first use, so installing the app does not
+  carry it.
+- **A "Comece por aqui" card** while the demo is in the library, with a way out.
+- **An install button**, where the browser offers to install.
+
+### Changed
+
+- The import flow is one function now, called by Settings, by the home and by
+  the demo loader, instead of living inside the change listener of an input that
+  only Settings renders.
+- Settings: "Importar exemplos" is now "Carregar a demo", and loads the same file
+  the home does. The example song is no longer built in code.
+
+  Precache: SHELL ~0.84 MB + VENDOR ~4.68 MB = ~5.51 MB.
+
 ## [0.19.0] - 2026-09-01
 
 ### Changed

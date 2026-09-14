@@ -872,3 +872,74 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   border:1px solid var(--border);border-radius:6px;display:block}
 .mini.on img,.mini.on .ph{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .mini .n{color:var(--muted);font-size:12px}
+
+/* --- Tela de boas-vindas (primeira visita) --- */
+.wc{padding:34px 40px 48px;display:flex;flex-direction:column;gap:30px}
+.wc-hero{display:flex;gap:34px;align-items:flex-start}
+.wc-hero-txt{flex:1;min-width:0}
+.wc-title{font-family:var(--f-title);font-weight:700;font-size:44px;line-height:1.08;letter-spacing:-1px;margin-bottom:14px}
+.wc-sub{color:var(--muted);font-size:17px;line-height:1.5;max-width:620px;margin-bottom:22px}
+.wc-actions{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.wc-demo{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.wc-demo-lead{color:var(--text);font-size:15px}
+.wc-demo-btn{border-color:var(--accent-soft3);color:var(--accent)}
+.wc-demo-sub,.wc-demo-dl{color:var(--muted);font-size:13px}
+.wc-demo-dl{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);text-decoration:underline}
+.wc-offline{margin-top:12px;color:var(--muted);font-size:13px}
+
+.wc-preview{width:390px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.wc-preview-hd{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.wc-preview-nm{color:var(--text);font-weight:600}
+.wc-preview-body{display:flex;gap:14px;align-items:flex-start}
+.wc-preview-diag{display:flex;flex-direction:column;align-items:center;gap:4px;width:96px;flex-shrink:0}
+.wc-preview-hint{color:var(--muted3);font-size:11px;text-align:center;line-height:1.35}
+.wc-chart{font-family:var(--f-mono);font-size:13px;line-height:1.5;white-space:pre;overflow-x:auto;flex:1;min-width:0;font-variant-ligatures:none}
+.wc-ch{color:var(--accent)}
+
+.wc-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:22px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:700}
+.wc-badge.t1{background:var(--accent-tint2);color:var(--accent)}
+.wc-badge.t2{background:var(--teal-tint2);color:var(--teal)}
+.wc-badge.t3{background:var(--gold-tint);color:var(--gold)}
+
+.wc-cards,.wc-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.wc-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px}
+.wc-card-t{display:flex;align-items:center;gap:9px;font-family:var(--f-title);font-weight:600;font-size:17px;color:var(--accent);margin-bottom:8px}
+.wc-card-s{color:var(--muted);font-size:14px;line-height:1.55}
+.wc-card-later{color:var(--muted3);font-size:13px;margin-top:12px}
+.wc-modes-t{font-family:var(--f-title);font-weight:600;font-size:18px}
+.wc-mode{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start}
+.wc-mode-txt{flex:1;min-width:0}
+.wc-mode-t{display:flex;align-items:center;gap:8px;font-family:var(--f-title);font-weight:600;font-size:15px;margin-bottom:6px}
+.wc-mode-s{color:var(--muted);font-size:13px;line-height:1.5}
+.wc-mode-chart{flex:1;min-width:0}
+.wc-mixer{width:140px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.wc-fader{display:flex;flex-direction:column;gap:3px}
+.wc-fader-nm{color:var(--muted);font-size:11px}
+.wc-fader-track{height:6px;border-radius:6px;background:var(--border);display:block}
+.wc-fader-fill{display:block;height:100%;border-radius:6px;background:var(--teal)}
+.wc-karaoke{width:170px;flex-shrink:0;font-size:13px;line-height:1.5}
+.wc-kline{color:var(--muted3)}
+.wc-kline.on{color:var(--gold);font-weight:600}
+
+.wc-trust{display:flex;flex-wrap:wrap;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 18px}
+.wc-trust-txt{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:14px;flex:1;min-width:240px}
+
+.wc-guia{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--accent-soft3);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.wc-guia-txt{flex:1;min-width:240px}
+.wc-guia-t{font-family:var(--f-title);font-weight:600;font-size:16px;margin-bottom:3px}
+.wc-guia-s{color:var(--muted);font-size:13px;line-height:1.5}
+
+/* .btn-ghost não separa ícone e rótulo (só .btn-primary faz isso); esta é a
+   primeira tela a colocar um ícone dentro de um botão ghost. Escopado à Home
+   de primeira visita para não mexer no .btn-ghost compartilhado — cobre também
+   o botão de instalar que a Task 6 vai desenhar na faixa de confiança. */
+.wc .btn-ghost{display:inline-flex;align-items:center;gap:9px}
+
+/* Retrato e telas estreitas: tudo empilha, e a prévia vai para baixo do texto */
+@media (max-width:1100px){
+  .wc{padding:24px 20px 40px}
+  .wc-title{font-size:34px}
+  .wc-hero{flex-direction:column}
+  .wc-preview{width:100%}
+  .wc-cards,.wc-modes{grid-template-columns:1fr}
+}
